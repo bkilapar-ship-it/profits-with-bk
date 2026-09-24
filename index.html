@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MACD Curl-Up Screener</title>
+  <meta name="description" content="Technical screening tool that finds stocks where MACD is below its Signal line but curling upward.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap header-inner">
+    <svg class="curl-mark" viewBox="0 0 120 56" aria-hidden="true">
+      <path class="curl-signal" d="M4 14 C 40 22, 70 34, 116 30"/>
+      <path class="curl-macd" d="M4 30 C 34 52, 62 54, 96 34"/>
+      <circle class="curl-dot" cx="96" cy="34" r="3.5"/>
+    </svg>
+    <div>
+      <h1>MACD Curl-Up Screener</h1>
+      <p class="subtitle">Find stocks where MACD momentum is turning upward before a bullish crossover.</p>
+      <p class="explain">An <strong>Early Bullish Curl</strong> means MACD is below its Signal line but rising, with the MACD/Signal gap narrowing.</p>
+    </div>
+  </div>
+</header>
+
+<main class="wrap layout">
+  <!-- ============ SETTINGS PANEL ============ -->
+  <aside class="panel settings" aria-label="Screener settings">
+
+    <section class="block">
+      <h2>What to scan</h2>
+      <div class="mode-switch" role="radiogroup" aria-label="What to scan">
+        <label><input type="radio" name="mode" id="modeMarket" value="market"><span>All US stocks</span></label>
+        <label><input type="radio" name="mode" id="modeWatch" value="watchlist"><span>My watchlist</span></label>
+      </div>
+      <div id="marketBlock">
+        <p id="marketInfo" class="hint">Loading…</p>
+        <button id="reloadMarket" type="button" class="btn btn-small">Reload latest results</button>
+      </div>
+    </section>
+
+    <section class="block" id="watchlistBlock" hidden>
+      <h2>Watchlist</h2>
+      <div class="add-row">
+        <label class="sr-only" for="tickerInput">Add ticker</label>
+        <input id="tickerInput" type="text" placeholder="Add a ticker, e.g. NVDA" autocomplete="off" autocapitalize="characters" spellcheck="false">
+        <button id="addTicker" type="button" class="btn">Add</button>
+      </div>
+      <label for="tickers" class="field-label">Tickers — one per line or comma-separated</label>
+      <textarea id="tickers" rows="6" spellcheck="false" placeholder="AAPL, NVDA, AMD, PLTR, BBAI, TSLA"></textarea>
+      <div class="btn-row">
+        <button id="scanBtn" type="button" class="btn btn-primary">Scan Stocks</button>
+        <button id="stopBtn" type="button" class="btn" hidden>Stop</button>
+        <button id="clearBtn" type="button" class="btn btn-ghost">Clear</button>
+      </div>
+    </section>
+
+    <details id="settingsDetails" class="settings-more" open>
+    <summary>Filters &amp; settings</summary>
+
+    <section class="block">
+      <h2>MACD &amp; RSI</h2>
+      <p id="periodsHint" class="hint" hidden></p>
+      <div class="grid-2">
+        <label>MACD Fast<input id="setFast" type="number" min="1" step="1" value="12"></label>
+        <label>MACD Slow<input id="setSlow" type="number" min="2" step="1" value="26"></label>
+        <label>Signal<input id="setSignal" type="number" min="1" step="1" value="9"></label>
+        <label>RSI Length<input id="setRsiLen" type="number" min="2" step="1" value="14"></label>
+        <label>RSI Min<input id="setRsiMin" type="number" min="0" max="100" step="0.5" value="35"></label>
+        <label>RSI Max<input id="setRsiMax" type="number" min="0" max="100" step="0.5" value="55"></label>
+        <label>Min Bars To Cross<input id="setMinBtc" type="number" min="0" step="0.5" value="1"></label>
+        <label>Max Bars To Cross<input id="setMaxBtc" type="number" min="0" step="0.5" value="5"></label>
+      </div>
+    </section>
+
+    <section class="block">
+      <h2>Volume &amp; timeframe</h2>
+      <label class="toggle">
+        <input id="setVolFilter" type="checkbox">
+        <span>Require volume above its 20-period average</span>
+      </label>
+      <div class="grid-2">
+        <label>Min Relative Volume<input id="setMinRelVol" type="number" min="0" step="0.1" value="1.0"></label>
+        <label>Timeframe
+          <select id="setTimeframe">
+            <option value="1D" selected>1D</option>
+            <option value="4H">4H</option>
+            <option value="1H">1H</option>
+          </select>
+        </label>
+      </div>
+      <div id="settingsError" class="form-error" role="alert" hidden></div>
+      <button id="resetSettings" type="button" class="btn btn-ghost btn-small">Reset to defaults</button>
+    </section>
+
+    <section class="block" id="providerBlock" hidden>
+      <h2>Live data for your watchlist</h2>
+      <label>Provider
+        <select id="providerSelect"></select>
+      </label>
+      <label for="apiKey" class="field-label">API key</label>
+      <div class="add-row">
+        <input id="apiKey" type="password" placeholder="Paste your API key" autocomplete="off" spellcheck="false">
+        <button id="saveKey" type="button" class="btn">Save</button>
+      </div>
+      <p id="keyStatus" class="hint"></p>
+      <button id="forgetKey" type="button" class="btn btn-ghost btn-small">Remove key from this browser</button>
+      <div class="grid-2">
+        <label>Requests / minute<input id="setRpm" type="number" min="1" step="1" value="8"></label>
+      </div>
+      <label class="toggle">
+        <input id="setCache" type="checkbox" checked>
+        <span>Keep downloaded candles in this browser</span>
+      </label>
+      <button id="clearCacheBtn" type="button" class="btn btn-ghost btn-small">Clear cached data</button>
+      <p class="hint">Only needed for My watchlist. The key is stored only in this browser's localStorage and sent only to the data provider. A static site cannot keep a key secret from anyone using this browser.</p>
+    </section>
+    </details>
+  </aside>
+
+  <!-- ============ RESULTS ============ -->
+  <section class="panel results" aria-label="Scan results">
+    <div class="toolbar">
+      <div class="status-wrap">
+        <p id="statusText" class="status-text" aria-live="polite">Add tickers and press Scan Stocks.</p>
+        <div class="progress" aria-hidden="true"><div id="progressBar" class="progress-bar"></div></div>
+      </div>
+      <div class="sort-controls">
+        <label class="find">Find ticker
+          <input id="findTicker" type="search" placeholder="e.g. NVDA" autocomplete="off" autocapitalize="characters" spellcheck="false">
+        </label>
+        <label>Sort by
+          <select id="sortKey">
+            <option value="score">Setup Strength</option>
+            <option value="btc">Bars To Cross</option>
+            <option value="rsi">RSI</option>
+            <option value="relVol">Relative Volume</option>
+            <option value="gap">MACD Gap (normalized)</option>
+          </select>
+        </label>
+        <button id="sortDir" type="button" class="btn btn-small" aria-label="Toggle sort direction">↓ Desc</button>
+        <label class="toggle compact">
+          <input id="onlySignals" type="checkbox">
+          <span>Signals only</span>
+        </label>
+      </div>
+    </div>
+
+    <div id="emptyState" class="empty">
+      <p><strong>Loading results…</strong></p>
+    </div>
+    <div id="noMatch" class="empty" hidden>
+      <p><strong>No stocks match right now.</strong></p>
+      <p>Turn off Signals only, clear the ticker search, or loosen the RSI and Bars To Cross ranges.</p>
+    </div>
+
+    <div class="table-wrap">
+      <table id="resultsTable" hidden>
+        <thead>
+          <tr>
+            <th data-sort="ticker">Ticker</th>
+            <th class="num">Price</th>
+            <th class="num">MACD</th>
+            <th class="num">Signal</th>
+            <th class="num" data-sort="gap">MACD Gap</th>
+            <th class="num">Gap Velocity</th>
+            <th class="num" data-sort="btc">Bars To Cross</th>
+            <th class="num" data-sort="rsi">RSI</th>
+            <th class="num" data-sort="relVol">Rel. Volume</th>
+            <th data-sort="score">Setup Strength</th>
+            <th>Signal Status</th>
+          </tr>
+        </thead>
+        <tbody id="resultsBody"></tbody>
+      </table>
+    </div>
+
+    <div id="resultsCards" class="cards"></div>
+
+    <div class="results-foot">
+      <span id="shownCount"></span>
+      <button id="showMore" type="button" class="btn" hidden>Show more</button>
+    </div>
+  </section>
+</main>
+
+<!-- ============ DETAIL DRAWER ============ -->
+<div id="detail" class="detail-overlay" hidden>
+  <div class="detail-panel" role="dialog" aria-modal="true" aria-labelledby="detailTitle">
+    <button id="detailClose" type="button" class="btn btn-ghost close-btn" aria-label="Close details">✕</button>
+    <div id="detailBody"></div>
+  </div>
+</div>
+
+<footer class="wrap site-footer">
+  <p>This is a technical screening tool, not financial advice and not a trading system. It only reports whether current indicator values match the criteria you set. Setup Strength is not a probability or a forecast of future price.</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
