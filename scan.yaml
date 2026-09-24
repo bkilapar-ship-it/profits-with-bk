@@ -1,0 +1,82 @@
+name: Market scan and deploy
+
+on:
+  schedule:
+    # Times are UTC. US market hours are 13:30–20:00 UTC in summer and 14:30–21:00 UTC in winter.
+    - cron: '5 14-21 * * 1-5'   # hourly while the market is open (updates 1H / 4H)
+    - cron: '45 22 * * 1-5'     # after the close (final daily candle)
+  workflow_dispatch:             # "Run workflow" button in the Actions tab
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Configure GitHub Pages
+        id: pages
+        uses: actions/configure-pages@v6
+
+      - name: Run market scan
+        id: scan
+        continue-on-error: true   # still deploy the site (and keep previous results) if the scan fails
+        env:
+          ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          PREVIOUS_BASE_URL: ${{ steps.pages.outputs.base_url }}
+          # --- Adjustable scan settings ---
+          MIN_PRICE: '2'
+          MIN_AVG_VOLUME: '500000'
+          INTRADAY_MAX_SYMBOLS: '1000'
+          TIMEFRAMES: '1D,4H,1H'
+          MACD_FAST: '12'
+          MACD_SLOW: '26'
+          MACD_SIGNAL: '9'
+          RSI_LENGTH: '14'
+          ALPACA_FEED: 'sip'
+          INCLUDE_CHART_SERIES: 'true'
+        run: node scanner/scan.js --out _site/data
+
+      - name: Warn if the scan failed
+        if: steps.scan.outcome == 'failure'
+        run: echo "::warning::The market scan failed. The site was still deployed with the previous results (if any). Open the 'Run market scan' step for details."
+
+      - name: Assemble site
+        run: |
+          mkdir -p _site
+          cp index.html style.css app.js _site/
+          touch _site/.nojekyll
+
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5
