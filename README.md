@@ -22,6 +22,12 @@ On the **Watchlist** tab, Uptrend Dip and Downtrend Rip are checked live on your
 
 The **Paper** button in the top bar opens the paper-trading section: Overview, Positions (filter by long or short), Orders, History and Rules. It reads `data/paper.json`, which the paper-trading job will publish. Until that job is set up, the section says paper trading hasn't started yet.
 
+**The Watchlist tab reads from the daily scan by default**, so no Twelve Data key is needed for tickers the scan already covers (all liquid US stocks, roughly $2+ and 500k+ average volume). This applies to Uptrend Dip, Downtrend Rip and MACD Curl alike. If a ticker isn't in the scan (delisted, too small, too new), the panel says so and suggests either:
+- adding it to a `watchlist.txt` file at the repo root (one ticker per line or comma-separated) so the scheduled scan always includes it, or
+- tapping **Live refresh**, which downloads prices right now via Twelve Data and needs a free key (see below).
+
+Tap **Use daily scan data** to switch back. The two sources are independent: switching doesn't clear your ticker list.
+
 There are two ways to scan:
 
 | | **All US, index and sector tabs** | **Watchlist tab** |
@@ -102,7 +108,8 @@ After that it runs automatically:
 8. **Index lists, sectors and themes.** The scan also downloads S&P 500, Nasdaq-100 and Dow 30 members and GICS sectors, and publishes them with company names in `data/universe.json` (see section 4).
 9. **Swing setups.** Every stock is checked for the Uptrend Dip and Downtrend Rip setups on daily candles. Entry, target and stop levels are written to `data/setups.json` (see section 5).
 10. **Backtest.** The same signal rules are replayed on every stock's history (see section 3). The market-wide summary goes into the result files, and each stock's past signals go into `data/bt-1D.json` etc.
-11. **If a scan fails** (bad keys, Alpaca outage), the site is still deployed. It keeps the previously published results and shows a warning that they are from an earlier scan.
+11. **Paper trading.** If the separate paper-trading workflow (section 10) has run at least once, this step turns its saved state into the public `data/paper.json` the app's **Paper** button reads. This step is read-only — it never places or touches an order.
+12. **If a scan fails** (bad keys, Alpaca outage), the site is still deployed. It keeps the previously published results and shows a warning that they are from an earlier scan.
 
 A full run makes several hundred Alpaca requests. The 1H/4H part is the slowest, and a first run can take 15+ minutes. The scanner stops downloading after `SCAN_TIME_BUDGET_MIN` (default 24 minutes), so the site still deploys before GitHub's 30-minute job limit. Timeframes that didn't finish keep their previous results. It uses Alpaca's free-plan limit of 200 requests/minute. The scanner paces itself at 180/minute and backs off automatically if it gets rate-limited.
 
@@ -361,7 +368,35 @@ ALPACA_KEY_ID=your_key ALPACA_SECRET_KEY=your_secret node scanner/scan.js --out 
 
 The `data/` folder is in `.gitignore`. The published results are built by the workflow, not committed.
 
-## 10. Limitations
+## 10. Paper trading
+
+A second, separate workflow (`.github/workflows/paper.yml`) trades every Uptrend Dip and Downtrend Rip signal automatically on your **Alpaca paper account** — simulated money, real order mechanics — so you can see how the rules hold up outside a backtest. The **Paper** button in the app reads the results it publishes.
+
+**Setup:** none needed beyond what you already have. It reuses the same `ALPACA_KEY_ID` / `ALPACA_SECRET_KEY` secrets as the market scan; no new secrets. It starts **paused** the first time it ever runs, so nothing is traded until you explicitly resume it (see below).
+
+**How a day works**
+1. **~9:35 ET** — reads the site's published `data/setups.json` for signals from the prior close, ranks them (strongest uptrend first for dips, biggest rally first for rips — the rule that did best on crowded days in the research), and places **limit** entry orders for as many as the daily/position caps allow. Each order is `time_in_force: "day"`, so it cancels itself if the market never reaches the entry price by the close, matching the backtest's "enter near today's open, or skip" rule.
+2. Once an entry **fills**, a separate **OCO exit order** (`time_in_force: "gtc"`) is attached immediately: a take-profit limit and a stop. A GTC OCO, rather than folding the stop into the entry as a single "bracket" order, avoids any ambiguity about whether a same-day ("day") bracket could let the protective stop itself expire at the end of the entry day — the exit legs are unambiguously live until one of them fills or the position is closed.
+3. **~15:55 ET** — any position that has reached its held-for-3-sessions limit has its OCO order cancelled and is flattened with a market order, regardless of price.
+4. Every run also reconciles: it checks Alpaca's actual positions and orders against what it last knew, records any trade that closed since the previous run (by target, by stop, by the time exit above, or — rarely — a change you made by hand on the Alpaca dashboard, recorded as "manual"), and refreshes the account's equity history.
+
+**Pause and resume, on demand:** in the **Actions** tab, open **Paper trading**, click **Run workflow**, and choose **pause** or **resume** in the *action* dropdown, leaving *mode* as `auto`. This takes effect on that run, immediately — no waiting for the next scheduled time. Pausing only stops **new** entries; any already-open position still gets its target/stop/time exit exactly as scheduled, so pausing never leaves a position unmanaged. The same screen's *mode* dropdown (`entry` / `exit` / `reconcile`) and a *force* checkbox exist for testing a specific step by hand; leave *mode* on `auto` for normal use.
+
+**Where the state lives:** open positions, pending orders, trade history and the pause/resume flag are kept in `state.json` on an orphan `paper-state` branch of this repository, created automatically the first time `paper.yml` runs. It's plain JSON, readable in the GitHub UI, and never touched by hand — use the pause/resume action above instead of editing it. The market-scan workflow checks out that branch **read-only** and turns it into the public `data/paper.json` the app reads, on its own existing schedule; it never places or touches an order itself, so a scan re-run can never duplicate trading activity.
+
+**Adjusting the rules:** edit the `env:` block of the "Run paper trading" step in `paper.yml` — `PAPER_PER_TRADE`, `PAPER_MAX_OPEN`, `PAPER_MAX_NEW_PER_DAY`, `PAPER_TARGET_ATR`, `PAPER_STOP_ATR`, `PAPER_TRADE_DIP` / `PAPER_TRADE_RIP`, `PAPER_SP500_ONLY`, `PAPER_REVIEW_AFTER`, `PAPER_SUCCESS_AVG_PCT`. Defaults match what's described in the app: $5,000 per trade, 10 open positions, 3 new trades a day. Keep the rules fixed while a test is running so the results stay comparable; changing them mid-test starts a fresh comparison in spirit even though the trade history keeps accumulating.
+
+**If you use a custom domain** for GitHub Pages, set a repository variable `PAGES_BASE_URL` (Settings → Secrets and variables → Actions → Variables) to your site's base URL, e.g. `https://screener.example.com`, so the entry job fetches `setups.json` from the right place. Without it, the default assumes the standard `https://<owner>.github.io/<repo>` address.
+
+**Safety notes**
+- The script refuses to run against anything that doesn't look like a paper-trading URL — it checks the base URL contains `paper-api` before placing a single order.
+- Before shorting, it checks the ticker's `shortable` flag and skips it (logged, not silently) if the account can't borrow it.
+- If an OCO exit order ever fails to attach after a fill (rare — a broker-side rejection), the position is still recorded and a loud warning is logged; check the Alpaca dashboard, since that position has no automatic stop until you add one.
+- Watch the first few days closely in your [Alpaca paper dashboard](https://app.alpaca.markets/paper/dashboard/overview) to confirm behaviour matches what's described here before trusting it unattended.
+
+**Limitations:** entries land within the first hour after the open (whenever the ~9:35 ET run happens to fire, GitHub Actions cron isn't second-precise), not the literal opening print; paper-account shorting can behave a little more permissively than a real margin account would; dividends and other corporate actions on held positions aren't specially handled (Alpaca's own account equity reflects them regardless). This is a paper account: no real money is ever at risk, and none of this is financial advice.
+
+## 11. Limitations
 
 - **Delay and freshness.** On Alpaca's free plan, SIP data from the most recent 15 minutes isn't available, so the scan reads data up to 16 minutes old. It then uses only completed candles. GitHub also doesn't guarantee exact cron timing, and scheduled runs can start several minutes late or occasionally be skipped at busy times.
 - **Scheduled runs pause after inactivity.** In public repositories, GitHub disables scheduled workflows after 60 days with no repository activity. GitHub emails you. Re-enable it in the Actions tab, or push any commit.
@@ -371,6 +406,6 @@ The `data/` folder is in `.gitignore`. The published results are built by the wo
 - **Data terms.** The site publishes indicator values and, by default, chart data derived from Alpaca's feed. Check Alpaca's market-data terms before making the site public. Set `INCLUDE_CHART_SERIES: 'false'` to publish less.
 - **Watchlist mode limits.** Twelve Data's free plan allows a small number of requests per minute and per day. Check their pricing page. The page paces requests with the **Requests / minute** setting and caches candles (60 min for 1D, 15 min for 4H, 5 min for 1H).
 
-## 11. Disclaimer
+## 12. Disclaimer
 
 This software is provided for educational and research purposes only. It identifies technical indicator conditions and **does not** provide investment, financial, or trading advice. A detected "Early Bullish Curl" does not mean a price will rise, and MACD crossovers frequently fail. Setup Strength is a checklist-match score, not a probability. You are solely responsible for any decisions you make. Past indicator behavior does not guarantee future results.
