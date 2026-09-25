@@ -81,6 +81,7 @@ const CFG = {
   // timeframes keep their previously published results.
   timeBudgetMin: num(env.SCAN_TIME_BUDGET_MIN, 24),
   intradayIncludeGroups: String(env.INTRADAY_INCLUDE_GROUPS || 'true').toLowerCase() !== 'false',
+  paperStateDir: env.PAPER_STATE_DIR || 'paper-state',
   outDir: argValue('--out', 'data'),
 };
 let deadline = Infinity;
@@ -118,6 +119,20 @@ const THEMES = [
   { key: 'gold', label: 'Gold & silver miners', etf: 'GDX', tickers: ['NEM', 'AEM', 'B', 'GOLD', 'KGC', 'AU', 'GFI', 'WPM', 'FNV', 'RGLD', 'AGI', 'HMY', 'EGO', 'PAAS', 'AG'] },
   { key: 'oil', label: 'Oil & gas', etf: 'XOP', tickers: ['XOM', 'CVX', 'COP', 'EOG', 'OXY', 'DVN', 'FANG', 'APA', 'CTRA', 'EQT', 'AR', 'RRC', 'SLB', 'HAL', 'BKR', 'MPC', 'PSX', 'VLO'] },
 ];
+
+/* Optional watchlist.txt at the repo root: tickers that are always scanned, even if they miss the filters. */
+function loadWatchlistFile() {
+  const file = path.join(__dirname, '..', 'watchlist.txt');
+  try {
+    if (!fs.existsSync(file)) return [];
+    const list = fs.readFileSync(file, 'utf8').toUpperCase().split(/[\s,;]+/).map(t => t.replace(/^\$/, '').trim()).filter(t => /^[A-Z]{1,5}(\.[A-Z])?$/.test(t));
+    log(`watchlist.txt: ${list.length} ticker${list.length === 1 ? '' : 's'} always scanned`);
+    return [...new Set(list)];
+  } catch (e) {
+    log(`watchlist.txt ignored (${e.message})`);
+    return [];
+  }
+}
 
 function loadThemes() {
   const file = path.join(__dirname, '..', 'themes.json');
@@ -584,9 +599,14 @@ function buildSetupsFile(symbols, getCandles, groups) {
   const asOf = Object.values(lastDate).sort().pop() || null;
   const sp500 = new Set((groups && groups.indexes.sp500 && groups.indexes.sp500.tickers) || []);
   const items = [];
+  const status = {};   // ticker -> [close, 5-session change %, % vs 200-day, RSI]: powers the Watchlist tab without a data key
+  const r2 = x => (isNum(x) ? Math.round(x * 100) / 100 : null);
   for (const sym of symbols) {
     if (lastDate[sym] !== asOf) continue;                     // skip halted / stale tickers
-    for (const sig of core.scanSetups(getCandles(sym))) items.push({ ticker: sym, sp500: sp500.has(sym), ...sig });
+    const candles = getCandles(sym);
+    for (const sig of core.scanSetups(candles)) items.push({ ticker: sym, sp500: sp500.has(sym), ...sig });
+    const f = candles.length >= 206 ? core.setupFlags(core.setupIndicators(candles), candles.length - 1) : null;
+    if (f) status[sym] = [r2(candles[candles.length - 1].c), r2(f.r5 * 100), r2(f.vs200 * 100), r2(f.rsi)];
   }
   const clean = roundNumbers(items);
   return {
@@ -598,6 +618,7 @@ function buildSetupsFile(symbols, getCandles, groups) {
     sp500Listed: sp500.size > 0,
     dip: clean.filter(x => x.kind === 'dip'),
     rip: clean.filter(x => x.kind === 'rip'),
+    status,
   };
 }
 
@@ -641,6 +662,7 @@ async function main() {
   let groups = null;
   let universeNames = {};
   const analysed = new Set();
+  let daily = new Map();
   let setupsOut = null;
 
   try {
@@ -660,11 +682,12 @@ async function main() {
     for (const ix of Object.values(groups.indexes)) ix.tickers.forEach(t => forced.add(t));
     for (const th of groups.themes) { th.tickers.forEach(t => forced.add(t)); if (th.etf) forced.add(th.etf); }
     for (const sec of SECTORS) forced.add(sec.etf);
+    for (const t of loadWatchlistFile()) forced.add(t);
     universeNames = names;
 
     const dailyStart = new Date(dataEnd.getTime() - CFG.dailyLookbackDays * 86400000);
     const dailyBars = await fetchBars(symbols, '1Day', dailyStart, dataEnd, 'Daily');
-    const daily = new Map();
+    daily = new Map();
     for (const [sym, bars] of dailyBars) daily.set(sym, toDailyCandles(bars, dataEnd).slice(-CFG.keepCandles));
 
     const liquid = [];
@@ -765,6 +788,25 @@ async function main() {
   } else {
     const previous = await fetchPrevious('universe.json');
     if (previous) writeJson(universePath, previous);
+  }
+
+  // Publish the paper-trading page. This is read-only: it renders whatever paper.js (a separate,
+  // separately-scheduled script) has already recorded in paper-state.json. It never places, cancels
+  // or otherwise touches any order — that keeps "publish the site" and "manage real orders" fully
+  // decoupled, so a scan re-run can never accidentally duplicate trading activity.
+  try {
+    const paperStatePath = path.join(CFG.paperStateDir, 'state.json');
+    if (fs.existsSync(paperStatePath)) {
+      const paper = require('./paper.js');
+      const paperState = JSON.parse(fs.readFileSync(paperStatePath, 'utf8'));
+      const paperJson = paper.renderPublicJson(paperState, sym => daily.get(sym));
+      writeJson(path.join(CFG.outDir, 'paper.json'), paperJson);
+      log(`Paper trading: ${paperState.status}, ${Object.keys(paperState.positions || {}).length} open position(s), ${(paperState.trades || []).length} closed trade(s).`);
+    } else {
+      log(`Paper trading: no state file at ${paperStatePath} yet (paper.js hasn't run). Skipping data/paper.json.`);
+    }
+  } catch (e) {
+    log(`Paper trading: could not render data/paper.json (${e.message}). Leaving any previous version in place.`);
   }
 
   log(`Done in ${((Date.now() - t0) / 1000).toFixed(0)} s with ${requestCount} Alpaca requests.`);
