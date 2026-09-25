@@ -34,14 +34,24 @@
       <svg class="brand-mark" aria-hidden="true"><use href="#bk-logo"/></svg>
       <span class="brand-name">Trade With <b>BK</b></span>
     </a>
+    <div class="appbar-actions">
+    <button id="openPaper" type="button" class="icon-btn paper-btn" aria-pressed="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5M4 19h16M7 15l4-4 3 3 5-6"/></svg>
+      <span>Paper</span>
+    </button>
     <button id="openSettings" type="button" class="icon-btn" aria-label="Filters and settings">
       <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2.2"/><circle cx="10" cy="17" r="2.2"/></svg>
       <span class="icon-btn-label">Filters</span>
     </button>
+    </div>
   </div>
 </header>
 
 <main class="wrap">
+  <!-- Paper trading -->
+  <div id="paperPage" class="paper-page" hidden></div>
+
+  <div id="scannerPage">
   <section class="intro">
     <h1>Swing Setup Scanner</h1>
     <p class="subtitle">Rules-based setups for 1–3 day trades, scanned every day across US stocks.</p>
@@ -163,6 +173,7 @@
       <span id="shownCount"></span>
       <button id="showMore" type="button" class="btn" hidden>Show more</button>
     </div>
+  </div>
   </div>
 </main>
 

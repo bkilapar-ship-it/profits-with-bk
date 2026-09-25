@@ -969,6 +969,14 @@ const state = {
   setups: null,
   setupsError: '',
   setupsLoading: null,
+  page: 'scanner',
+  paper: null,
+  paperError: '',
+  paperLoading: null,
+  paperTab: 'overview',
+  paperFilter: { strategy: 'all', result: 'all' },
+  paperSide: 'all',
+  paperLimit: 20,
 };
 const sortOf = () => state.sort[state.strategy];
 const isSetupStrategy = () => state.strategy !== 'macd';
@@ -986,7 +994,7 @@ function init() {
     'statusText', 'progressBar', 'emptyState', 'noMatch', 'resultsCards', 'resultsTable', 'resultsBody',
     'shownCount', 'showMore', 'settingsSheet', 'closeSettings', 'settingsError', 'periodsHint',
     'providerSelect', 'apiKey', 'saveKey', 'keyStatus', 'forgetKey', 'clearCacheBtn', 'resetSettings',
-    'detail', 'detailBody', 'detailClose', 'setupArea', 'tfSwitch', 'strategyTabs', 'toolbar', 'statusRow', 'strategyIntro', 'layoutToggle',
+    'detail', 'detailBody', 'detailClose', 'setupArea', 'tfSwitch', 'strategyTabs', 'toolbar', 'statusRow', 'strategyIntro', 'layoutToggle', 'openPaper', 'paperPage', 'scannerPage',
   ].forEach(id => { els[id] = $(id); });
   SETTING_FIELDS.forEach(([, id]) => { els[id] = $(id); });
 
@@ -1169,6 +1177,10 @@ function init() {
   loadUniverse();
   const savedStrategy = storage.get('strategy');
   setStrategy(STRATEGIES[savedStrategy] ? savedStrategy : 'dip');
+  initPaper();
+  const savedTab = storage.get('paperTab');
+  if (PAPER_TABS.some(([k]) => k === savedTab)) state.paperTab = savedTab;
+  if (storage.get('page') === 'paper') setPage('paper');
 }
 
 function debounce(fn, ms) {
@@ -1843,6 +1855,7 @@ function emptyMessage(scoped) {
 }
 
 function render() {
+  if (state.page === 'paper') { renderPaper(); return; }
   const market = state.mode === 'market';
   const setupMode = isSetupStrategy();
   const boardMode = state.view === 'sectors' && !state.group;
@@ -2785,6 +2798,376 @@ function drawChart(canvas, r, markers = []) {
   ctx.fillText(String(ser.time[0] ?? ''), padL, H - 9);
   ctx.textAlign = 'right';
   ctx.fillText(`Current: ${ser.time[n - 1] ?? ''}`, xc, H - 9);
+}
+
+/* =========================================================================
+ * 6. PAPER TRADING
+ *
+ * Reads data/paper.json, written by the scheduled paper-trading job (or, for
+ * the prototype, a replay of the rules on real prices). The site only reads
+ * it: orders are placed by the job, never from the browser.
+ * ========================================================================= */
+const PAPER_TABS = [['overview', 'Overview'], ['positions', 'Positions'], ['orders', 'Orders'], ['history', 'History'], ['rules', 'Rules']];
+const STRAT_NAME = { dip: 'Uptrend Dip', rip: 'Downtrend Rip' };
+
+function setPage(page) {
+  state.page = page === 'paper' ? 'paper' : 'scanner';
+  storage.set('page', state.page);
+  const paper = state.page === 'paper';
+  els.paperPage.hidden = !paper;
+  els.scannerPage.hidden = paper;
+  els.openPaper.classList.toggle('active', paper);
+  els.openPaper.setAttribute('aria-pressed', String(paper));
+  closeDetail();
+  if (paper) { loadPaper(); renderPaper(); }
+  else render();
+  window.scrollTo(0, 0);
+}
+
+function loadPaper(force = false) {
+  if (state.paperLoading && !force) return state.paperLoading;
+  state.paperError = '';
+  state.paperLoading = fetch(`${CONFIG.MARKET_DATA_DIR}paper.json`, { cache: 'no-cache' })
+    .then(res => {
+      if (res.status === 404) return null;
+      if (!res.ok) throw new ScreenerError(`Could not load paper trading results (HTTP ${res.status}).`, 'api');
+      return res.json();
+    })
+    .then(j => { state.paper = j; })
+    .catch(e => { state.paper = null; state.paperError = errorMessage(e); })
+    .then(() => { if (state.page === 'paper') renderPaper(); return state.paper; });
+  return state.paperLoading;
+}
+
+function money(x, signed = false) {
+  if (!isNum(x)) return '—';
+  const s = `$${Math.abs(x).toLocaleString(undefined, { maximumFractionDigits: 0 })}`;
+  return signed ? `${x > 0 ? '+' : x < 0 ? '−' : ''}${s}` : (x < 0 ? `−${s}` : s);
+}
+function signedPct(x, digits = 1) { return isNum(x) ? `${x > 0 ? '+' : x < 0 ? '−' : ''}${Math.abs(x).toFixed(digits)}%` : '—'; }
+function cls(x) { return !isNum(x) || x === 0 ? '' : x > 0 ? 'up' : 'down'; }
+
+function paperStats(P) {
+  const t = P.trades || [];
+  const n = t.length;
+  const won = t.filter(x => x.usd > 0).length;
+  const avg = n ? t.reduce((s, x) => s + x.pct, 0) / n : null;
+  const worst = n ? t.reduce((a, b) => (b.pct < a.pct ? b : a)) : null;
+  const best = n ? t.reduce((a, b) => (b.pct > a.pct ? b : a)) : null;
+  let peak = P.account.start, dd = 0;
+  for (const e of P.equity || []) { peak = Math.max(peak, e.value); dd = Math.min(dd, (e.value / peak - 1) * 100); }
+  const slip = t.filter(x => isNum(x.signalClose) && x.signalClose > 0)
+    .map(x => (x.side === 'long' ? x.entry / x.signalClose - 1 : 1 - x.entry / x.signalClose) * 100);
+  const by = key => {
+    const g = {};
+    for (const x of t) { const k = key(x); (g[k] = g[k] || []).push(x); }
+    return Object.entries(g).map(([k, xs]) => ({ key: k, n: xs.length, won: xs.filter(x => x.usd > 0).length,
+      avg: xs.reduce((s, x) => s + x.pct, 0) / xs.length, usd: xs.reduce((s, x) => s + x.usd, 0) }));
+  };
+  return {
+    n, won, lost: n - won, winRate: n ? (won / n) * 100 : null, avg, totalUsd: t.reduce((s, x) => s + x.usd, 0),
+    hitTarget: n ? (t.filter(x => x.how === 'target').length / n) * 100 : null,
+    stopped: n ? (t.filter(x => x.how === 'stop').length / n) * 100 : null,
+    stoppedN: t.filter(x => x.how === 'stop').length,
+    worst, best, maxDD: dd, slip: slip.length ? slip.reduce((a, b) => a + b, 0) / slip.length : null,
+    byStrategy: by(x => x.strategy), byMonth: by(x => String(x.exitDate).slice(0, 7)).sort((a, b) => (a.key < b.key ? -1 : 1)),
+  };
+}
+
+function equityChart(eq) {
+  if (!eq || eq.length < 2) return '<p class="hint">The chart appears after the first few sessions.</p>';
+  const W = 420, H = 190, L = 36, R = 8, Tp = 10, B = 22;
+  const vals = eq.flatMap(e => [e.pct, e.spy]).filter(isNum);
+  let lo = Math.min(0, ...vals), hi = Math.max(0, ...vals);
+  const padv = (hi - lo) * 0.1 || 1; lo -= padv; hi += padv;
+  const x = i => L + (i / (eq.length - 1)) * (W - L - R);
+  const y = v => Tp + (hi - v) / (hi - lo) * (H - Tp - B);
+  const line = key => eq.map((e, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(e[key]).toFixed(1)}`).join('');
+  const step = Math.max(1, Math.ceil((hi - lo) / 4));
+  let grid = '';
+  for (let v = Math.ceil(lo); v <= hi; v += step) {
+    grid += `<line x1="${L}" x2="${W - R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" class="eq-grid"/><text x="${L - 6}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end" class="eq-label">${v > 0 ? '+' : ''}${v}%</text>`;
+  }
+  return `<svg class="eq-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Paper account return compared with the S&amp;P 500">
+    ${grid}
+    <path d="${line('spy')}" class="eq-spy"/><path d="${line('pct')}" class="eq-paper"/>
+    <circle cx="${x(eq.length - 1).toFixed(1)}" cy="${y(eq[eq.length - 1].pct).toFixed(1)}" r="4" class="eq-dot"/>
+    <text x="${L}" y="${H - 6}" class="eq-label">${escapeHtml(fmtSession(eq[0].d))}</text>
+    <text x="${W - R}" y="${H - 6}" text-anchor="end" class="eq-label">${escapeHtml(fmtSession(eq[eq.length - 1].d))}</text>
+  </svg>
+  <div class="legend"><span><i style="background:var(--brand)"></i>Paper account</span><span><i class="dash"></i>S&amp;P 500</span></div>`;
+}
+
+function pstat(label, value, sub = '', c = '') {
+  return `<div class="pstat"><span>${label}</span><b class="${c}">${value}</b>${sub ? `<small>${sub}</small>` : ''}</div>`;
+}
+function meter(frac, cl = '') { return `<div class="meter ${cl}"><div style="width:${Math.max(0, Math.min(1, frac)) * 100}%"></div></div>`; }
+
+function paperVerdict(P, st) {
+  const R = P.rules;
+  if (st.n < 20) return ['Too early to tell', 'neutral'];
+  if (st.avg >= R.successAvgPct && st.avg >= P.backtest.avgPct * 0.5) return ['On track', 'good'];
+  if (st.avg >= 0) return ['Behind the backtest', 'warn'];
+  return ['Losing money', 'bad'];
+}
+
+function paperOverview(P, st) {
+  const R = P.rules;
+  const last = (P.equity || [])[P.equity.length - 1] || { pct: 0, spy: 0, value: P.account.value };
+  const gain = P.account.value - P.account.start;
+  const [verdict, vcls] = paperVerdict(P, st);
+  const weeks = Math.max(1, (new Date(P.asOf) - new Date(P.startedAt)) / 6048e5);
+  const perWeek = st.n / weeks;
+  const toGo = perWeek > 0 ? Math.ceil(Math.max(0, R.reviewAfter - st.n) / perWeek) : null;
+  const inUseMax = R.perTrade * R.maxOpen;
+  const row = (label, paper, bt) => `<tr><td>${label}</td><td class="num"><b>${paper}</b></td><td class="num muted">${bt}</td></tr>`;
+  return `
+    <section class="panel pcard">
+      <div class="prow"><span class="pill ${P.status === 'running' ? 'pill-curl' : 'pill-none'}">${P.simulated ? 'Simulated' : P.status === 'running' ? 'Running' : 'Paused'}</span><span class="hint">${escapeHtml(P.broker || 'Alpaca paper account')}, since ${escapeHtml(fmtSession(P.startedAt))}</span></div>
+      <div class="pvalue"><span>Account value</span><b>${money(P.account.value)}</b>
+        <em class="${cls(gain)}">${money(gain, true)} (${signedPct(last.pct)}) since the start</em>
+        <small>S&amp;P 500 over the same days: ${signedPct(last.spy)}</small></div>
+      ${equityChart(P.equity)}
+    </section>
+    <section class="panel pcard">
+      <div class="prow"><h2>Results so far</h2><span class="hint">${st.n} closed trade${st.n === 1 ? '' : 's'}</span></div>
+      <div class="pgrid">
+        ${pstat('Profitable', signedPct(st.winRate, 0).replace('+', ''), `${st.won} won, ${st.lost} lost`)}
+        ${pstat('Avg per trade', signedPct(st.avg), `${money(isNum(st.avg) ? R.perTrade * st.avg / 100 : null, true)} on ${money(R.perTrade)}`, cls(st.avg))}
+        ${pstat('Hit target', signedPct(st.hitTarget, 0).replace('+', ''), `sold at +${R.targetAtr} ATR`)}
+        ${pstat('Stopped out', signedPct(st.stopped, 0).replace('+', ''), `${st.stoppedN} trade${st.stoppedN === 1 ? '' : 's'}`)}
+        ${pstat('Worst trade', st.worst ? signedPct(st.worst.pct) : '—', st.worst ? `${escapeHtml(st.worst.ticker)}, ${escapeHtml(fmtSession(st.worst.exitDate))}` : '', 'down')}
+        ${pstat('Biggest dip in account', signedPct(st.maxDD), 'from its high', st.maxDD < 0 ? 'down' : '')}
+      </div>
+    </section>
+    <section class="panel pcard">
+      <div class="prow"><h2>Compared with the backtest</h2><span class="tag ${vcls}">${verdict}</span></div>
+      <div class="bt-scroll"><table class="bt-list ptable">
+        <thead><tr><th>Measure</th><th class="num">Paper</th><th class="num">Backtest</th></tr></thead>
+        <tbody>
+          ${row('Profitable', signedPct(st.winRate, 0).replace('+', ''), `${P.backtest.profitable}%`)}
+          ${row('Avg per trade', signedPct(st.avg), signedPct(P.backtest.avgPct))}
+          ${row('Hit target', signedPct(st.hitTarget, 0).replace('+', ''), `${P.backtest.hitTarget}%`)}
+          ${row('Stopped out', signedPct(st.stopped, 0).replace('+', ''), `${P.backtest.stopped}%`)}
+          ${row('Entry vs signal close', signedPct(st.slip, 2), '0% (assumed)')}
+        </tbody>
+      </table></div>
+      <div class="prow small"><b>${st.n} of ${R.reviewAfter} trades before the review</b><span class="hint">${toGo === null ? '' : toGo ? `about ${toGo} week${toGo === 1 ? '' : 's'} to go` : 'ready to review'}</span></div>
+      ${meter(st.n / R.reviewAfter)}
+      <p class="hint">Success bar: an average above +${R.successAvgPct}% per trade after ${R.reviewAfter} trades. Backtest figures: ${escapeHtml(P.backtest.period)}. “Entry vs signal close” shows how much worse (+) or better (−) real entries were than the price the signal assumed.</p>
+    </section>
+    <section class="panel pcard">
+      <h2>Money in use</h2>
+      <div class="prow small"><span>Open positions</span><b>${(P.positions || []).length} of ${R.maxOpen}</b></div>
+      ${meter((P.positions || []).length / R.maxOpen)}
+      <div class="prow small"><span>In trades</span><b>${money(P.account.inTrades)} of ${money(inUseMax)}</b></div>
+      ${meter(P.account.inTrades / inUseMax, 'navy')}
+      <div class="pbtns"><button type="button" class="btn btn-primary" data-paper-tab="positions">Open positions</button><button type="button" class="btn" data-paper-tab="orders">Next orders</button></div>
+    </section>
+    <section class="panel pcard">
+      <h2>By strategy</h2>
+      ${st.byStrategy.length ? st.byStrategy.map(g => `<div class="track-row"><div><b>${escapeHtml(STRAT_NAME[g.key] || g.key)}</b><small>${g.key === 'rip' ? 'Short' : 'Long'}, ${g.n} trades, ${Math.round(g.won / g.n * 100)}% profitable</small></div><b class="${cls(g.avg)}">${signedPct(g.avg)}</b></div>`).join('') : '<p class="hint">No closed trades yet.</p>'}
+      <p class="hint">MACD Curl isn’t paper traded: it showed no edge as a trade signal in the research.</p>
+    </section>`;
+}
+
+function positionCard(p) {
+  const long = p.side === 'long';
+  const pnl = (long ? p.now - p.entry : p.entry - p.now) * p.shares;
+  const pct = (long ? p.now / p.entry - 1 : 1 - p.now / p.entry) * 100;
+  const lo = long ? p.stop : p.target, hi = long ? p.target : p.stop;
+  const f = v => Math.max(0, Math.min(100, ((v - lo) / (hi - lo)) * 100));
+  const name = companyName(p.ticker);
+  return `<article class="card pos-card">
+    <div class="card-top">
+      <div class="card-id"><span class="ticker">${escapeHtml(p.ticker)}</span>${name ? `<span class="cname">${escapeHtml(name)}</span>` : ''}</div>
+      <div class="card-price ${cls(pnl)}">${money(pnl, true)}<small class="${cls(pnl)}">${signedPct(pct)}</small></div>
+    </div>
+    <div class="card-tags left">
+      <span class="tag ${long ? 'good' : 'warn'}">${long ? 'Long' : 'Short'}, ${escapeHtml(STRAT_NAME[p.strategy] || p.strategy)}</span>
+      <span class="tag">Day ${p.day} of 3</span>
+      <span class="tag">Exits ${escapeHtml(fmtSession(p.exitDate))} close</span>
+    </div>
+    <p class="setup-facts">${long ? 'Bought' : 'Shorted'} ${p.shares} shares at <b>${fmtPrice(p.entry)}</b> (${money(p.shares * p.entry)}) on ${escapeHtml(fmtSession(p.entryDate))}. Last close <b>${fmtPrice(p.now)}</b>.</p>
+    <div class="range" aria-label="Price between ${long ? 'stop' : 'target'} and ${long ? 'target' : 'stop'}">
+      <div class="range-track"><span class="range-entry" style="left:${f(p.entry)}%"></span><span class="range-now ${cls(pnl)}" style="left:${f(p.now)}%"></span></div>
+      <div class="range-labels"><span>${long ? 'Stop' : 'Target'} <b>${fmtPrice(lo)}</b></span><span>entry ${fmtPrice(p.entry)}</span><span>${long ? 'Target' : 'Stop'} <b>${fmtPrice(hi)}</b></span></div>
+    </div>
+  </article>`;
+}
+
+function paperPositions(P) {
+  const all = P.positions || [];
+  const side = state.paperSide;
+  const nLong = all.filter(p => p.side === 'long').length, nShort = all.length - nLong;
+  const pos = side === 'all' ? all : all.filter(p => p.side === side);
+  const chip = (key, label, n) => `<button type="button" class="chip${side === key ? ' active' : ''}" data-paper-side="${key}" aria-pressed="${side === key}">${label}<span class="tab-n">(${n})</span></button>`;
+  const filters = `<div class="chips side-filter" role="group" aria-label="Filter positions">${chip('all', 'All', all.length)}${chip('long', 'Long', nLong)}${chip('short', 'Short', nShort)}</div>`;
+  const openPnl = pos.reduce((s, p) => s + (p.side === 'long' ? p.now - p.entry : p.entry - p.now) * p.shares, 0);
+  const cost = pos.reduce((s, p) => s + p.shares * p.entry, 0);
+  const exiting = pos.filter(p => p.day >= P.rules.holdSessions - 1).length;
+  const emptyText = side === 'all'
+    ? `<p><strong>No open positions.</strong></p><p>${(P.orders && P.orders.entries.length) ? `Next orders: ${P.orders.entries.map(e => escapeHtml(e.ticker)).join(', ')}.` : 'New trades open when setups appear.'}</p>`
+    : `<p><strong>No open ${side} positions.</strong></p><p>${side === 'long' ? 'Long trades come from Uptrend Dip setups.' : 'Short trades come from Downtrend Rip setups.'}</p>`;
+  return `
+    ${filters}
+    <section class="panel pcard"><div class="pgrid three">
+      ${pstat(side === 'all' ? 'Open' : `Open ${side}`, side === 'all' ? `${pos.length} of ${P.rules.maxOpen}` : String(pos.length))}
+      ${pstat('Open P&amp;L', money(openPnl, true), cost ? signedPct(openPnl / cost * 100) : '', cls(openPnl))}
+      ${pstat('Exiting next close', String(exiting))}
+    </div></section>
+    ${pos.length ? `<div class="cards">${pos.map(positionCard).join('')}</div>` : `<div class="empty small">${emptyText}</div>`}
+    <p class="hint">Each position has a take-profit and a stop order working at the broker. Anything still open in its 3rd session is closed at that day’s close.</p>`;
+}
+
+function paperOrders(P) {
+  const O = P.orders || { entries: [], skipped: [], exits: [] };
+  const entry = e => `<div class="order-row">
+      <span class="rank">${e.rank}</span>
+      <div><div class="prow"><b>${escapeHtml(e.ticker)} <small class="muted">${escapeHtml(companyName(e.ticker))}</small></b><span class="pill pill-loading">Queued</span></div>
+      <small class="muted">${escapeHtml(STRAT_NAME[e.strategy])}: ${e.strategy === 'dip' ? `${signedPct(e.vs200)} vs 200-day, ${signedPct(e.chg5d)} in 5 sessions` : `${signedPct(e.chg5d)} in 5 sessions`}</small>
+      <div class="small">${e.strategy === 'dip' ? 'Buy' : 'Short'} <b>${e.shares}</b> shares, limit <b>${fmtPrice(e.limit)}</b> (about ${money(P.rules.perTrade)})</div></div>
+    </div>`;
+  const line = (a, b) => `<div class="track-row"><b>${escapeHtml(a)}</b><span class="muted right">${escapeHtml(b)}</span></div>`;
+  return `
+    <section class="panel pcard">
+      <div class="prow"><h2>Entering at the open</h2><span class="hint">${O.entries.length} of ${P.rules.maxNewPerDay} daily slots</span></div>
+      <p class="hint">Ranked strongest uptrend first, the order that did best on crowded days in the research.</p>
+      ${O.entries.length ? O.entries.map(entry).join('') : '<p class="hint">No new setups for this open.</p>'}
+    </section>
+    <section class="panel pcard">
+      <div class="prow"><h2>Skipped</h2><span class="hint">${O.skipped.length} signal${O.skipped.length === 1 ? '' : 's'}</span></div>
+      ${O.skipped.length ? O.skipped.map(x => line(x.ticker, x.reason)).join('') : '<p class="hint">Nothing skipped: every signal fit.</p>'}
+      <p class="hint">Skipped signals aren’t kept for later. They still show in the scanner’s tracker, so you can compare.</p>
+    </section>
+    <section class="panel pcard">
+      <h2>Exits at the next close</h2>
+      ${O.exits.length ? O.exits.map(x => line(x.ticker, x.note)).join('') : '<p class="hint">No time exits due.</p>'}
+    </section>
+    <section class="panel pcard">
+      <h2>Daily schedule (US Eastern)</h2>
+      <div class="schedule"><b>9:20</b><span>Orders placed for the open</span><b>9:35</b><span>Take-profit and stop added to new fills</span><b>15:45</b><span>3rd-session exits sent for the close</span><b>16:45</b><span>Results saved and new signals scanned</span></div>
+    </section>`;
+}
+
+function paperHistory(P, st) {
+  const f = state.paperFilter;
+  let t = P.trades || [];
+  if (f.strategy !== 'all') t = t.filter(x => x.strategy === f.strategy);
+  if (f.result === 'won') t = t.filter(x => x.usd > 0);
+  if (f.result === 'lost') t = t.filter(x => x.usd <= 0);
+  if (state.findText) t = t.filter(x => matchesFind(x.ticker));
+  const shown = t.slice(0, state.paperLimit);
+  const chip = (group, key, label) => `<button type="button" class="chip${f[group] === key ? ' active' : ''}" data-paper-filter="${group}:${key}" aria-pressed="${f[group] === key}">${label}</button>`;
+  const how = { target: ['Target', 'good'], stop: ['Stop', 'bad'], time: ['Day-3 exit', ''] };
+  const tr = x => `<div class="track-row">
+      <div><div class="prow start"><b>${escapeHtml(x.ticker)}</b><span class="tag ${how[x.how][1]}">${how[x.how][0]}</span></div>
+      <small>${escapeHtml(STRAT_NAME[x.strategy])}, ${escapeHtml(fmtSession(x.entryDate))} to ${escapeHtml(fmtSession(x.exitDate))}</small></div>
+      <div class="right"><b class="${cls(x.pct)}">${signedPct(x.pct)}</b><small class="${cls(x.usd)}">${money(x.usd, true)}</small></div>
+    </div>`;
+  const total = t.reduce((s, x) => s + x.usd, 0);
+  const won = t.filter(x => x.usd > 0).length;
+  return `
+    <div class="chips">${chip('strategy', 'all', 'All')}${chip('strategy', 'dip', 'Uptrend Dip')}${chip('strategy', 'rip', 'Downtrend Rip')}${chip('result', 'all', 'Any result')}${chip('result', 'won', 'Won')}${chip('result', 'lost', 'Lost')}</div>
+    <section class="panel pcard"><div class="pgrid three">
+      ${pstat('Trades', String(t.length))}
+      ${pstat('Won / lost', `${won} / ${t.length - won}`)}
+      ${pstat('Total', money(total, true), '', cls(total))}
+    </div></section>
+    <section class="panel pcard">
+      <div class="prow"><h2>Closed trades</h2><span class="hint">newest first</span></div>
+      ${shown.length ? shown.map(tr).join('') : '<p class="hint">No trades match these filters.</p>'}
+      ${t.length > shown.length ? `<button type="button" class="btn" data-paper-more>Show more (${t.length - shown.length} left)</button>` : ''}
+    </section>
+    <section class="panel pcard">
+      <h2>By month</h2>
+      <div class="bt-scroll"><table class="bt-list ptable"><thead><tr><th>Month</th><th class="num">Trades</th><th class="num">Profitable</th><th class="num">Avg</th><th class="num">Total</th></tr></thead>
+      <tbody>${st.byMonth.map(m => `<tr><td>${escapeHtml(new Date(m.key + '-15T12:00:00Z').toLocaleDateString(undefined, { month: 'long', year: 'numeric', timeZone: 'UTC' }))}</td><td class="num">${m.n}</td><td class="num">${Math.round(m.won / m.n * 100)}%</td><td class="num ${cls(m.avg)}"><b>${signedPct(m.avg)}</b></td><td class="num ${cls(m.usd)}">${money(m.usd, true)}</td></tr>`).join('')}</tbody></table></div>
+    </section>
+    <button type="button" class="btn" data-paper-csv>Download trade log (CSV)</button>`;
+}
+
+function paperRules(P) {
+  const R = P.rules;
+  const kv = (k, v) => `<span class="muted">${k}</span><b>${v}</b>`;
+  return `
+    <section class="panel pcard">
+      <div class="prow"><h2>Status</h2><span class="pill ${P.status === 'running' ? 'pill-curl' : 'pill-none'}">${P.simulated ? 'Simulated' : P.status === 'running' ? 'Running' : 'Paused'}</span></div>
+      <p class="hint">Locked to Alpaca paper trading. It can’t place real trades.</p>
+    </section>
+    <section class="panel pcard">
+      <h2>Money</h2>
+      <div class="kv">${kv('Per trade', money(R.perTrade))}${kv('Max open positions', R.maxOpen)}${kv('Max new trades per day', R.maxNewPerDay)}${kv('Most in trades at once', money(R.perTrade * R.maxOpen))}</div>
+    </section>
+    <section class="panel pcard">
+      <h2>What it trades</h2>
+      <div class="kv">${kv('Uptrend Dip (long)', R.strategies.dip ? 'On' : 'Off')}${kv('Downtrend Rip (short)', R.strategies.rip ? 'On' : 'Off')}${kv('MACD Curl', R.strategies.macd ? 'On' : 'Off (not tested as a trade signal)')}${kv('Stocks', R.sp500Only ? 'S&amp;P 500 only' : 'All liquid US stocks')}${kv('When signals outnumber slots', escapeHtml(R.ranking))}</div>
+    </section>
+    <section class="panel pcard">
+      <h2>Entries and exits</h2>
+      <div class="kv">${kv('Entry', 'Limit order at the open, up to 2% past the signal close')}${kv('Target', `${R.targetAtr} × ATR from entry`)}${kv('Stop', `${R.stopAtr} × ATR from entry`)}${kv('Time exit', `Close of session ${R.holdSessions}`)}${kv('Late entry', 'Only if day 1 moved against the setup')}</div>
+    </section>
+    <section class="panel pcard">
+      <h2>Review point</h2>
+      <div class="kv">${kv('Review after', `${R.reviewAfter} trades`)}${kv('Success bar', `Average above +${R.successAvgPct}% per trade`)}</div>
+      <p class="hint">These rules are set in the GitHub workflow, not in the app, so they can’t drift during a test. Changing them starts a fresh comparison.</p>
+    </section>`;
+}
+
+function renderPaper() {
+  const P = state.paper;
+  const tab = state.paperTab;
+  const head = `
+    <div class="paper-head">
+      <button type="button" class="btn btn-small btn-ghost" data-paper-back>← Back to the scanner</button>
+      <h1>Paper trading</h1>
+      <p class="explain">Every Uptrend Dip and Downtrend Rip signal, traded automatically with virtual money, to see how the rules hold up in live markets.</p>
+      ${P && P.simulated ? `<div class="sim-banner"><b>Simulated results.</b> ${escapeHtml(P.note || '')} Shown as of ${escapeHtml(fmtSession(P.asOf))}.</div>` : ''}
+    </div>
+    <nav class="tabs paper-tabs" role="tablist" aria-label="Paper trading sections">
+      ${PAPER_TABS.map(([k, label]) => {
+        const n = P && k === 'positions' ? (P.positions || []).length : P && k === 'orders' ? (P.orders ? P.orders.entries.length : 0) : 0;
+        return `<button type="button" role="tab" data-paper-tab="${k}" class="${tab === k ? 'active' : ''}" aria-selected="${tab === k}">${label}${n ? `<span class="tab-n">(${n})</span>` : ''}</button>`;
+      }).join('')}
+    </nav>`;
+  if (!P) {
+    els.paperPage.innerHTML = head + `<div class="empty"><p><strong>${escapeHtml(state.paperError || (state.paperLoading ? 'Loading…' : 'Paper trading hasn’t started yet.'))}</strong></p>
+      <p>Once the paper-trading job is switched on, it trades every new setup with virtual money and publishes the results here each day.</p></div>`;
+    return;
+  }
+  const st = paperStats(P);
+  let body = '';
+  if (tab === 'positions') body = paperPositions(P);
+  else if (tab === 'orders') body = `<p class="hint">For the ${escapeHtml(fmtSession(P.orders && P.orders.forDate))} open. Orders only go to the paper account.</p>` + paperOrders(P);
+  else if (tab === 'history') body = paperHistory(P, st);
+  else if (tab === 'rules') body = paperRules(P);
+  else body = paperOverview(P, st);
+  els.paperPage.innerHTML = head + `<div class="paper-body">${body}</div>`;
+}
+
+function paperCsv() {
+  const P = state.paper;
+  if (!P) return;
+  const cols = ['ticker', 'strategy', 'side', 'signalDate', 'entryDate', 'exitDate', 'shares', 'entry', 'exit', 'how', 'pct', 'usd'];
+  const csv = [cols.join(',')].concat((P.trades || []).map(t => cols.map(c => JSON.stringify(t[c] ?? '')).join(','))).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+  a.download = 'paper-trades.csv';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+
+function initPaper() {
+  els.openPaper.addEventListener('click', () => setPage(state.page === 'paper' ? 'scanner' : 'paper'));
+  els.paperPage.addEventListener('click', e => {
+    const t = e.target.closest('[data-paper-tab],[data-paper-back],[data-paper-filter],[data-paper-side],[data-paper-more],[data-paper-csv]');
+    if (!t) return;
+    if (t.dataset.paperBack !== undefined) { setPage('scanner'); return; }
+    if (t.dataset.paperTab) { state.paperTab = t.dataset.paperTab; state.paperLimit = 20; storage.set('paperTab', state.paperTab); renderPaper(); window.scrollTo({ top: 0 }); return; }
+    if (t.dataset.paperSide) { state.paperSide = t.dataset.paperSide; renderPaper(); return; }
+    if (t.dataset.paperFilter) { const [g, k] = t.dataset.paperFilter.split(':'); state.paperFilter[g] = k; state.paperLimit = 20; renderPaper(); return; }
+    if (t.dataset.paperMore !== undefined) { state.paperLimit += 20; renderPaper(); return; }
+    if (t.dataset.paperCsv !== undefined) paperCsv();
+  });
 }
 
 /* ---------- Boot ---------- */

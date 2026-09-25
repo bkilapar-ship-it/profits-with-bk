@@ -20,6 +20,8 @@ Every list can be **searched** (by ticker or company name) and **sorted**:
 
 On the **Watchlist** tab, Uptrend Dip and Downtrend Rip are checked live on your tickers' daily candles, including how far each ticker is from qualifying.
 
+The **Paper** button in the top bar opens the paper-trading section: Overview, Positions (filter by long or short), Orders, History and Rules. It reads `data/paper.json`, which the paper-trading job will publish. Until that job is set up, the section says paper trading hasn't started yet.
+
 There are two ways to scan:
 
 | | **All US, index and sector tabs** | **Watchlist tab** |
