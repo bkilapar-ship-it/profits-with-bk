@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Trade With BK — MACD Curl-Up Screener</title>
-  <meta name="description" content="Trade With BK: find stocks where MACD is below its Signal line but curling upward, across US stocks, indexes, sectors and themes.">
+  <title>Trade With BK — Swing Setup Scanner</title>
+  <meta name="description" content="Trade With BK: rules-based swing setups (Uptrend Dip, Downtrend Rip, MACD Curl) scanned daily across US stocks, indexes, sectors and themes.">
   <meta name="theme-color" content="#13233F">
   <meta name="apple-mobile-web-app-title" content="Trade With BK">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -43,15 +43,19 @@
 
 <main class="wrap">
   <section class="intro">
-    <h1>MACD Curl-Up Screener</h1>
-    <p class="subtitle">Find stocks where MACD momentum is turning upward before a bullish crossover.</p>
-    <p class="explain">An <strong>Early Bullish Curl</strong> means MACD is below its Signal line but rising, with the MACD/Signal gap narrowing.</p>
+    <h1>Swing Setup Scanner</h1>
+    <p class="subtitle">Rules-based setups for 1–3 day trades, scanned every day across US stocks.</p>
+    <p class="explain">Pick a setup. <strong>Uptrend Dip</strong> (long) and <strong>Downtrend Rip</strong> (short) held up in a 30-year backtest. <strong>MACD Curl</strong> spots momentum turning up, and works best as a watch-and-timing tool.</p>
   </section>
+
+  <nav id="strategyTabs" class="strategy-tabs" role="tablist" aria-label="Setups">
+    <button type="button" role="tab" data-strategy="dip"><b>Uptrend Dip</b><span>Long, 1–3 days</span></button>
+    <button type="button" role="tab" data-strategy="rip"><b>Downtrend Rip</b><span>Short, 1–3 days</span></button>
+    <button type="button" role="tab" data-strategy="macd"><b>MACD Curl</b><span>Watch and timing</span></button>
+  </nav>
 
   <nav id="tabs" class="tabs" role="tablist" aria-label="Stock lists">
     <button type="button" role="tab" data-view="all">All US</button>
-    <button type="button" role="tab" data-view="dip">Uptrend Dip</button>
-    <button type="button" role="tab" data-view="rip">Downtrend Rip</button>
     <button type="button" role="tab" data-view="watchlist">Watchlist</button>
     <button type="button" role="tab" data-view="sp500">S&amp;P 500</button>
     <button type="button" role="tab" data-view="ndx">Nasdaq-100</button>
@@ -71,6 +75,9 @@
     </button>
   </section>
 
+  <!-- Intro card for the selected setup -->
+  <div id="strategyIntro" class="strategy-intro"></div>
+
   <!-- Watchlist editor -->
   <section id="watchPanel" class="panel watch-panel" hidden>
     <div class="add-row">
@@ -88,13 +95,36 @@
     <div id="watchKeyNote" class="key-note"></div>
   </section>
 
-  <!-- Swing setups: Uptrend Dip (long) / Downtrend Rip (short) -->
-  <section id="setupArea" class="setup-area" hidden></section>
-
   <!-- Sectors & themes -->
   <section id="groupHeader" class="group-header" hidden></section>
   <section id="sectorBoard" class="board" hidden></section>
 
+  <!-- Shared search & sort -->
+  <div id="toolbar" class="list-toolbar">
+    <label class="find">
+      <span class="sr-only">Find a ticker or company</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>
+      <input id="findTicker" type="search" placeholder="Find ticker or company" autocomplete="off" spellcheck="false">
+    </label>
+    <div class="sort">
+      <label class="sr-only" for="sortKey">Sort by</label>
+      <select id="sortKey"></select>
+      <button id="sortDir" type="button" class="btn btn-small" aria-label="Toggle sort direction">↓</button>
+    </div>
+    <div id="layoutToggle" class="layout-toggle" role="group" aria-label="Layout">
+      <button id="layoutCards" type="button" class="btn btn-small">Cards</button>
+      <button id="layoutTable" type="button" class="btn btn-small">Table</button>
+    </div>
+  </div>
+  <div id="statusRow" class="status-row">
+    <p id="statusText" class="status-text" aria-live="polite"></p>
+    <div class="progress" aria-hidden="true"><div id="progressBar" class="progress-bar"></div></div>
+  </div>
+
+  <!-- Uptrend Dip / Downtrend Rip -->
+  <section id="setupArea" class="setup-area" hidden></section>
+
+  <!-- MACD Curl -->
   <div id="listArea" class="list-area">
     <div id="statChips" class="chips" role="group" aria-label="Filter by signal"></div>
 
@@ -102,35 +132,6 @@
       <summary id="btHeadline">Backtest</summary>
       <div id="btBody"></div>
     </details>
-
-    <div class="list-toolbar">
-      <label class="find">
-        <span class="sr-only">Find a ticker or company</span>
-        <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>
-        <input id="findTicker" type="search" placeholder="Find ticker or company" autocomplete="off" spellcheck="false">
-      </label>
-      <div class="sort">
-        <label class="sr-only" for="sortKey">Sort by</label>
-        <select id="sortKey">
-          <option value="score">Setup Strength</option>
-          <option value="btc">Bars To Cross</option>
-          <option value="rsi">RSI</option>
-          <option value="relVol">Relative Volume</option>
-          <option value="gap">MACD Gap</option>
-          <option value="ticker">Ticker</option>
-        </select>
-        <button id="sortDir" type="button" class="btn btn-small" aria-label="Toggle sort direction">↓</button>
-      </div>
-      <div class="layout-toggle" role="group" aria-label="Layout">
-        <button id="layoutCards" type="button" class="btn btn-small">Cards</button>
-        <button id="layoutTable" type="button" class="btn btn-small">Table</button>
-      </div>
-    </div>
-
-    <div class="status-row">
-      <p id="statusText" class="status-text" aria-live="polite"></p>
-      <div class="progress" aria-hidden="true"><div id="progressBar" class="progress-bar"></div></div>
-    </div>
 
     <div id="emptyState" class="empty" hidden></div>
     <div id="noMatch" class="empty" hidden></div>
@@ -170,7 +171,7 @@
     <svg class="brand-mark small" aria-hidden="true"><use href="#bk-logo"/></svg>
     <span>Trade With <b>BK</b></span>
   </div>
-  <p>This is a technical screening tool, not financial advice and not a trading system. It only reports whether current indicator values match the criteria you set. Setup Strength is not a probability or a forecast of future price.</p>
+  <p>This is a technical screening tool, not financial advice and not a trading system. It reports which stocks match rules-based setups and how those setups behaved in past data. Past results do not guarantee future results.</p>
 </footer>
 
 <!-- ============ SETTINGS SHEET ============ -->

@@ -1,4 +1,4 @@
-/* Trade With BK — MACD Curl-Up Screener */
+/* Trade With BK — Swing Setup Scanner */
 
 :root {
   --bg: #F4F6FA;
@@ -140,6 +140,35 @@ svg { flex-shrink: 0; }
   .tabs button.active { background: var(--brand); }
   .brand-mark { box-shadow: 0 0 0 1px #2E3D5C; }
   .tf-switch input:checked + span { background: #2C3C60; color: #fff; box-shadow: none; }
+}
+
+
+/* ---------- Strategy tabs ---------- */
+.strategy-tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 18px; }
+.strategy-tabs button {
+  font: inherit; text-align: left; cursor: pointer;
+  background: var(--surface); color: var(--ink);
+  border: 1px solid var(--line); border-radius: var(--r-card);
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 2px;
+  box-shadow: var(--shadow-card);
+}
+.strategy-tabs button b { font-size: 1rem; font-weight: 800; letter-spacing: -0.01em; }
+.strategy-tabs button span { font-size: 0.78rem; color: var(--muted); font-weight: 600; }
+.strategy-tabs button:hover { border-color: color-mix(in srgb, var(--brand) 45%, var(--line)); }
+.strategy-tabs button.active { background: var(--navy); border-color: var(--navy); color: #fff; }
+.strategy-tabs button.active span { color: rgba(255, 255, 255, 0.72); }
+@media (prefers-color-scheme: dark) { .strategy-tabs button.active { background: var(--brand); border-color: var(--brand); } }
+.tabs { margin-top: 10px; }
+.tabs button { font-size: 0.88rem; padding: 7px 13px; }
+.setup-scope { margin: 2px 0 4px; }
+.tile-quiet { opacity: 0.62; }
+.strategy-intro { margin-top: 12px; }
+.strategy-intro .setup-intro { margin-bottom: 0; }
+@media (max-width: 640px) {
+  .strategy-tabs { gap: 6px; margin-top: 14px; }
+  .strategy-tabs button { padding: 9px 8px; text-align: center; align-items: center; }
+  .strategy-tabs button b { font-size: 0.84rem; white-space: nowrap; }
+  .strategy-tabs button span { font-size: 0.68rem; }
 }
 
 /* ---------- Controls ---------- */

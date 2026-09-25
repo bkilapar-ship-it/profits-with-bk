@@ -1,10 +1,24 @@
-# Trade With BK — MACD Curl-Up Screener
+# Trade With BK — Swing Setup Scanner
 
 A static stock screener for GitHub Pages. It finds stocks where the **MACD line is still below its Signal line but curling upward**, with the gap between them narrowing. This is often visible a few candles before a conventional bullish MACD crossover.
 
 > **Important:** This is a technical-analysis screening tool, **not financial advice** and **not a trading system**. It only reports whether current indicator values match the criteria you choose. "Setup Strength" is **not** a probability and does **not** predict future prices.
 
-The site has eight tabs: **All US**, **Uptrend Dip**, **Downtrend Rip**, **Watchlist**, **S&P 500**, **Nasdaq-100**, **Dow 30** and **Sectors & themes**. Uptrend Dip and Downtrend Rip are 2–3 day swing setups found in a 30-year study (see section 5). Every tab except Watchlist reads the results of the scheduled market scan, filtered to that list. Tapping a stock shows its company name, sector, index memberships and themes, along with the signal details, chart and backtest.
+The site is organised around three **strategy tabs**, each with the same six **list tabs** underneath:
+
+| Strategy | What it finds | Tested result |
+|---|---|---|
+| **Uptrend Dip** (long) | A sharp drop in a stock still in a long-term uptrend | Held up in a 30-year backtest (section 5) |
+| **Downtrend Rip** (short) | A sharp rally in a stock still in a long-term downtrend | Held up in a 30-year backtest (section 5) |
+| **MACD Curl** | MACD below its Signal line but curling up | No stand-alone edge over 1–5 days; use it to watch and time |
+
+List tabs: **All US**, **Watchlist**, **S&P 500**, **Nasdaq-100**, **Dow 30** and **Sectors & themes**. Uptrend Dip and Downtrend Rip open on S&P 500 by default, since that's the group they were tested on. The app remembers the last list tab and sort you used for each strategy.
+
+Every list can be **searched** (by ticker or company name) and **sorted**:
+- **Uptrend Dip / Downtrend Rip:** uptrend or downtrend strength (vs the 200-day average), 5-day move, price, relative volume, RSI, volatility (ATR %), ticker.
+- **MACD Curl:** Setup Strength, Bars To Cross, price, relative volume, RSI, MACD gap, ticker.
+
+On the **Watchlist** tab, Uptrend Dip and Downtrend Rip are checked live on your tickers' daily candles, including how far each ticker is from qualifying.
 
 There are two ways to scan:
 

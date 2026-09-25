@@ -786,13 +786,14 @@ function addSessions(dateStr, k) {
 
 function setupIndicators(candles) {
   const o = candles.map(x => x.o), h = candles.map(x => x.h), l = candles.map(x => x.l), c = candles.map(x => x.c);
+  const v = candles.map(x => (isNum(x.v) ? x.v : NaN));
   const tr = c.map((_, i) => (i === 0 ? h[0] - l[0] : Math.max(h[i] - l[i], Math.abs(h[i] - c[i - 1]), Math.abs(l[i] - c[i - 1]))));
-  return { o, h, l, c, s200: sma(c, 200), rsi: rsiWilder(c, 14), atr: sma(tr, 14) };
+  return { o, h, l, c, v, vsma: sma(v, CONFIG.VOLUME_SMA), s200: sma(c, 200), rsi: rsiWilder(c, 14), atr: sma(tr, 14) };
 }
 
 /** Setup flags for candle i (null if not enough history). */
 function setupFlags(ind, i) {
-  const { h, l, c, s200, rsi, atr } = ind;
+  const { h, l, c, v, vsma, s200, rsi, atr } = ind;
   if (i < 200 || !isNum(s200[i]) || !isNum(atr[i]) || !isNum(c[i - 5]) || c[i - 5] <= 0) return null;
   const r5 = c[i] / c[i - 5] - 1;
   const rng = h[i] - l[i];
@@ -807,6 +808,7 @@ function setupFlags(ind, i) {
     dip: priceOk && c[i] > s200[i] && r5 <= -0.10 && (bottom20 || newLow20 || down3),
     rip: priceOk && c[i] < s200[i] && r5 >= 0.10 && isNum(rsi[i]) && rsi[i] >= 70,
     r5, clv, bottom20, newLow20, down3, vs200: c[i] / s200[i] - 1, rsi: rsi[i], atr: atr[i],
+    relVol: isNum(v[i]) && isNum(vsma[i]) && vsma[i] > 0 ? v[i] / vsma[i] : null,
   };
 }
 
@@ -855,7 +857,7 @@ function describeSetup(kind, candles, ind, i, f) {
   const sessionsAgo = n - 1 - i;
   const out = {
     kind, signalDate, sessionsAgo,
-    close: candles[i].c, chg5d: f.r5 * 100, rsi: f.rsi, vs200: f.vs200 * 100, atr: f.atr, atrPct: (f.atr / candles[i].c) * 100,
+    close: candles[i].c, chg5d: f.r5 * 100, rsi: f.rsi, vs200: f.vs200 * 100, atr: f.atr, atrPct: (f.atr / candles[i].c) * 100, relVol: f.relVol,
     reasons: kind === 'dip' ? [f.bottom20 && 'closed near the day’s low', f.newLow20 && 'new 20-day low', f.down3 && '3 down days in a row'].filter(Boolean) : [],
     levels: setupLevels(kind, candles[i].c, f.atr),
     entryDate: addSessions(signalDate, 1),
@@ -908,11 +910,21 @@ const DEFAULT_SORT_DIR = { score: 'desc', btc: 'asc', rsi: 'desc', relVol: 'desc
 const PERIOD_FIELDS = ['setFast', 'setSlow', 'setSignal', 'setRsiLen'];
 const TIMEFRAMES = ['1D', '4H', '1H'];
 
-// Tabs. "index" views filter the market scan by index membership.
+// Strategy tabs, each with the same list sub-tabs underneath.
+const STRATEGIES = { dip: 'Uptrend Dip', rip: 'Downtrend Rip', macd: 'MACD Curl' };
+const DEFAULT_SUBVIEW = { dip: 'sp500', rip: 'sp500', macd: 'all' };   // Dip and Rip were tested on S&P 500 stocks
+// Sort options per strategy: [key, label, default direction]
+const SORTS = {
+  macd: [['score', 'Setup Strength', 'desc'], ['btc', 'Bars To Cross', 'asc'], ['price', 'Price', 'desc'], ['relVol', 'Relative volume', 'desc'],
+         ['rsi', 'RSI', 'desc'], ['gap', 'MACD Gap', 'desc'], ['ticker', 'Ticker', 'asc']],
+  dip: [['vs200', 'Uptrend strength (vs 200-day)', 'desc'], ['chg5d', '5-day drop', 'asc'], ['price', 'Price', 'desc'], ['relVol', 'Relative volume', 'desc'],
+        ['rsi', 'RSI', 'asc'], ['atrPct', 'Volatility (ATR %)', 'desc'], ['ticker', 'Ticker', 'asc']],
+  rip: [['chg5d', '5-day rally', 'desc'], ['vs200', 'Downtrend depth (vs 200-day)', 'asc'], ['price', 'Price', 'desc'], ['relVol', 'Relative volume', 'desc'],
+        ['rsi', 'RSI', 'desc'], ['atrPct', 'Volatility (ATR %)', 'desc'], ['ticker', 'Ticker', 'asc']],
+};
+// List sub-tabs. "index" views filter by index membership.
 const VIEWS = {
   all: { label: 'All US' },
-  dip: { label: 'Uptrend Dip', setup: 'dip' },
-  rip: { label: 'Downtrend Rip', setup: 'rip' },
   watchlist: { label: 'Watchlist' },
   sp500: { label: 'S&P 500', index: 'sp500' },
   ndx: { label: 'Nasdaq-100', index: 'ndx' },
@@ -943,8 +955,9 @@ const state = {
   universeLoading: null,
   scanning: false,
   scannedTimeframe: null,
-  sortKey: 'score',
-  sortDir: 'desc',
+  strategy: 'dip',
+  subByStrategy: { ...DEFAULT_SUBVIEW },
+  sort: { macd: { key: 'score', dir: 'desc' }, dip: { key: 'vs200', dir: 'desc' }, rip: { key: 'chg5d', dir: 'desc' } },
   statusFilter: { market: 'signals', watchlist: 'all' },
   findText: '',
   visibleLimit: CONFIG.PAGE_SIZE,
@@ -956,8 +969,9 @@ const state = {
   setups: null,
   setupsError: '',
   setupsLoading: null,
-  setupSp500Only: true,
 };
+const sortOf = () => state.sort[state.strategy];
+const isSetupStrategy = () => state.strategy !== 'macd';
 const currentRows = () => (state.mode === 'market' ? state.marketRows : state.watchRows);
 
 const els = {};
@@ -972,7 +986,7 @@ function init() {
     'statusText', 'progressBar', 'emptyState', 'noMatch', 'resultsCards', 'resultsTable', 'resultsBody',
     'shownCount', 'showMore', 'settingsSheet', 'closeSettings', 'settingsError', 'periodsHint',
     'providerSelect', 'apiKey', 'saveKey', 'keyStatus', 'forgetKey', 'clearCacheBtn', 'resetSettings',
-    'detail', 'detailBody', 'detailClose', 'setupArea', 'tfSwitch',
+    'detail', 'detailBody', 'detailClose', 'setupArea', 'tfSwitch', 'strategyTabs', 'toolbar', 'statusRow', 'strategyIntro', 'layoutToggle',
   ].forEach(id => { els[id] = $(id); });
   SETTING_FIELDS.forEach(([, id]) => { els[id] = $(id); });
 
@@ -995,7 +1009,12 @@ function init() {
   requestsPerMinute = saved.rpm;
   els.tickers.value = storage.get('tickers') ?? 'AAPL, NVDA, AMD, PLTR, BBAI, TSLA';
   state.layout = storage.get('layout') === 'table' ? 'table' : 'cards';
-  state.setupSp500Only = storage.get('setupSp500') !== 'false';
+  try {
+    const saved = JSON.parse(storage.get('sort') || 'null');
+    if (saved) for (const k of Object.keys(state.sort)) if (saved[k] && SORTS[k].some(o => o[0] === saved[k].key)) state.sort[k] = saved[k];
+    const subs = JSON.parse(storage.get('subviews') || 'null');
+    if (subs) for (const k of Object.keys(STRATEGIES)) if (VIEWS[subs[k]]) state.subByStrategy[k] = subs[k];
+  } catch { /* ignore */ }
   updateKeyStatus();
 
   // Tabs & timeframe
@@ -1006,15 +1025,12 @@ function init() {
   document.querySelectorAll('input[name="tf"]').forEach(r => {
     r.addEventListener('change', () => { if (r.checked) setTimeframe(r.value); });
   });
-  els.setupArea.addEventListener('change', e => {
-    if (e.target && e.target.id === 'setupSp500') {
-      state.setupSp500Only = e.target.checked;
-      storage.set('setupSp500', String(state.setupSp500Only));
-      render();
-    }
+  els.strategyTabs.addEventListener('click', e => {
+    const b = e.target.closest('[data-strategy]');
+    if (b) setStrategy(b.dataset.strategy);
   });
   els.reloadMarket.addEventListener('click', () => {
-    if (VIEWS[state.view].setup) { loadUniverse(true); loadSetups(true); return; }
+    if (isSetupStrategy()) { loadUniverse(true); loadSetups(true); return; }
     if (state.mode !== 'market') return;
     state.btFiles.delete(state.timeframe);
     loadUniverse(true);
@@ -1071,12 +1087,17 @@ function init() {
 
   // Sorting, search, layout, paging
   els.sortKey.addEventListener('change', () => {
-    state.sortKey = els.sortKey.value;
-    state.sortDir = DEFAULT_SORT_DIR[state.sortKey] || 'desc';
+    const opt = SORTS[state.strategy].find(o => o[0] === els.sortKey.value);
+    state.sort[state.strategy] = { key: els.sortKey.value, dir: opt ? opt[2] : 'desc' };
+    storage.set('sort', JSON.stringify(state.sort));
     state.visibleLimit = CONFIG.PAGE_SIZE;
     render();
   });
-  els.sortDir.addEventListener('click', () => { state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc'; render(); });
+  els.sortDir.addEventListener('click', () => {
+    const so = sortOf(); so.dir = so.dir === 'asc' ? 'desc' : 'asc';
+    storage.set('sort', JSON.stringify(state.sort));
+    render();
+  });
   els.findTicker.addEventListener('input', debounce(() => {
     state.findText = els.findTicker.value.trim().toUpperCase().replace(/^\$/, '');
     state.visibleLimit = CONFIG.PAGE_SIZE;
@@ -1088,9 +1109,10 @@ function init() {
   document.querySelectorAll('th[data-sort]').forEach(th => {
     th.addEventListener('click', () => {
       const key = th.dataset.sort;
-      if (state.sortKey === key) state.sortDir = state.sortDir === 'asc' ? 'desc' : 'asc';
-      else { state.sortKey = key; state.sortDir = DEFAULT_SORT_DIR[key] || 'desc'; }
-      els.sortKey.value = key;
+      const so = state.sort.macd;
+      if (so.key === key) so.dir = so.dir === 'asc' ? 'desc' : 'asc';
+      else { so.key = key; so.dir = DEFAULT_SORT_DIR[key] || 'desc'; }
+      storage.set('sort', JSON.stringify(state.sort));
       render();
     });
   });
@@ -1145,8 +1167,8 @@ function init() {
   };
 
   loadUniverse();
-  const savedView = storage.get('view');
-  setView(VIEWS[savedView] ? savedView : 'all');
+  const savedStrategy = storage.get('strategy');
+  setStrategy(STRATEGIES[savedStrategy] ? savedStrategy : 'dip');
 }
 
 function debounce(fn, ms) {
@@ -1164,17 +1186,32 @@ function closeSheet(el) {
   if (els.detail.hidden && els.settingsSheet.hidden) document.body.classList.remove('no-scroll');
 }
 
-/* ---------- Views, timeframe, layout ---------- */
-function setView(view) {
+/* ---------- Strategy, views, timeframe, layout ---------- */
+function setStrategy(strategy) {
+  if (!STRATEGIES[strategy]) strategy = 'dip';
+  if (state.scanning) { setStatus('Stop the watchlist scan before switching.'); return; }
+  state.strategy = strategy;
+  storage.set('strategy', strategy);
+  els.sortKey.innerHTML = SORTS[strategy].map(([k, label]) => `<option value="${k}">${escapeHtml(label)}</option>`).join('');
+  els.strategyTabs.querySelectorAll('[data-strategy]').forEach(b => {
+    const on = b.dataset.strategy === strategy;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', String(on));
+  });
+  setView(state.subByStrategy[strategy] || DEFAULT_SUBVIEW[strategy], true);
+}
+
+function setView(view, keepScroll) {
   if (!VIEWS[view]) view = 'all';
   const mode = view === 'watchlist' ? 'watchlist' : 'market';
-  if (state.scanning && mode !== 'watchlist') { setStatus('Stop the watchlist scan before switching.'); return; }
+  if (state.scanning && (mode !== 'watchlist' || view !== state.view)) { setStatus('Stop the watchlist scan before switching.'); return; }
   state.view = view;
   state.mode = mode;
   state.group = null;
   state.visibleLimit = CONFIG.PAGE_SIZE;
   lastSettingsKey = '';
-  storage.set('view', view);
+  state.subByStrategy[state.strategy] = view;
+  storage.set('subviews', JSON.stringify(state.subByStrategy));
   closeDetail();
   PERIOD_FIELDS.forEach(id => { els[id].disabled = mode === 'market'; });
   updatePeriodsHint();
@@ -1182,8 +1219,9 @@ function setView(view) {
   const tab = els.tabs.querySelector(`[data-view="${view}"]`);
   if (tab && tab.scrollIntoView) tab.scrollIntoView({ block: 'nearest', inline: 'center' });
 
-  if (VIEWS[view].setup) {
-    loadSetups();
+  if (isSetupStrategy()) {
+    if (mode === 'market') loadSetups();
+    else setStatus(state.watchRows.size ? '' : 'Add tickers and tap Scan watchlist. Setups use daily candles.');
     render();
     return;
   }
@@ -1424,6 +1462,7 @@ function onSettingsChanged() {
   storage.set('settings', JSON.stringify(s));
   persistCache = s.persistCache;
   requestsPerMinute = s.rpm;
+  if (isSetupStrategy()) { render(); return; }   // Dip / Rip rules are fixed by the research
 
   if (state.mode === 'market') {
     if (!state.marketFile || state.marketFile.timeframe !== s.timeframe) { loadMarket(s.timeframe); return; }
@@ -1538,13 +1577,15 @@ async function scan() {
   for (const t of invalid) state.watchRows.set(t, { ticker: t, status: 'error', error: 'Invalid ticker format' });
   for (const t of valid) state.watchRows.set(t, { ticker: t, status: 'pending' });
 
+  const tf = isSetupStrategy() ? '1D' : s.timeframe;   // Dip / Rip are daily-candle setups
+  const sc = { ...s, timeframe: tf };
   state.scanning = true;
-  state.scannedTimeframe = s.timeframe;
+  state.scannedTimeframe = tf;
   abortFlag = false;
   els.scanBtn.disabled = true;
   els.stopBtn.hidden = false;
   setProgress(0);
-  setStatus(`Scanning ${valid.length} ticker${valid.length === 1 ? '' : 's'} on ${s.timeframe}…`);
+  setStatus(`Scanning ${valid.length} ticker${valid.length === 1 ? '' : 's'} on ${tf}…`);
   render();
 
   let done = 0;
@@ -1553,10 +1594,10 @@ async function scan() {
     row.status = 'loading';
     scheduleRender();
     try {
-      const { candles, fromCache } = await fetchHistoricalData(ticker, s.timeframe);
+      const { candles, fromCache } = await fetchHistoricalData(ticker, tf);
       row.candles = candles;
       row.fromCache = fromCache;
-      row.result = analyze(candles, s);
+      row.result = analyze(candles, sc);
       row.status = 'done';
     } catch (e) {
       row.status = e instanceof ScreenerError && e.kind === 'aborted' ? 'skipped' : 'error';
@@ -1575,7 +1616,7 @@ async function scan() {
   els.scanBtn.disabled = false;
   els.stopBtn.hidden = true;
   setProgress(1);
-  refreshWatchBacktest(s);
+  refreshWatchBacktest(sc);
   if (state.mode === 'watchlist') setStatus((abortFlag ? 'Scan stopped. ' : 'Scan complete. ') + summaryText());
   abortFlag = false;
   render();
@@ -1623,6 +1664,7 @@ function sortValue(row, key) {
   const r = row.result;
   switch (key) {
     case 'score': return r.score;
+    case 'price': return r.price;
     case 'btc': return r.barsToCross;
     case 'rsi': return r.rsi;
     case 'relVol': return r.relVol;
@@ -1644,9 +1686,10 @@ function filteredSortedRows(scoped) {
     const q = state.findText;
     rows = rows.filter(r => r.ticker.startsWith(q) || (q.length >= 2 && companyName(r.ticker).toUpperCase().includes(q)));
   }
-  const dir = state.sortDir === 'asc' ? 1 : -1;
+  const so = state.sort.macd;
+  const dir = so.dir === 'asc' ? 1 : -1;
   return rows.sort((a, b) => {
-    const va = sortValue(a, state.sortKey), vb = sortValue(b, state.sortKey);
+    const va = sortValue(a, so.key), vb = sortValue(b, so.key);
     const na = va === null || va === undefined || (typeof va === 'number' && !isNum(va));
     const nb = vb === null || vb === undefined || (typeof vb === 'number' && !isNum(vb));
     if (na && nb) return statusRank(a) - statusRank(b) || a.ticker.localeCompare(b.ticker);
@@ -1801,40 +1844,44 @@ function emptyMessage(scoped) {
 
 function render() {
   const market = state.mode === 'market';
-  const setupKind = VIEWS[state.view].setup;
+  const setupMode = isSetupStrategy();
   const boardMode = state.view === 'sectors' && !state.group;
-  els.setupArea.hidden = !setupKind;
-  els.tfSwitch.hidden = !!setupKind;
-  if (setupKind) {
-    els.tabs.querySelectorAll('[data-view]').forEach(b => {
-      const on = b.dataset.view === state.view;
-      b.classList.toggle('active', on);
-      b.setAttribute('aria-selected', String(on));
-    });
-    els.watchPanel.hidden = true;
-    els.sectorBoard.hidden = true;
-    els.groupHeader.hidden = true;
-    els.listArea.hidden = true;
-    els.reloadMarket.hidden = false;
-    els.scanInfo.hidden = false;
-    const S = state.setups;
-    els.scanInfo.textContent = S
-      ? `Daily setups, updated ${fmtDateTime(S.generatedAt)}. Based on completed daily candles only.`
-      : (state.setupsError || 'Loading setups…');
-    renderSetups(setupKind);
-    return;
-  }
 
   els.tabs.querySelectorAll('[data-view]').forEach(b => {
     const on = b.dataset.view === state.view;
     b.classList.toggle('active', on);
     b.setAttribute('aria-selected', String(on));
   });
+  els.tfSwitch.hidden = setupMode;
   els.watchPanel.hidden = market;
   els.reloadMarket.hidden = !market;
   els.scanInfo.hidden = !market;
   els.sectorBoard.hidden = !boardMode;
   els.groupHeader.hidden = !(state.view === 'sectors' && state.group);
+  els.toolbar.hidden = boardMode;
+  els.statusRow.hidden = boardMode || (setupMode && market);
+  els.layoutToggle.hidden = setupMode;
+  const so = sortOf();
+  els.sortKey.value = so.key;
+  els.sortDir.textContent = so.dir === 'asc' ? '↑' : '↓';
+  if (state.view === 'sectors' && state.group) renderGroupHeader();
+  renderStrategyIntro();
+
+  if (setupMode) {
+    els.listArea.hidden = true;
+    els.setupArea.hidden = boardMode;
+    const S = state.setups;
+    if (market) {
+      els.scanInfo.textContent = S
+        ? `Daily setups, updated ${fmtDateTime(S.generatedAt)}. Based on completed daily candles only.`
+        : (state.setupsError || 'Loading setups…');
+    }
+    if (boardMode) renderSetupBoard(state.strategy);
+    else renderSetups(state.strategy);
+    return;
+  }
+
+  els.setupArea.hidden = true;
   els.listArea.hidden = boardMode;
   els.listArea.dataset.layout = state.layout;
   els.layoutCards.classList.toggle('active', state.layout === 'cards');
@@ -1842,7 +1889,6 @@ function render() {
 
   if (boardMode) { renderBoard(); return; }
   if (market && state.marketFile && !state.marketError) setStatus(summaryText());
-  if (state.view === 'sectors' && state.group) renderGroupHeader();
 
   const scoped = scopedRows();
   renderChips(scoped);
@@ -1864,12 +1910,10 @@ function render() {
   }
 
   document.querySelectorAll('th[data-sort]').forEach(th => {
-    const active = th.dataset.sort === state.sortKey;
+    const active = th.dataset.sort === state.sort.macd.key;
     th.classList.toggle('sorted', active);
-    th.classList.toggle('asc', active && state.sortDir === 'asc');
+    th.classList.toggle('asc', active && state.sort.macd.dir === 'asc');
   });
-  els.sortKey.value = state.sortKey;
-  els.sortDir.textContent = state.sortDir === 'asc' ? '↑' : '↓';
 
   els.resultsCards.innerHTML = visible.map(cardHtml).join('');
   els.resultsBody.innerHTML = visible.map(tableRowHtml).join('');
@@ -2009,11 +2053,86 @@ function trackRow(x) {
   </div>`;
 }
 
-function renderSetups(kind) {
-  const info = STRATEGY_INFO[kind];
-  const box = els.setupArea;
+function setupSortValue(x, key) {
+  switch (key) {
+    case 'price': return x.close;
+    case 'relVol': return isNum(x.relVol) ? x.relVol : null;
+    case 'chg5d': return x.chg5d;
+    case 'vs200': return x.vs200;
+    case 'rsi': return isNum(x.rsi) ? x.rsi : null;
+    case 'atrPct': return x.atrPct;
+    case 'ticker': return x.ticker;
+    default: return null;
+  }
+}
+
+function sortSetups(list) {
+  const so = sortOf();
+  const dir = so.dir === 'asc' ? 1 : -1;
+  return [...list].sort((a, b) => {
+    const va = setupSortValue(a, so.key), vb = setupSortValue(b, so.key);
+    if (va === null && vb === null) return a.ticker.localeCompare(b.ticker);
+    if (va === null) return 1;
+    if (vb === null) return -1;
+    const cmp = typeof va === 'string' ? va.localeCompare(vb) : va - vb;
+    return cmp * dir || a.ticker.localeCompare(b.ticker);
+  });
+}
+
+function matchesFind(ticker) {
+  const q = state.findText;
+  if (!q) return true;
+  return ticker.startsWith(q) || (q.length >= 2 && companyName(ticker).toUpperCase().includes(q));
+}
+
+/* Setup signals for the current tab: scheduled scan (market tabs) or live watchlist candles. */
+function setupItems(kind) {
+  const sp = state.universe && state.universe.indexSets.sp500;
+  if (state.mode === 'watchlist') {
+    if (!state.watchRows.size) return { items: [], message: ['Your watchlist results will appear here.', 'Add tickers above and tap Scan watchlist. Setups are checked on daily candles.'] };
+    if (state.scannedTimeframe !== '1D') return { items: [], message: ['Your watchlist was scanned on intraday candles.', 'Tap Scan watchlist to load the daily candles this setup needs.'] };
+    const items = [];
+    for (const row of state.watchRows.values()) {
+      if (!row.candles) continue;
+      for (const sig of scanSetups(row.candles)) if (sig.kind === kind) items.push({ ticker: row.ticker, sp500: sp ? sp.has(row.ticker) : true, ...sig });
+    }
+    return { items };
+  }
   const S = state.setups;
-  const intro = `
+  if (!S) return { items: [], message: [state.setupsError || 'Loading setups…', ''] };
+  let items = S[kind] || [];
+  const v = VIEWS[state.view];
+  if (v.index) {
+    const set = state.universe && state.universe.indexSets[v.index];
+    if (!set) return { items: [], message: [`The ${v.label} list isn’t available yet.`, 'Index lists are downloaded by the scheduled scan and will appear after its next run.'] };
+    items = items.filter(x => set.has(x.ticker));
+  } else if (state.view === 'sectors') {
+    items = state.group ? items.filter(x => state.group.tickers.has(x.ticker)) : [];
+  }
+  return { items };
+}
+
+/* For the Watchlist tab: how close each ticker is to the setup today. */
+function watchlistSetupStatus(kind, withSetup) {
+  const rows = [];
+  for (const row of state.watchRows.values()) {
+    if (!matchesFind(row.ticker)) continue;
+    if (!row.candles) { rows.push(`<div class="track-row"><div><span class="ticker">${escapeHtml(row.ticker)}</span></div><b class="down">${escapeHtml(row.error || 'No data')}</b></div>`); continue; }
+    if (withSetup.has(row.ticker)) continue;
+    const ind = setupIndicators(row.candles);
+    const f = setupFlags(ind, row.candles.length - 1);
+    const label = !f ? 'Not enough history (needs about 205 daily candles)'
+      : kind === 'dip'
+        ? `${pctText(f.r5 * 100)} in 5 sessions (needs −10%), ${pctText(f.vs200 * 100)} vs 200-day (needs above)`
+        : `${pctText(f.r5 * 100)} in 5 sessions (needs +10%), RSI ${isNum(f.rsi) ? f.rsi.toFixed(0) : '—'} (needs 70+), ${pctText(f.vs200 * 100)} vs 200-day (needs below)`;
+    rows.push(`<div class="track-row"><div><span class="ticker">${escapeHtml(row.ticker)}</span><small>${escapeHtml(companyName(row.ticker))}</small></div><b class="muted">${escapeHtml(label)}</b></div>`);
+  }
+  return rows.join('');
+}
+
+function setupIntroHtml(kind) {
+  const info = STRATEGY_INFO[kind];
+  return `
     <div class="panel setup-intro">
       <div class="setup-title"><h2>${info.title}</h2><span class="tag ${kind === 'dip' ? 'good' : 'warn'}">${info.side}, up to 3 sessions</span></div>
       <p>${escapeHtml(info.summary)}</p>
@@ -2028,34 +2147,113 @@ function renderSetups(kind) {
         <p class="hint">Found on 2000–2012, checked on 2013–2018, and confirmed on 2019–2026 data that wasn’t used while searching. Trading costs excluded. Past results don’t guarantee future results. Not financial advice.</p>
       </details>
     </div>`;
-  if (!S) {
-    box.innerHTML = intro + `<div class="empty"><p><strong>${escapeHtml(state.setupsError || 'Loading setups…')}</strong></p></div>`;
+}
+
+function renderSetups(kind) {
+  const info = STRATEGY_INFO[kind];
+  const box = els.setupArea;
+  const { items: raw, message } = setupItems(kind);
+  if (message) {
+    box.innerHTML = `<div class="empty"><p><strong>${escapeHtml(message[0])}</strong></p>${message[1] ? `<p>${escapeHtml(message[1])}</p>` : ''}</div>`;
     return;
   }
-  const all = S[kind] || [];
-  const list = state.setupSp500Only && S.sp500Listed ? all.filter(x => x.sp500) : all;
-  const fresh = list.filter(x => x.sessionsAgo === 0);
-  const late = list.filter(x => x.sessionsAgo === 1 && x.late);
-  const tracked = list.filter(x => x.sessionsAgo >= 1).sort((a, b) => (a.signalDate < b.signalDate ? 1 : a.signalDate > b.signalDate ? -1 : a.ticker.localeCompare(b.ticker)));
+  const items = raw.filter(x => matchesFind(x.ticker));
+  const S = state.setups;
+  const watch = state.mode === 'watchlist';
+  const fresh = sortSetups(items.filter(x => x.sessionsAgo === 0));
+  const late = sortSetups(items.filter(x => x.sessionsAgo === 1 && x.late));
+  const tracked = items.filter(x => x.sessionsAgo >= 1).sort((a, b) => (a.signalDate < b.signalDate ? 1 : a.signalDate > b.signalDate ? -1 : a.ticker.localeCompare(b.ticker)));
   const counts = { target: 0, stop: 0, closed: 0, open: 0 };
   let closedUp = 0;
   for (const x of tracked) { const st = x.track && x.track.state; if (st in counts) counts[st]++; if (st === 'closed' && x.track.pct > 0) closedUp++; }
-  const asOf = escapeHtml(fmtSession(S.asOf));
-  const next = escapeHtml(fmtSession(S.nextSession));
+  const asOfDate = watch ? (items[0] && addSessions(items[0].signalDate, items[0].sessionsAgo)) || null : S && S.asOf;
+  const lastCandle = watch ? (() => { for (const r of state.watchRows.values()) if (r.candles) return String(r.candles[r.candles.length - 1].t).slice(0, 10); return null; })() : asOfDate;
+  const asOf = escapeHtml(fmtSession(lastCandle));
+  const next = escapeHtml(fmtSession(lastCandle ? addSessions(lastCandle, 1) : ''));
+  const scopeNote = state.view === 'all'
+    ? 'Includes stocks outside the S&amp;P 500. Those weren’t part of the test, so they are marked.'
+    : state.view === 'sp500' ? 'S&amp;P 500 stocks, the group the rules were tested on.'
+    : watch ? 'Checked live on your watchlist’s daily candles.'
+    : state.view === 'sectors' && state.group ? `Stocks in ${escapeHtml(state.group.label)}.` : '';
   const section = (title, sub, body) => `<section class="setup-section"><h2>${title}</h2>${sub ? `<p class="hint">${sub}</p>` : ''}${body}</section>`;
-  box.innerHTML = intro + `
-    <div class="setup-controls">
-      <label class="switch"><input type="checkbox" id="setupSp500" ${state.setupSp500Only ? 'checked' : ''}><span class="switch-ui" aria-hidden="true"></span><span>S&amp;P 500 stocks only (what was tested)</span></label>
-      <p class="hint">Setups from the close of ${asOf}.${S.stale ? ' ⚠ The latest scan failed, so these may be out of date.' : ''}</p>
-    </div>
+  const withSetup = new Set(items.filter(x => x.sessionsAgo === 0).map(x => x.ticker));
+  box.innerHTML = `
+    <p class="hint setup-scope">${scopeNote} Setups from the close of ${asOf}.${S && S.stale && !watch ? ' ⚠ The latest scan failed, so these may be out of date.' : ''}</p>
     ${section(`New setups: ${kind === 'dip' ? 'buy' : 'short'} at the ${next} open`, 'Levels are based on the signal close. Recalculate from your actual fill using the note on each card.',
       fresh.length ? `<div class="cards">${fresh.map(x => setupCard(x, 'new')).join('')}</div>`
-                   : `<div class="empty small"><p>No new ${info.title} setups at the ${asOf} close.</p></div>`)}
+                   : `<div class="empty small"><p>No new ${info.title} setups ${state.findText ? 'matching your search ' : ''}at the ${asOf} close.</p></div>`)}
     ${late.length ? section('One session late', 'The tested entry was yesterday’s open. A late entry only held up when day 1 moved against the setup.', `<div class="cards">${late.map(x => setupCard(x, 'late')).join('')}</div>`) : ''}
     ${section('Tracker: signals from the last 5 sessions', tracked.length
         ? `Assumes the tested entry (the open after the signal). ${counts.target} hit target, ${counts.stop} stopped, ${counts.closed} closed at day 3 (${closedUp} up), ${counts.open} still open.`
         : '', tracked.length ? `<div class="panel track-list">${tracked.map(trackRow).join('')}</div>` : '<div class="empty small"><p>No signals in the last 5 sessions.</p></div>')}
+    ${watch ? section('The rest of your watchlist', 'How far each stock is from qualifying today.', `<div class="panel track-list">${watchlistSetupStatus(kind, withSetup) || '<p class="hint">Every ticker has a setup today.</p>'}</div>`) : ''}
     <p class="disclaimer">Rules-based output from a backtested model, not financial advice. Always check the live price and news before trading.</p>`;
+}
+
+/* Sectors & themes board for Dip / Rip: where the setups are clustering. */
+function setupGroupStats(g, kind) {
+  const all = (state.setups && state.setups[kind]) || [];
+  const mine = all.filter(x => g.tickers.has(x.ticker));
+  const fresh = sortSetups(mine.filter(x => x.sessionsAgo === 0));
+  return {
+    members: g.tickers.size, fresh: fresh.length, recent: mine.length,
+    hits: mine.filter(x => x.track && x.track.state === 'target').length,
+    top: fresh.slice(0, 4).map(x => x.ticker),
+  };
+}
+
+function renderSetupBoard(kind) {
+  const box = els.sectorBoard;
+  if (!state.setups) { box.innerHTML = `<div class="empty"><p><strong>${escapeHtml(state.setupsError || 'Loading setups…')}</strong></p></div>`; return; }
+  if (!state.universe || !state.universe.groups.length) {
+    box.innerHTML = '<div class="empty"><p><strong>Sectors and themes will appear after the next scheduled scan.</strong></p></div>';
+    return;
+  }
+  const title = STRATEGY_INFO[kind].title;
+  const tile = g => {
+    const st = setupGroupStats(g, kind);
+    return `<button type="button" class="tile${st.recent ? '' : ' tile-quiet'}" data-group="${escapeHtml(g.id)}">
+      <div class="tile-head"><span class="tile-name">${escapeHtml(g.label)}</span><span class="etf">${st.members} stocks</span></div>
+      <div class="tile-legend"><span><b>${st.fresh}</b> new today</span><span><b>${st.recent}</b> in the last 6 sessions</span></div>
+      <div class="tile-sub">${st.recent ? `${st.hits} of those hit their target` : `No ${escapeHtml(title)} signals lately`}</div>
+      ${st.top.length ? `<div class="tile-top">New: <b>${st.top.map(escapeHtml).join(', ')}</b></div>` : ''}
+    </button>`;
+  };
+  const order = gs => gs.map(g => ({ g, st: setupGroupStats(g, kind) }))
+    .sort((a, b) => b.st.fresh - a.st.fresh || b.st.recent - a.st.recent || a.g.label.localeCompare(b.g.label)).map(x => x.g);
+  const themes = order(state.universe.groups.filter(g => g.kind === 'theme'));
+  const sectors = order(state.universe.groups.filter(g => g.kind === 'sector'));
+  const section = (h, note, gs) => gs.length ? `<section class="board-section"><h2>${h}</h2><p>${note}</p><div class="tiles">${gs.map(tile).join('')}</div></section>` : '';
+  box.innerHTML =
+    section('Themes', `Where ${escapeHtml(title)} setups are appearing, busiest first. Tap one to see its setups.`, themes) +
+    section('Sectors', 'GICS sectors for S&amp;P 500 and Nasdaq-100 members.', sectors);
+}
+
+/* Intro card for the selected strategy (re-rendered only when the strategy changes). */
+function renderStrategyIntro() {
+  const kind = state.strategy;
+  if (els.strategyIntro.dataset.kind === kind) return;
+  els.strategyIntro.dataset.kind = kind;
+  els.strategyIntro.innerHTML = kind === 'macd' ? macdIntroHtml() : setupIntroHtml(kind);
+}
+
+function macdIntroHtml() {
+  return `
+    <div class="panel setup-intro">
+      <div class="setup-title"><h2>MACD Curl</h2><span class="tag">Watch and timing</span></div>
+      <p>Finds stocks where MACD is still below its Signal line but curling upward, with the gap narrowing, before a bullish crossover.</p>
+      <p class="setup-headline">In the 1996–2026 study, the curl on its own did no better than an average stock over 1–5 days. Use it to spot and time stocks worth watching, not as a stand-alone buy signal.</p>
+      <details class="setup-more">
+        <summary>How the curl is detected</summary>
+        <ul>
+          <li>MACD (12, 26) is below its 9-period Signal line, and rising.</li>
+          <li>The MACD/Signal gap is shrinking. Bars To Cross = −gap ÷ how fast the gap is closing (default 1–5 candles).</li>
+          <li>RSI(14) is between your minimum and maximum (default 35–55) and rising. Volume confirmation is optional.</li>
+          <li>Setup Strength (0–100) measures how closely a stock matches these rules. It is not a probability.</li>
+        </ul>
+        <p class="hint">Adjust the rules in Filters &amp; settings. The Backtest box below shows how past curls played out.</p>
+      </details>
+    </div>`;
 }
 
 /* ---------- Sectors & themes board ---------- */
@@ -2128,6 +2326,14 @@ function renderBoard() {
 
 function renderGroupHeader() {
   const g = state.group;
+  if (isSetupStrategy()) {
+    const st = state.setups ? setupGroupStats(g, state.strategy) : null;
+    els.groupHeader.innerHTML = `
+      <button type="button" class="btn btn-small btn-ghost" data-back>← All sectors &amp; themes</button>
+      <h2>${escapeHtml(g.label)}</h2>
+      <p>${st ? `${st.fresh} new ${escapeHtml(STRATEGIES[state.strategy])} setup${st.fresh === 1 ? '' : 's'} today, ${st.recent} in the last 6 sessions.` : ''}${g.kind === 'sector' ? ' Sector membership covers S&amp;P 500 and Nasdaq-100 stocks.' : ''}</p>`;
+    return;
+  }
   const st = groupStats(g);
   const etfLine = g.etf
     ? ` ${escapeHtml(g.etf)} (the group’s ETF): ${st.etfRow && st.etfRow.result ? STATUS_LABEL[st.etfRow.result.status] : 'not in this scan'}.`
