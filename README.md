@@ -1,12 +1,14 @@
-# MACD Curl-Up Screener
+# Trade With BK — MACD Curl-Up Screener
 
 A static stock screener for GitHub Pages. It finds stocks where the **MACD line is still below its Signal line but curling upward**, with the gap between them narrowing. This is often visible a few candles before a conventional bullish MACD crossover.
 
 > **Important:** This is a technical-analysis screening tool, **not financial advice** and **not a trading system**. It only reports whether current indicator values match the criteria you choose. "Setup Strength" is **not** a probability and does **not** predict future prices.
 
-It has two ways to scan:
+The site has six tabs: **All US**, **Watchlist**, **S&P 500**, **Nasdaq-100**, **Dow 30** and **Sectors & themes**. Every tab except Watchlist reads the results of the scheduled market scan, filtered to that list. Tapping a stock shows its company name, sector, index memberships and themes, along with the signal details, chart and backtest.
 
-| | **All US stocks** | **My watchlist** |
+There are two ways to scan:
+
+| | **All US, index and sector tabs** | **Watchlist tab** |
 |---|---|---|
 | What | Every listed US stock that passes a price/volume filter | Tickers you type in |
 | Where the work happens | A scheduled GitHub Action (runs on GitHub's servers) | Your browser |
@@ -23,7 +25,8 @@ Both use exactly the same maths. The scheduled scan loads `app.js` to compute it
 ├── index.html                    UI markup
 ├── style.css                     Layout, light/dark theme, mobile cards
 ├── app.js                        Indicators, analysis, UI (also used by the scanner)
-├── scanner/scan.js               Scheduled market scan (Node, no dependencies)
+├── scanner/scan.js               Scheduled market scan, backtest, index/sector/theme lists (Node, no dependencies)
+├── themes.json                   (optional) your own theme lists; see section 4
 ├── .github/workflows/scan.yml    Runs the scan on a schedule and deploys the site
 ├── .gitignore
 └── README.md
@@ -80,13 +83,85 @@ After that it runs automatically:
 5. **Completed candles only.** A daily candle is used only after 16:00 ET. An intraday candle is used only once it has closed. Results therefore don't flicker while a candle is still forming.
 6. **Indicators.** MACD, Signal, histogram, Wilder RSI and relative volume are calculated with the functions in `app.js`. The results are written to `data/1D.json`, `data/4H.json` and `data/1H.json`.
 7. **Charts.** Price/MACD/RSI chart data is published only for stocks already in the setup's core shape (MACD below Signal, rising, gap closing). That keeps the files small. For any other stock, the detail panel offers **Add to my watchlist** to load its chart live.
-8. **If a scan fails** (bad keys, Alpaca outage), the site is still deployed. It keeps the previously published results and shows a warning that they are from an earlier scan.
+8. **Index lists, sectors and themes.** The scan also downloads S&P 500, Nasdaq-100 and Dow 30 members and GICS sectors, and publishes them with company names in `data/universe.json` (see section 4).
+9. **Backtest.** The same signal rules are replayed on every stock's history (see section 3). The market-wide summary goes into the result files, and each stock's past signals go into `data/bt-1D.json` etc.
+10. **If a scan fails** (bad keys, Alpaca outage), the site is still deployed. It keeps the previously published results and shows a warning that they are from an earlier scan.
 
-A typical run makes roughly 500–600 Alpaca requests and takes about 3–5 minutes. It uses Alpaca's free-plan limit of 200 requests/minute. The scanner paces itself at 180/minute and backs off automatically if it gets rate-limited.
+A full run makes several hundred Alpaca requests. The 1H/4H part is the slowest, and a first run can take 15+ minutes. The scanner stops downloading after `SCAN_TIME_BUDGET_MIN` (default 24 minutes), so the site still deploys before GitHub's 30-minute job limit. Timeframes that didn't finish keep their previous results. It uses Alpaca's free-plan limit of 200 requests/minute. The scanner paces itself at 180/minute and backs off automatically if it gets rate-limited.
 
 In the browser, **RSI range, Bars To Cross range, volume filter and minimum relative volume** can still be changed instantly. The page re-scores every stock from the published values without downloading anything.
 
-## 3. Mathematical formulas
+## 3. Backtest
+
+The backtest answers one question: when these signals appeared in the past, what happened next?
+
+**How it works**
+- The screener's exact rules are replayed on each candle of the downloaded history (about 300 candles). EMA, RSI and SMA only use earlier candles, so each signal is exactly what the screener would have shown at that time. There is no look-ahead.
+- **Entry:** the next candle's open, since you can only act after a candle closes.
+- **Return:** close 5, 10 and 20 candles later ÷ entry − 1.
+- **Crossed:** whether MACD closed above Signal within 10 candles, which tests the Bars To Cross idea directly.
+- **Worst dip:** the lowest low within 10 candles, relative to entry. Useful when thinking about stop distance.
+- **Repeats:** a signal counts only when it newly appears, and not within 5 candles of the previous signal of the same type.
+- **All candles (baseline):** the same forward returns measured from every candle. A signal only adds something if it beats this column. In a rising market most things go up.
+
+**Where to find it**
+- **Summary panel** above the results. On the market tabs it always covers every stock in the scan, not just the current tab. On the Watchlist tab it covers your scanned tickers.
+- **Past signals** section in each stock's detail view, with a list of dates and outcomes. Past signals are also marked on the chart with ▲.
+
+**Which settings it uses**
+- *Market tabs (All US, indexes, sectors):* the thresholds set in the workflow (`RSI_MIN`, `RSI_MAX`, `MIN_BARS_TO_CROSS`, `MAX_BARS_TO_CROSS`, `VOLUME_FILTER`, `MIN_REL_VOL`; defaults match the page). Changing settings on the page doesn't change these results, and the page tells you when your settings differ.
+- *Watchlist tab:* your current settings, recalculated instantly when you change them.
+
+**Limitations**
+- *Survivorship bias:* the market scan only includes stocks that are listed and liquid today. Stocks that collapsed or were delisted are missing, which makes results look better than reality.
+- *One period:* about a year of daily history, or a few months of intraday history. One market regime may not repeat.
+- *No costs:* commissions, slippage, spreads and taxes are ignored.
+- *Not independent:* many signals fire on the same days, so 1,000 signals aren't 1,000 independent tests.
+- *Small samples:* a single stock's handful of signals says very little.
+
+For longer history, raise `DAILY_LOOKBACK_DAYS` (e.g. `760`) and `KEEP_CANDLES` (e.g. `500`) in the workflow. That adds download time.
+
+Past results do not predict future results.
+
+## 4. Indexes, sectors and themes
+
+**Where the lists come from**
+
+| List | Source | If it can't be downloaded |
+|---|---|---|
+| S&P 500 members and GICS sectors | [datasets/s-and-p-500-companies](https://github.com/datasets/s-and-p-500-companies) on GitHub, then Wikipedia | Keeps the previously published list |
+| Nasdaq-100 members and GICS sectors | Wikipedia (“Nasdaq-100”) | Keeps the previously published list |
+| Dow 30 members | Wikipedia (“Dow Jones Industrial Average”) | Previous list, then a built-in snapshot |
+| Company names | Alpaca's asset list (e.g. “Apple Inc.”) | Index list names |
+| Themes | `THEMES` in `scanner/scan.js`, or your `themes.json` | Built-in themes |
+
+Index and theme members are always scanned, even when they miss the price/volume filter. They're also added to the 1H/4H scan, so these tabs stay complete. Set `INTRADAY_INCLUDE_GROUPS: 'false'` to turn that off for intraday if scans get too slow.
+
+**The Sectors & themes tab** shows one tile per group:
+- the number of stocks, and the share whose MACD is rising
+- a bar showing how many are Early Curls and how many are Approaching
+- the top setups in the group
+- the signal of the group's ETF (e.g. SMH for semiconductors, XLE for energy)
+
+Tiles are sorted by the share of stocks with a signal. When many stocks in one group curl up together, the whole group may be turning, which is often more telling than a single stock. Tap a tile to see its stocks.
+
+- **Sectors** are the 11 official GICS sectors. They only cover S&P 500 and Nasdaq-100 members, because those are the lists that come with free sector data.
+- **Themes** are hand-picked lists for areas GICS doesn't capture, such as quantum computing, AI, nuclear, crypto miners and space. They're starting points from mid-2026. Review them, since companies come and go.
+
+**Editing themes.** Create `themes.json` in the repository root (next to `index.html`). Once it exists, it replaces the built-in list:
+
+```json
+[
+  { "key": "quantum", "label": "Quantum computing", "etf": "QTUM",
+    "tickers": ["IONQ", "RGTI", "QBTS", "QUBT", "IBM"] },
+  { "key": "robotics", "label": "Robotics", "etf": "BOTZ",
+    "tickers": ["ISRG", "TER", "ROK", "SYM"] }
+]
+```
+
+`key` must be unique, and `etf` is optional. Tickers that aren't listed or have no data are skipped. Changes appear after the next scheduled scan.
+
+## 5. Mathematical formulas
 
 **EMA** (implemented by hand, seeded with the SMA of the first `period` values):
 
@@ -151,7 +226,7 @@ BarsToCross is a straight-line extrapolation: "if the gap keeps closing at the c
 
 When the volume filter is off, the maximum is 90 and the score is rescaled to 0–100. It is labeled "without volume confirmation".
 
-## 4. Configuring the scheduled scan
+## 6. Configuring the scheduled scan
 
 Edit the `env:` block of the **Run market scan** step in `.github/workflows/scan.yml`:
 
@@ -161,19 +236,27 @@ Edit the `env:` block of the **Run market scan** step in `.github/workflows/scan
 | `MIN_AVG_VOLUME` | `500000` | Minimum 20-day average daily volume (shares) |
 | `INTRADAY_MAX_SYMBOLS` | `1000` | How many of the most-traded stocks get 1H/4H scans (`0` turns intraday off) |
 | `TIMEFRAMES` | `1D,4H,1H` | Which result files to produce |
-| `MACD_FAST` / `MACD_SLOW` / `MACD_SIGNAL` / `RSI_LENGTH` | `12` / `26` / `9` / `14` | Indicator periods used for All US stocks |
+| `MACD_FAST` / `MACD_SLOW` / `MACD_SIGNAL` / `RSI_LENGTH` | `12` / `26` / `9` / `14` | Indicator periods used for the market tabs |
 | `ALPACA_FEED` | `sip` | `sip` = all US exchanges (15-minute delay on the free plan). Use `iex` if your account can't read SIP data |
 | `INCLUDE_CHART_SERIES` | `true` | Set to `false` to publish only indicator values, not chart data |
 | `EXCHANGES` | `NYSE,NASDAQ,AMEX,ARCA,NYSEARCA,BATS` | Remove `ARCA,NYSEARCA,BATS` to exclude most ETFs |
+| `RSI_MIN` / `RSI_MAX` / `MIN_BARS_TO_CROSS` / `MAX_BARS_TO_CROSS` | `35` / `55` / `1` / `5` | Thresholds for the published backtest |
+| `VOLUME_FILTER` / `MIN_REL_VOL` | `false` / `1` | Volume rule for the published backtest |
+| `SCAN_TIME_BUDGET_MIN` | `24` | Stop downloading after this many minutes so the site still deploys. Keep it about 5 below `timeout-minutes` |
+| `BATCH_SIZE` / `CONCURRENCY` | `100` / `4` | Symbols per request / parallel downloads. `25` / `8` can be faster for 1H/4H |
+| `INTRADAY_INCLUDE_GROUPS` | `true` | Also scan index and theme members on 1H/4H, not just the most-traded stocks |
+| `DAILY_LOOKBACK_DAYS` / `KEEP_CANDLES` | `460` / `300` | How much daily history to download and keep (more = longer backtest, slower scan) |
+
+None of these need to be in the workflow file. Add a line only for settings you want to change.
 
 To change the schedule, edit the `cron:` lines. Cron times are in UTC.
 
-## 5. My watchlist mode and its data provider
+## 7. The Watchlist tab and its data provider
 
-Watchlist mode works as before. It downloads candles in the browser through `fetchHistoricalData()`, which calls the active entry in `PROVIDERS` in `app.js`. The default is **Twelve Data**, which allows browser (CORS) requests and supports 1day/4h/1h intervals.
+The Watchlist tab works as before. It downloads candles in the browser through `fetchHistoricalData()`, which calls the active entry in `PROVIDERS` in `app.js`. The default is **Twelve Data**, which allows browser (CORS) requests and supports 1day/4h/1h intervals.
 
 1. Create a free Twelve Data account and copy the API key.
-2. On the site, choose **My watchlist**, paste the key under **Live data for your watchlist**, and press **Save**.
+2. On the site, open **Filters** (top right), paste the key under **Live data for your watchlist**, and press **Save**. The Watchlist tab also has an **Add free key** button when no key is saved.
 3. Without a key, the public `demo` key is used. It only works for a handful of symbols such as AAPL.
 
 The key is kept only in that browser's `localStorage` and sent only to the provider. Anyone with access to that browser can read it. Use a free or low-privilege key, and use **Remove key from this browser** on shared machines.
@@ -198,7 +281,7 @@ PROVIDERS.myprovider = {
 
 The provider must allow browser (CORS) requests.
 
-## 6. Running locally
+## 8. Running locally
 
 Serve the folder over HTTP. Opening `index.html` directly from disk blocks loading the result files.
 
@@ -206,7 +289,7 @@ Serve the folder over HTTP. Opening `index.html` directly from disk blocks loadi
 python3 -m http.server 8000      # then open http://localhost:8000
 ```
 
-Without result files, **All US stocks** shows "No scan results have been published yet", and **My watchlist** works normally. To generate real result files locally (Node 22 or newer):
+Without result files, the market tabs show "No scan results have been published yet", and the **Watchlist** tab works normally. To generate real result files locally (Node 22 or newer):
 
 ```bash
 ALPACA_KEY_ID=your_key ALPACA_SECRET_KEY=your_secret node scanner/scan.js --out data
@@ -214,7 +297,7 @@ ALPACA_KEY_ID=your_key ALPACA_SECRET_KEY=your_secret node scanner/scan.js --out 
 
 The `data/` folder is in `.gitignore`. The published results are built by the workflow, not committed.
 
-## 7. Limitations
+## 9. Limitations
 
 - **Delay and freshness.** On Alpaca's free plan, SIP data from the most recent 15 minutes isn't available, so the scan reads data up to 16 minutes old. It then uses only completed candles. GitHub also doesn't guarantee exact cron timing, and scheduled runs can start several minutes late or occasionally be skipped at busy times.
 - **Scheduled runs pause after inactivity.** In public repositories, GitHub disables scheduled workflows after 60 days with no repository activity. GitHub emails you. Re-enable it in the Actions tab, or push any commit.
@@ -224,6 +307,6 @@ The `data/` folder is in `.gitignore`. The published results are built by the wo
 - **Data terms.** The site publishes indicator values and, by default, chart data derived from Alpaca's feed. Check Alpaca's market-data terms before making the site public. Set `INCLUDE_CHART_SERIES: 'false'` to publish less.
 - **Watchlist mode limits.** Twelve Data's free plan allows a small number of requests per minute and per day. Check their pricing page. The page paces requests with the **Requests / minute** setting and caches candles (60 min for 1D, 15 min for 4H, 5 min for 1H).
 
-## 8. Disclaimer
+## 10. Disclaimer
 
 This software is provided for educational and research purposes only. It identifies technical indicator conditions and **does not** provide investment, financial, or trading advice. A detected "Early Bullish Curl" does not mean a price will rise, and MACD crossovers frequently fail. Setup Strength is a checklist-match score, not a probability. You are solely responsible for any decisions you make. Past indicator behavior does not guarantee future results.
