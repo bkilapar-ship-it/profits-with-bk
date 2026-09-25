@@ -15,6 +15,9 @@
  *    per-stock signal lists (data/bt-1D.json, data/bt-4H.json, data/bt-1H.json).
  * 7. Writes data/universe.json: company names, S&P 500 / Nasdaq-100 / Dow 30
  *    members, GICS sectors and themes (see THEMES below or themes.json).
+ * 8. Writes data/setups.json: today's Uptrend Dip (long) and Downtrend Rip (short)
+ *    setups with entry/target/stop levels, late-entry checks and a tracker of
+ *    the last few sessions' signals (rules in app.js, section 4c).
  *
  * Only completed candles are used, so results do not change until the next candle closes.
  *
@@ -571,6 +574,33 @@ function buildFile(tf, symbols, getCandles, dataEnd, universe) {
   return { main, bt: btFile };
 }
 
+/* Uptrend Dip / Downtrend Rip setups over the last few completed daily candles. */
+function buildSetupsFile(symbols, getCandles, groups) {
+  const lastDate = {};
+  for (const sym of symbols) {
+    const c = getCandles(sym);
+    if (c && c.length) lastDate[sym] = String(c[c.length - 1].t).slice(0, 10);
+  }
+  const asOf = Object.values(lastDate).sort().pop() || null;
+  const sp500 = new Set((groups && groups.indexes.sp500 && groups.indexes.sp500.tickers) || []);
+  const items = [];
+  for (const sym of symbols) {
+    if (lastDate[sym] !== asOf) continue;                     // skip halted / stale tickers
+    for (const sig of core.scanSetups(getCandles(sym))) items.push({ ticker: sym, sp500: sp500.has(sym), ...sig });
+  }
+  const clean = roundNumbers(items);
+  return {
+    version: 1,
+    generatedAt: new Date().toISOString(),
+    asOf,
+    nextSession: asOf ? core.addSessions(asOf, 1) : null,
+    rules: core.SETUP,
+    sp500Listed: sp500.size > 0,
+    dip: clean.filter(x => x.kind === 'dip'),
+    rip: clean.filter(x => x.kind === 'rip'),
+  };
+}
+
 /* Rounds every non-integer number in a plain object to 2 decimals (for the backtest summary). */
 function roundNumbers(obj) {
   return JSON.parse(JSON.stringify(obj, (k, v) => (typeof v === 'number' && !Number.isInteger(v) ? Math.round(v * 100) / 100 : v)));
@@ -611,6 +641,7 @@ async function main() {
   let groups = null;
   let universeNames = {};
   const analysed = new Set();
+  let setupsOut = null;
 
   try {
     if (!CFG.keyId || !CFG.secret) {
@@ -657,6 +688,8 @@ async function main() {
     if (CFG.timeframes.includes('1D')) {
       results['1D'] = buildFile('1D', liquid.map(x => x.sym), sym => daily.get(sym), dataEnd, universe);
       results['1D'].main.rows.forEach(r => analysed.add(r.ticker));
+      setupsOut = buildSetupsFile(liquid.map(x => x.sym), sym => daily.get(sym), groups);
+      log(`Setups: ${setupsOut.dip.length} Uptrend Dip and ${setupsOut.rip.length} Downtrend Rip signals in the last ${core.SETUP.LOOKBACK} sessions (as of ${setupsOut.asOf})`);
       logResult('1D', results['1D']);
     }
 
@@ -708,6 +741,13 @@ async function main() {
     }
   }
 
+  const setupsPath = path.join(CFG.outDir, 'setups.json');
+  if (setupsOut) writeJson(setupsPath, setupsOut);
+  else {
+    const previous = await fetchPrevious('setups.json');
+    if (previous) { previous.stale = true; writeJson(setupsPath, previous); }
+  }
+
   const universePath = path.join(CFG.outDir, 'universe.json');
   if (groups) {
     const names = {};
@@ -740,5 +780,5 @@ if (require.main === module) {
 
 module.exports = {
   CFG, etParts, toDailyCandles, aggregateSession, liquidityStats, buildFile, main,
-  cleanName, parseCsv, parseHtmlTables, membersFromRows, buildGroups, THEMES, SECTORS,
+  cleanName, parseCsv, parseHtmlTables, membersFromRows, buildGroups, buildSetupsFile, THEMES, SECTORS,
 };
