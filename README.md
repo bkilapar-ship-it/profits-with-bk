@@ -4,7 +4,7 @@ A static stock screener for GitHub Pages. It finds stocks where the **MACD line 
 
 > **Important:** This is a technical-analysis screening tool, **not financial advice** and **not a trading system**. It only reports whether current indicator values match the criteria you choose. "Setup Strength" is **not** a probability and does **not** predict future prices.
 
-The site has six tabs: **All US**, **Watchlist**, **S&P 500**, **Nasdaq-100**, **Dow 30** and **Sectors & themes**. Every tab except Watchlist reads the results of the scheduled market scan, filtered to that list. Tapping a stock shows its company name, sector, index memberships and themes, along with the signal details, chart and backtest.
+The site has eight tabs: **All US**, **Uptrend Dip**, **Downtrend Rip**, **Watchlist**, **S&P 500**, **Nasdaq-100**, **Dow 30** and **Sectors & themes**. Uptrend Dip and Downtrend Rip are 2–3 day swing setups found in a 30-year study (see section 5). Every tab except Watchlist reads the results of the scheduled market scan, filtered to that list. Tapping a stock shows its company name, sector, index memberships and themes, along with the signal details, chart and backtest.
 
 There are two ways to scan:
 
@@ -84,8 +84,9 @@ After that it runs automatically:
 6. **Indicators.** MACD, Signal, histogram, Wilder RSI and relative volume are calculated with the functions in `app.js`. The results are written to `data/1D.json`, `data/4H.json` and `data/1H.json`.
 7. **Charts.** Price/MACD/RSI chart data is published only for stocks already in the setup's core shape (MACD below Signal, rising, gap closing). That keeps the files small. For any other stock, the detail panel offers **Add to my watchlist** to load its chart live.
 8. **Index lists, sectors and themes.** The scan also downloads S&P 500, Nasdaq-100 and Dow 30 members and GICS sectors, and publishes them with company names in `data/universe.json` (see section 4).
-9. **Backtest.** The same signal rules are replayed on every stock's history (see section 3). The market-wide summary goes into the result files, and each stock's past signals go into `data/bt-1D.json` etc.
-10. **If a scan fails** (bad keys, Alpaca outage), the site is still deployed. It keeps the previously published results and shows a warning that they are from an earlier scan.
+9. **Swing setups.** Every stock is checked for the Uptrend Dip and Downtrend Rip setups on daily candles. Entry, target and stop levels are written to `data/setups.json` (see section 5).
+10. **Backtest.** The same signal rules are replayed on every stock's history (see section 3). The market-wide summary goes into the result files, and each stock's past signals go into `data/bt-1D.json` etc.
+11. **If a scan fails** (bad keys, Alpaca outage), the site is still deployed. It keeps the previously published results and shows a warning that they are from an earlier scan.
 
 A full run makes several hundred Alpaca requests. The 1H/4H part is the slowest, and a first run can take 15+ minutes. The scanner stops downloading after `SCAN_TIME_BUDGET_MIN` (default 24 minutes), so the site still deploys before GitHub's 30-minute job limit. Timeframes that didn't finish keep their previous results. It uses Alpaca's free-plan limit of 200 requests/minute. The scanner paces itself at 180/minute and backs off automatically if it gets rate-limited.
 
@@ -161,7 +162,54 @@ Tiles are sorted by the share of stocks with a signal. When many stocks in one g
 
 `key` must be unique, and `etf` is optional. Tickers that aren't listed or have no data are skipped. Changes appear after the next scheduled scan.
 
-## 5. Mathematical formulas
+## 5. Swing setups: Uptrend Dip (long) and Downtrend Rip (short)
+
+These two setups came out of a separate study of daily prices for S&P 500 members from 1996 to 2026 (about 3 million stock-days, using point-in-time index membership). About 80 technical conditions were tested, alone and in combinations, on a 2–3 day trade:
+1. Rules were searched for on 2000–2012.
+2. The best were checked on 2013–2018.
+3. The survivors were confirmed on 2019–2026, which wasn't used while searching.
+
+The MACD curl itself showed no edge on this horizon. These two setups did.
+
+| | Uptrend Dip (long) | Downtrend Rip (short) |
+|---|---|---|
+| Trend | Close **above** its 200-day SMA | Close **below** its 200-day SMA |
+| Move | **Down** ≥ 10% over 5 sessions | **Up** ≥ 10% over 5 sessions |
+| Trigger | Closed in the bottom 20% of the day's range, **or** a new 20-day closing low, **or** 3 lower closes in a row | RSI(14) ≥ 70 |
+| Price | ≥ $5 | ≥ $5 |
+
+**Trade plan (tested)**
+- **Entry:** the next session's open. Best at or below the signal close for longs (at or above it for shorts). Avoid chasing more than 2% past it.
+- **Target:** 1.5 × ATR(14) from entry.
+- **Stop:** a 3 × ATR(14) "disaster stop". Tighter stops made results worse over a 3-day hold.
+- **Time exit:** the close of the 3rd session.
+- **Late entry:** one session late only held up when day 1 moved against the setup. For a dip, day 1 must close below its open. For a rip, day 1 must close above its open.
+- **Holding longer:** 5–20 session holds were tested. The edge was mostly captured within 3–4 sessions, while losses grew faster than gains after that.
+
+**Tested results, 2019–2026 (S&P 500 stocks, costs excluded)**
+- **Uptrend Dip:** 2,546 signals.
+  - 37% reached +5% within 3 sessions, and 37% lost.
+  - The average trade was +0.9% (+1.0% with the ATR levels).
+  - The only losing year was 2022 (−0.5% per trade).
+- **Downtrend Rip:** 734 signals.
+  - The average short was +1.7%, or +0.6% excluding 2020.
+  - 69% were profitable, or 59% excluding 2020.
+  - It beat the average stock in 24 of 26 years.
+
+**In the app:** the **Uptrend Dip** and **Downtrend Rip** tabs show:
+- **New setups** from the latest completed daily candle, with buy/short limit, target, stop and exit date.
+- **One session late:** yesterday's setups, marked OK or skip according to the late-entry rule.
+- **Tracker:** how every signal from the last 5 sessions has played out, assuming the tested entry.
+
+A switch limits the list to S&P 500 stocks, which is what was tested and is the default. Exit dates skip weekends and NYSE holidays. The holiday list is `MARKET_HOLIDAYS` in `app.js`, so update it once a year.
+
+**Be aware**
+- **Bunched signals:** signals cluster in sell-offs (dips) and rebounds (rips). Taking many at once is one big market bet.
+- **Short costs:** shorts carry borrow fees, margin and dividend costs, and squeeze risk.
+- **Not tested:** small caps, other timeframes, and trading costs.
+- **No guarantee:** this is not financial advice.
+
+## 6. Mathematical formulas
 
 **EMA** (implemented by hand, seeded with the SMA of the first `period` values):
 
@@ -226,7 +274,7 @@ BarsToCross is a straight-line extrapolation: "if the gap keeps closing at the c
 
 When the volume filter is off, the maximum is 90 and the score is rescaled to 0–100. It is labeled "without volume confirmation".
 
-## 6. Configuring the scheduled scan
+## 7. Configuring the scheduled scan
 
 Edit the `env:` block of the **Run market scan** step in `.github/workflows/scan.yml`:
 
@@ -251,7 +299,7 @@ None of these need to be in the workflow file. Add a line only for settings you 
 
 To change the schedule, edit the `cron:` lines. Cron times are in UTC.
 
-## 7. The Watchlist tab and its data provider
+## 8. The Watchlist tab and its data provider
 
 The Watchlist tab works as before. It downloads candles in the browser through `fetchHistoricalData()`, which calls the active entry in `PROVIDERS` in `app.js`. The default is **Twelve Data**, which allows browser (CORS) requests and supports 1day/4h/1h intervals.
 
@@ -281,7 +329,7 @@ PROVIDERS.myprovider = {
 
 The provider must allow browser (CORS) requests.
 
-## 8. Running locally
+## 9. Running locally
 
 Serve the folder over HTTP. Opening `index.html` directly from disk blocks loading the result files.
 
@@ -297,7 +345,7 @@ ALPACA_KEY_ID=your_key ALPACA_SECRET_KEY=your_secret node scanner/scan.js --out 
 
 The `data/` folder is in `.gitignore`. The published results are built by the workflow, not committed.
 
-## 9. Limitations
+## 10. Limitations
 
 - **Delay and freshness.** On Alpaca's free plan, SIP data from the most recent 15 minutes isn't available, so the scan reads data up to 16 minutes old. It then uses only completed candles. GitHub also doesn't guarantee exact cron timing, and scheduled runs can start several minutes late or occasionally be skipped at busy times.
 - **Scheduled runs pause after inactivity.** In public repositories, GitHub disables scheduled workflows after 60 days with no repository activity. GitHub emails you. Re-enable it in the Actions tab, or push any commit.
@@ -307,6 +355,6 @@ The `data/` folder is in `.gitignore`. The published results are built by the wo
 - **Data terms.** The site publishes indicator values and, by default, chart data derived from Alpaca's feed. Check Alpaca's market-data terms before making the site public. Set `INCLUDE_CHART_SERIES: 'false'` to publish less.
 - **Watchlist mode limits.** Twelve Data's free plan allows a small number of requests per minute and per day. Check their pricing page. The page paces requests with the **Requests / minute** setting and caches candles (60 min for 1D, 15 min for 4H, 5 min for 1H).
 
-## 10. Disclaimer
+## 11. Disclaimer
 
 This software is provided for educational and research purposes only. It identifies technical indicator conditions and **does not** provide investment, financial, or trading advice. A detected "Early Bullish Curl" does not mean a price will rise, and MACD crossovers frequently fail. Setup Strength is a checklist-match score, not a probability. You are solely responsible for any decisions you make. Past indicator behavior does not guarantee future results.

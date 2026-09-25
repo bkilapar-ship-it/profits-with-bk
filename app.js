@@ -748,6 +748,150 @@ function escapeHtml(str) {
 }
 
 /* =========================================================================
+ * 4c. SWING SETUPS: Uptrend Dip (long) and Downtrend Rip (short)
+ *
+ * Rules found and validated in the 1996-2026 S&P 500 study (explore 2000-2012,
+ * check 2013-2018, final test 2019-2026). Daily candles only.
+ *
+ * Uptrend Dip:   close > 200-day SMA, down >= 10% over 5 sessions, and
+ *                (closed in the bottom 20% of the day's range OR new 20-day
+ *                closing low OR 3 lower closes in a row).
+ * Downtrend Rip: close < 200-day SMA, up >= 10% over 5 sessions, RSI(14) >= 70.
+ *
+ * Trade plan (tested): enter at the next session's open; target 1.5 x ATR(14);
+ * disaster stop 3 x ATR(14); exit at the close of the 3rd session.
+ * Late entry (one session late) only if day 1 moved against the bounce:
+ * dip -> day 1 closed below its open; rip -> day 1 closed above its open.
+ * ========================================================================= */
+const SETUP = { HOLD: 3, CHASE: 0.02, TARGET_ATR: 1.5, STOP_ATR: 3, LOOKBACK: 6, MIN_PRICE: 5 };
+
+// NYSE full-day holidays (update once a year).
+const MARKET_HOLIDAYS = new Set([
+  '2026-01-01', '2026-01-19', '2026-02-16', '2026-04-03', '2026-05-25', '2026-06-19', '2026-07-03', '2026-09-07', '2026-11-26', '2026-12-25',
+  '2027-01-01', '2027-01-18', '2027-02-15', '2027-03-26', '2027-05-31', '2027-06-18', '2027-07-05', '2027-09-06', '2027-11-25', '2027-12-24',
+]);
+
+/** Trading session `k` sessions after YYYY-MM-DD (skips weekends and NYSE holidays). */
+function addSessions(dateStr, k) {
+  const d = new Date(String(dateStr).slice(0, 10) + 'T12:00:00Z');
+  let n = 0, s = String(dateStr).slice(0, 10);
+  while (n < k) {
+    d.setUTCDate(d.getUTCDate() + 1);
+    s = d.toISOString().slice(0, 10);
+    const wd = d.getUTCDay();
+    if (wd !== 0 && wd !== 6 && !MARKET_HOLIDAYS.has(s)) n++;
+  }
+  return s;
+}
+
+function setupIndicators(candles) {
+  const o = candles.map(x => x.o), h = candles.map(x => x.h), l = candles.map(x => x.l), c = candles.map(x => x.c);
+  const tr = c.map((_, i) => (i === 0 ? h[0] - l[0] : Math.max(h[i] - l[i], Math.abs(h[i] - c[i - 1]), Math.abs(l[i] - c[i - 1]))));
+  return { o, h, l, c, s200: sma(c, 200), rsi: rsiWilder(c, 14), atr: sma(tr, 14) };
+}
+
+/** Setup flags for candle i (null if not enough history). */
+function setupFlags(ind, i) {
+  const { h, l, c, s200, rsi, atr } = ind;
+  if (i < 200 || !isNum(s200[i]) || !isNum(atr[i]) || !isNum(c[i - 5]) || c[i - 5] <= 0) return null;
+  const r5 = c[i] / c[i - 5] - 1;
+  const rng = h[i] - l[i];
+  const clv = rng > 0 ? (c[i] - l[i]) / rng : 0.5;
+  let prior20min = Infinity;
+  for (let k = i - 20; k < i; k++) prior20min = Math.min(prior20min, c[k]);
+  const newLow20 = c[i] < prior20min;
+  const down3 = c[i] < c[i - 1] && c[i - 1] < c[i - 2] && c[i - 2] < c[i - 3];
+  const bottom20 = clv <= 0.2;
+  const priceOk = c[i] >= SETUP.MIN_PRICE;
+  return {
+    dip: priceOk && c[i] > s200[i] && r5 <= -0.10 && (bottom20 || newLow20 || down3),
+    rip: priceOk && c[i] < s200[i] && r5 >= 0.10 && isNum(rsi[i]) && rsi[i] >= 70,
+    r5, clv, bottom20, newLow20, down3, vs200: c[i] / s200[i] - 1, rsi: rsi[i], atr: atr[i],
+  };
+}
+
+/** Levels for a trade entered around `ref`: target 1.5 ATR, stop 3 ATR, 2% chase limit. */
+function setupLevels(kind, ref, atr) {
+  const long = kind === 'dip';
+  return {
+    ref,
+    entryLimit: long ? ref * (1 + SETUP.CHASE) : ref * (1 - SETUP.CHASE),
+    target: long ? ref + SETUP.TARGET_ATR * atr : ref - SETUP.TARGET_ATR * atr,
+    stop: long ? ref - SETUP.STOP_ATR * atr : ref + SETUP.STOP_ATR * atr,
+  };
+}
+
+/**
+ * Follows a signal after it fired, assuming the tested entry (open of the next session).
+ * Same-day target and stop -> stop assumed first (conservative); gaps past a level fill at the open.
+ */
+function trackSetup(kind, candles, i, atr) {
+  const long = kind === 'dip';
+  const n = candles.length;
+  const after = n - 1 - i;
+  if (after < 1) return { state: 'pending' };
+  const entry = candles[i + 1].o;
+  const lv = setupLevels(kind, entry, atr);
+  const ret = px => (long ? px / entry - 1 : 1 - px / entry) * 100;
+  const last = Math.min(after, SETUP.HOLD);
+  for (let j = 1; j <= last; j++) {
+    const k = candles[i + j];
+    if (j > 1) {
+      if (long ? k.o >= lv.target : k.o <= lv.target) return { state: 'target', day: j, entry, exit: k.o, pct: ret(k.o), levels: lv };
+      if (long ? k.o <= lv.stop : k.o >= lv.stop) return { state: 'stop', day: j, entry, exit: k.o, pct: ret(k.o), levels: lv };
+    }
+    if (long ? k.l <= lv.stop : k.h >= lv.stop) return { state: 'stop', day: j, entry, exit: lv.stop, pct: ret(lv.stop), levels: lv };
+    if (long ? k.h >= lv.target : k.l <= lv.target) return { state: 'target', day: j, entry, exit: lv.target, pct: ret(lv.target), levels: lv };
+  }
+  const lastClose = candles[i + last].c;
+  if (after >= SETUP.HOLD) return { state: 'closed', day: SETUP.HOLD, entry, exit: lastClose, pct: ret(lastClose), levels: lv };
+  return { state: 'open', day: after, entry, now: lastClose, pct: ret(lastClose), levels: lv };
+}
+
+/** Everything the app needs about one setup signal at candle i. */
+function describeSetup(kind, candles, ind, i, f) {
+  const n = candles.length;
+  const signalDate = String(candles[i].t).slice(0, 10);
+  const sessionsAgo = n - 1 - i;
+  const out = {
+    kind, signalDate, sessionsAgo,
+    close: candles[i].c, chg5d: f.r5 * 100, rsi: f.rsi, vs200: f.vs200 * 100, atr: f.atr, atrPct: (f.atr / candles[i].c) * 100,
+    reasons: kind === 'dip' ? [f.bottom20 && 'closed near the day’s low', f.newLow20 && 'new 20-day low', f.down3 && '3 down days in a row'].filter(Boolean) : [],
+    levels: setupLevels(kind, candles[i].c, f.atr),
+    entryDate: addSessions(signalDate, 1),
+    exitDate: addSessions(signalDate, SETUP.HOLD),
+    track: trackSetup(kind, candles, i, f.atr),
+  };
+  if (sessionsAgo === 1) {
+    const d1 = candles[i + 1];
+    const lateOk = kind === 'dip' ? d1.c < d1.o : d1.c > d1.o;
+    out.late = {
+      ok: lateOk, day1Open: d1.o, day1Close: d1.c,
+      levels: setupLevels(kind, d1.c, f.atr),
+      entryDate: addSessions(signalDate, 2),
+      exitDate: addSessions(signalDate, SETUP.HOLD + 1),
+    };
+  }
+  return out;
+}
+
+/** Scans the last SETUP.LOOKBACK completed daily candles of one stock. */
+function scanSetups(candles) {
+  const found = [];
+  if (!Array.isArray(candles) || candles.length < 206) return found;
+  const ind = setupIndicators(candles);
+  const n = candles.length;
+  for (let back = 0; back < SETUP.LOOKBACK; back++) {
+    const i = n - 1 - back;
+    const f = setupFlags(ind, i);
+    if (!f) continue;
+    if (f.dip) found.push(describeSetup('dip', candles, ind, i, f));
+    if (f.rip) found.push(describeSetup('rip', candles, ind, i, f));
+  }
+  return found;
+}
+
+/* =========================================================================
  * 5. UI
  * ========================================================================= */
 const STATUS_LABEL = {
@@ -767,6 +911,8 @@ const TIMEFRAMES = ['1D', '4H', '1H'];
 // Tabs. "index" views filter the market scan by index membership.
 const VIEWS = {
   all: { label: 'All US' },
+  dip: { label: 'Uptrend Dip', setup: 'dip' },
+  rip: { label: 'Downtrend Rip', setup: 'rip' },
   watchlist: { label: 'Watchlist' },
   sp500: { label: 'S&P 500', index: 'sp500' },
   ndx: { label: 'Nasdaq-100', index: 'ndx' },
@@ -807,6 +953,10 @@ const state = {
   btFiles: new Map(),
   watchBacktest: null,
   detailMarkers: [],
+  setups: null,
+  setupsError: '',
+  setupsLoading: null,
+  setupSp500Only: true,
 };
 const currentRows = () => (state.mode === 'market' ? state.marketRows : state.watchRows);
 
@@ -822,7 +972,7 @@ function init() {
     'statusText', 'progressBar', 'emptyState', 'noMatch', 'resultsCards', 'resultsTable', 'resultsBody',
     'shownCount', 'showMore', 'settingsSheet', 'closeSettings', 'settingsError', 'periodsHint',
     'providerSelect', 'apiKey', 'saveKey', 'keyStatus', 'forgetKey', 'clearCacheBtn', 'resetSettings',
-    'detail', 'detailBody', 'detailClose',
+    'detail', 'detailBody', 'detailClose', 'setupArea', 'tfSwitch',
   ].forEach(id => { els[id] = $(id); });
   SETTING_FIELDS.forEach(([, id]) => { els[id] = $(id); });
 
@@ -845,6 +995,7 @@ function init() {
   requestsPerMinute = saved.rpm;
   els.tickers.value = storage.get('tickers') ?? 'AAPL, NVDA, AMD, PLTR, BBAI, TSLA';
   state.layout = storage.get('layout') === 'table' ? 'table' : 'cards';
+  state.setupSp500Only = storage.get('setupSp500') !== 'false';
   updateKeyStatus();
 
   // Tabs & timeframe
@@ -855,7 +1006,15 @@ function init() {
   document.querySelectorAll('input[name="tf"]').forEach(r => {
     r.addEventListener('change', () => { if (r.checked) setTimeframe(r.value); });
   });
+  els.setupArea.addEventListener('change', e => {
+    if (e.target && e.target.id === 'setupSp500') {
+      state.setupSp500Only = e.target.checked;
+      storage.set('setupSp500', String(state.setupSp500Only));
+      render();
+    }
+  });
   els.reloadMarket.addEventListener('click', () => {
+    if (VIEWS[state.view].setup) { loadUniverse(true); loadSetups(true); return; }
     if (state.mode !== 'market') return;
     state.btFiles.delete(state.timeframe);
     loadUniverse(true);
@@ -1023,9 +1182,14 @@ function setView(view) {
   const tab = els.tabs.querySelector(`[data-view="${view}"]`);
   if (tab && tab.scrollIntoView) tab.scrollIntoView({ block: 'nearest', inline: 'center' });
 
+  if (VIEWS[view].setup) {
+    loadSetups();
+    render();
+    return;
+  }
   if (mode === 'market') {
     if (!state.marketFile || state.marketFile.timeframe !== state.timeframe) loadMarket(state.timeframe);
-    else { setStatus(summaryText()); render(); }
+    else { updateScanInfo(state.marketFile); setStatus(summaryText()); render(); }
   } else {
     setProgress(0);
     setStatus(state.watchRows.size ? summaryText() : 'Add tickers and tap Scan watchlist.');
@@ -1637,7 +1801,29 @@ function emptyMessage(scoped) {
 
 function render() {
   const market = state.mode === 'market';
+  const setupKind = VIEWS[state.view].setup;
   const boardMode = state.view === 'sectors' && !state.group;
+  els.setupArea.hidden = !setupKind;
+  els.tfSwitch.hidden = !!setupKind;
+  if (setupKind) {
+    els.tabs.querySelectorAll('[data-view]').forEach(b => {
+      const on = b.dataset.view === state.view;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-selected', String(on));
+    });
+    els.watchPanel.hidden = true;
+    els.sectorBoard.hidden = true;
+    els.groupHeader.hidden = true;
+    els.listArea.hidden = true;
+    els.reloadMarket.hidden = false;
+    els.scanInfo.hidden = false;
+    const S = state.setups;
+    els.scanInfo.textContent = S
+      ? `Daily setups, updated ${fmtDateTime(S.generatedAt)}. Based on completed daily candles only.`
+      : (state.setupsError || 'Loading setups…');
+    renderSetups(setupKind);
+    return;
+  }
 
   els.tabs.querySelectorAll('[data-view]').forEach(b => {
     const on = b.dataset.view === state.view;
@@ -1691,6 +1877,185 @@ function render() {
 
   els.showMore.hidden = filtered.length <= visible.length;
   els.shownCount.textContent = filtered.length ? `Showing ${visible.length.toLocaleString()} of ${filtered.length.toLocaleString()}` : '';
+}
+
+/* ---------- Swing setups: Uptrend Dip / Downtrend Rip ---------- */
+// Figures from the 1996-2026 S&P 500 study (daily candles, costs excluded).
+const STRATEGY_INFO = {
+  dip: {
+    title: 'Uptrend Dip', side: 'Long',
+    summary: 'Buys a sharp drop in a stock that is still in a long-term uptrend, and holds for up to 3 sessions.',
+    headline: 'In 2019–2026, 37% of trades reached +5% within 3 sessions, 37% lost, and the average trade made +0.9%.',
+    rules: ['Close above its 200-day moving average', 'Down 10% or more over the last 5 sessions',
+            'At least one of: closed in the bottom 20% of the day’s range, a new 20-day closing low, or 3 lower closes in a row'],
+    plan: ['Buy at the next session’s open. Best at or below the signal close; avoid paying more than 2% above it.',
+           'Target: entry + 1.5 × ATR (the stock’s average daily range).',
+           'Disaster stop: entry − 3 × ATR. Tighter stops did worse in testing.',
+           'Sell at the close of the 3rd session if neither level is hit.',
+           'One session late? Only enter if day 1 closed below its open.'],
+    stats: [['Signals', '2,546 (about 330 a year)'], ['Reached +5% within 3 sessions', '37%'], ['Losing trades', '37%'],
+            ['Average per trade (+5% target)', '+0.9%'], ['Average per trade (ATR levels)', '+1.0%, 60% profitable'],
+            ['Lost more than 5%', '10% of trades'], ['Worst year', '2022: −0.5% per trade'], ['Strongest version', 'More than 10% above the 200-day: +1.45%']],
+    cautions: ['Signals bunch up in sell-offs. Buying many at once is one big bet on the market bouncing.',
+               'Tested on S&P 500 stocks only. Smaller stocks were not tested.'],
+  },
+  rip: {
+    title: 'Downtrend Rip', side: 'Short',
+    summary: 'Shorts a sharp rally in a stock that is still in a long-term downtrend, and covers within 3 sessions.',
+    headline: 'In 2019–2026 (excluding the unusual 2020), shorts averaged +0.6% and 59% were profitable.',
+    rules: ['Close below its 200-day moving average', 'Up 10% or more over the last 5 sessions', 'RSI(14) at 70 or above'],
+    plan: ['Short at the next session’s open. Best at or above the signal close; avoid shorting more than 2% below it.',
+           'Target: entry − 1.5 × ATR.',
+           'Disaster stop: entry + 3 × ATR. Losses on a short have no ceiling, so always use it.',
+           'Cover at the close of the 3rd session if neither level is hit.',
+           'One session late? Only enter if day 1 closed above its open.'],
+    stats: [['Signals', '734 (about 75 a year outside 2020)'], ['Fell 5% within 3 sessions', '39% (21% excluding 2020)'],
+            ['Rose 5% against you', '15%'], ['Average per short', '+1.7% (+0.6% excluding 2020)'], ['Profitable', '69% (59% excluding 2020)'],
+            ['Beat the average stock', '24 of 26 years']],
+    cautions: ['Borrow fees, margin and dividends owed while short are not included.',
+               'Tested on S&P 500 stocks only. Small caps and meme stocks can squeeze violently; this is not for them.'],
+  },
+};
+
+function loadSetups(force = false) {
+  if (state.setupsLoading && !force) return state.setupsLoading;
+  state.setupsError = '';
+  state.setupsLoading = fetch(`${CONFIG.MARKET_DATA_DIR}setups.json`, { cache: 'no-cache' })
+    .then(res => {
+      if (res.status === 404) throw new ScreenerError('No setups have been published yet. They appear after the next scheduled scan.', 'missing');
+      if (!res.ok) throw new ScreenerError(`Could not load setups (HTTP ${res.status}).`, 'api');
+      return res.json();
+    })
+    .then(j => { state.setups = j; })
+    .catch(e => { state.setups = null; state.setupsError = errorMessage(e); })
+    .then(() => { render(); return state.setups; });
+  return state.setupsLoading;
+}
+
+function fmtSession(dateStr) {
+  const d = new Date(String(dateStr).slice(0, 10) + 'T12:00:00Z');
+  if (isNaN(d.getTime())) return String(dateStr || '—');
+  return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+}
+
+function pctText(x) { return isNum(x) ? `${x > 0 ? '+' : ''}${x.toFixed(1)}%` : '—'; }
+
+function levelsHtml(kind, lv, exitDate) {
+  const long = kind === 'dip';
+  const rel = v => pctText((v / lv.ref - 1) * 100);
+  return `<div class="levels">
+    <div><span>${long ? 'Buy up to' : 'Short down to'}</span><b>${fmtPrice(lv.entryLimit)}</b></div>
+    <div><span>Target</span><b class="up">${fmtPrice(lv.target)}</b><small>${rel(lv.target)}</small></div>
+    <div><span>Stop</span><b class="down">${fmtPrice(lv.stop)}</b><small>${rel(lv.stop)}</small></div>
+    <div><span>Exit by</span><b>${escapeHtml(fmtSession(exitDate))}</b><small>at the close</small></div>
+  </div>`;
+}
+
+function setupTags(x) {
+  const tags = [];
+  if (!x.sp500) tags.push('<span class="tag warn">Not in S&amp;P 500: untested</span>');
+  if (x.kind === 'dip') {
+    if (x.vs200 > 10) tags.push(`<span class="tag good">Strong uptrend: ${pctText(x.vs200)} vs 200-day</span>`);
+    else if (x.vs200 < 1) tags.push(`<span class="tag warn">Barely above 200-day (${pctText(x.vs200)})</span>`);
+    for (const r of x.reasons || []) tags.push(`<span class="tag">${escapeHtml(r)}</span>`);
+  } else {
+    tags.push(`<span class="tag">RSI ${isNum(x.rsi) ? x.rsi.toFixed(0) : '—'}</span>`);
+    tags.push(`<span class="tag">${pctText(x.vs200)} vs 200-day</span>`);
+  }
+  return tags.join('');
+}
+
+function setupCard(x, mode) {
+  const t = escapeHtml(x.ticker);
+  const name = escapeHtml(companyName(x.ticker));
+  const long = x.kind === 'dip';
+  let banner = '', lv = x.levels, exitDate = x.exitDate, priceLabel = `${escapeHtml(fmtSession(x.signalDate))} close`, price = x.close;
+  if (mode === 'late' && x.late) {
+    const L = x.late;
+    banner = L.ok
+      ? `<div class="late ok">✓ Late entry OK: day 1 (${escapeHtml(fmtSession(x.entryDate))}) closed ${long ? 'below' : 'above'} its open, so the ${long ? 'bounce' : 'drop'} hasn’t started. Enter at the next open.</div>`
+      : `<div class="late skip">✗ Skip: day 1 (${escapeHtml(fmtSession(x.entryDate))}) closed ${long ? 'above' : 'below'} its open, so the ${long ? 'bounce' : 'drop'} already began. Late entries like this did much worse.</div>`;
+    lv = L.levels; exitDate = L.exitDate; price = L.day1Close; priceLabel = `${escapeHtml(fmtSession(x.entryDate))} close`;
+  }
+  const facts = `${pctText(x.chg5d)} in 5 sessions, RSI ${isNum(x.rsi) ? x.rsi.toFixed(0) : '—'}, daily range (ATR) ${isNum(x.atrPct) ? x.atrPct.toFixed(1) : '—'}% = ${fmtPrice(x.atr)}`;
+  const showLevels = mode !== 'late' || (x.late && x.late.ok);
+  return `<article class="card setup-card${mode === 'late' && x.late && !x.late.ok ? ' muted-card' : ''}">
+    <div class="card-top">
+      <div class="card-id"><span class="ticker">${t}</span>${name ? `<span class="cname">${name}</span>` : ''}</div>
+      <div class="card-price">${fmtPrice(price)}<small>${priceLabel}</small></div>
+    </div>
+    ${banner}
+    <p class="setup-facts">${escapeHtml(facts)}</p>
+    ${showLevels ? levelsHtml(x.kind, lv, exitDate) : ''}
+    ${showLevels ? `<p class="hint">Adjust to your fill: target = fill ${long ? '+' : '−'} ${fmtPrice(SETUP.TARGET_ATR * x.atr)}, stop = fill ${long ? '−' : '+'} ${fmtPrice(SETUP.STOP_ATR * x.atr)}.</p>` : ''}
+    <div class="card-tags left">${setupTags(x)}</div>
+  </article>`;
+}
+
+function trackRow(x) {
+  const tr = x.track || {};
+  const t = escapeHtml(x.ticker);
+  let label, cls;
+  switch (tr.state) {
+    case 'target': label = `Target hit on day ${tr.day} (${pctText(tr.pct)})`; cls = 'up'; break;
+    case 'stop': label = `Stopped on day ${tr.day} (${pctText(tr.pct)})`; cls = 'down'; break;
+    case 'closed': label = `Closed at day 3 (${pctText(tr.pct)})`; cls = tr.pct >= 0 ? 'up' : 'down'; break;
+    case 'open': label = `Open, day ${tr.day} of 3 (${pctText(tr.pct)} so far)`; cls = tr.pct >= 0 ? 'up' : 'down'; break;
+    default: label = 'Waiting for entry'; cls = 'muted';
+  }
+  return `<div class="track-row">
+    <div><span class="ticker">${t}</span><small>${escapeHtml(fmtSession(x.signalDate))} signal${isNum(tr.entry) ? `, entry ${fmtPrice(tr.entry)}` : ''}${x.sp500 ? '' : ', not in S&amp;P 500'}</small></div>
+    <b class="${cls}">${escapeHtml(label)}</b>
+  </div>`;
+}
+
+function renderSetups(kind) {
+  const info = STRATEGY_INFO[kind];
+  const box = els.setupArea;
+  const S = state.setups;
+  const intro = `
+    <div class="panel setup-intro">
+      <div class="setup-title"><h2>${info.title}</h2><span class="tag ${kind === 'dip' ? 'good' : 'warn'}">${info.side}, up to 3 sessions</span></div>
+      <p>${escapeHtml(info.summary)}</p>
+      <p class="setup-headline">${escapeHtml(info.headline)}</p>
+      <details class="setup-more">
+        <summary>Rules, trade plan and tested results</summary>
+        <h3>Scan rules (daily candles)</h3><ul>${info.rules.map(r => `<li>${escapeHtml(r)}</li>`).join('')}</ul>
+        <h3>Trade plan</h3><ul>${info.plan.map(r => `<li>${escapeHtml(r)}</li>`).join('')}</ul>
+        <h3>Tested results, 2019–2026 (S&amp;P 500 stocks)</h3>
+        <div class="bt-scroll"><table class="bt-list">${info.stats.map(([a, b]) => `<tr><td>${escapeHtml(a)}</td><td><b>${escapeHtml(b)}</b></td></tr>`).join('')}</table></div>
+        <h3>Be aware</h3><ul>${info.cautions.map(r => `<li>${escapeHtml(r)}</li>`).join('')}</ul>
+        <p class="hint">Found on 2000–2012, checked on 2013–2018, and confirmed on 2019–2026 data that wasn’t used while searching. Trading costs excluded. Past results don’t guarantee future results. Not financial advice.</p>
+      </details>
+    </div>`;
+  if (!S) {
+    box.innerHTML = intro + `<div class="empty"><p><strong>${escapeHtml(state.setupsError || 'Loading setups…')}</strong></p></div>`;
+    return;
+  }
+  const all = S[kind] || [];
+  const list = state.setupSp500Only && S.sp500Listed ? all.filter(x => x.sp500) : all;
+  const fresh = list.filter(x => x.sessionsAgo === 0);
+  const late = list.filter(x => x.sessionsAgo === 1 && x.late);
+  const tracked = list.filter(x => x.sessionsAgo >= 1).sort((a, b) => (a.signalDate < b.signalDate ? 1 : a.signalDate > b.signalDate ? -1 : a.ticker.localeCompare(b.ticker)));
+  const counts = { target: 0, stop: 0, closed: 0, open: 0 };
+  let closedUp = 0;
+  for (const x of tracked) { const st = x.track && x.track.state; if (st in counts) counts[st]++; if (st === 'closed' && x.track.pct > 0) closedUp++; }
+  const asOf = escapeHtml(fmtSession(S.asOf));
+  const next = escapeHtml(fmtSession(S.nextSession));
+  const section = (title, sub, body) => `<section class="setup-section"><h2>${title}</h2>${sub ? `<p class="hint">${sub}</p>` : ''}${body}</section>`;
+  box.innerHTML = intro + `
+    <div class="setup-controls">
+      <label class="switch"><input type="checkbox" id="setupSp500" ${state.setupSp500Only ? 'checked' : ''}><span class="switch-ui" aria-hidden="true"></span><span>S&amp;P 500 stocks only (what was tested)</span></label>
+      <p class="hint">Setups from the close of ${asOf}.${S.stale ? ' ⚠ The latest scan failed, so these may be out of date.' : ''}</p>
+    </div>
+    ${section(`New setups: ${kind === 'dip' ? 'buy' : 'short'} at the ${next} open`, 'Levels are based on the signal close. Recalculate from your actual fill using the note on each card.',
+      fresh.length ? `<div class="cards">${fresh.map(x => setupCard(x, 'new')).join('')}</div>`
+                   : `<div class="empty small"><p>No new ${info.title} setups at the ${asOf} close.</p></div>`)}
+    ${late.length ? section('One session late', 'The tested entry was yesterday’s open. A late entry only held up when day 1 moved against the setup.', `<div class="cards">${late.map(x => setupCard(x, 'late')).join('')}</div>`) : ''}
+    ${section('Tracker: signals from the last 5 sessions', tracked.length
+        ? `Assumes the tested entry (the open after the signal). ${counts.target} hit target, ${counts.stop} stopped, ${counts.closed} closed at day 3 (${closedUp} up), ${counts.open} still open.`
+        : '', tracked.length ? `<div class="panel track-list">${tracked.map(trackRow).join('')}</div>` : '<div class="empty small"><p>No signals in the last 5 sessions.</p></div>')}
+    <p class="disclaimer">Rules-based output from a backtested model, not financial advice. Always check the live price and news before trading.</p>`;
 }
 
 /* ---------- Sectors & themes board ---------- */
@@ -2229,5 +2594,6 @@ if (typeof module !== 'undefined' && module.exports) {
     ema, computeMACD, rsiWilder, sma, cleanCandles,
     computeMetrics, classify, evaluate, analyze, parseTickers,
     BT, backtestCandles, summarizeSignals, summarizeBacktest, packSignal, unpackSignal,
+    SETUP, addSessions, setupIndicators, setupFlags, setupLevels, trackSetup, describeSetup, scanSetups,
   };
 }

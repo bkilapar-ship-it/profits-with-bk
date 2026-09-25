@@ -50,6 +50,8 @@
 
   <nav id="tabs" class="tabs" role="tablist" aria-label="Stock lists">
     <button type="button" role="tab" data-view="all">All US</button>
+    <button type="button" role="tab" data-view="dip">Uptrend Dip</button>
+    <button type="button" role="tab" data-view="rip">Downtrend Rip</button>
     <button type="button" role="tab" data-view="watchlist">Watchlist</button>
     <button type="button" role="tab" data-view="sp500">S&amp;P 500</button>
     <button type="button" role="tab" data-view="ndx">Nasdaq-100</button>
@@ -58,7 +60,7 @@
   </nav>
 
   <section class="controls">
-    <div class="tf-switch" role="radiogroup" aria-label="Timeframe">
+    <div id="tfSwitch" class="tf-switch" role="radiogroup" aria-label="Timeframe">
       <label><input type="radio" name="tf" value="1D" id="tf1D"><span>1D</span></label>
       <label><input type="radio" name="tf" value="4H" id="tf4H"><span>4H</span></label>
       <label><input type="radio" name="tf" value="1H" id="tf1H"><span>1H</span></label>
@@ -85,6 +87,9 @@
     </div>
     <div id="watchKeyNote" class="key-note"></div>
   </section>
+
+  <!-- Swing setups: Uptrend Dip (long) / Downtrend Rip (short) -->
+  <section id="setupArea" class="setup-area" hidden></section>
 
   <!-- Sectors & themes -->
   <section id="groupHeader" class="group-header" hidden></section>
