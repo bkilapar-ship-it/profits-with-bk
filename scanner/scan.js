@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * MACD Curl-Up Screener — scheduled market scan
+ * Trade With BK — MACD Curl-Up Screener — scheduled market scan
  *
  * Runs in GitHub Actions (Node 22+, built-in fetch, no npm dependencies).
  * 1. Lists all active, tradable US stocks & ETFs from Alpaca.
@@ -10,6 +10,11 @@
  *    regular-session 1H and 4H candles (anchored at 9:30 ET, like most charts).
  * 5. Computes MACD / Signal / RSI / relative volume with the SAME code as the
  *    website (../app.js) and writes data/1D.json, data/4H.json, data/1H.json.
+ * 6. Backtests the Early Bullish Curl / Approaching rules on each stock's history
+ *    and writes the market-wide summary (inside the files above) plus the
+ *    per-stock signal lists (data/bt-1D.json, data/bt-4H.json, data/bt-1H.json).
+ * 7. Writes data/universe.json: company names, S&P 500 / Nasdaq-100 / Dow 30
+ *    members, GICS sectors and themes (see THEMES below or themes.json).
  *
  * Only completed candles are used, so results do not change until the next candle closes.
  *
@@ -58,9 +63,74 @@ const CFG = {
     signal: num(env.MACD_SIGNAL, 9),
     rsiLen: num(env.RSI_LENGTH, 14),
   },
-  keepCandles: 300,
+  // Thresholds used for the published backtest (the page's "All US stocks" backtest).
+  backtest: {
+    rsiMin: num(env.RSI_MIN, 35),
+    rsiMax: num(env.RSI_MAX, 55),
+    minBtc: num(env.MIN_BARS_TO_CROSS, 1),
+    maxBtc: num(env.MAX_BARS_TO_CROSS, 5),
+    volumeFilter: String(env.VOLUME_FILTER || 'false').toLowerCase() === 'true',
+    minRelVol: num(env.MIN_REL_VOL, 1),
+  },
+  keepCandles: num(env.KEEP_CANDLES, 300),
+  // Stop downloading after this many minutes so the site still deploys before
+  // GitHub's job time limit (timeout-minutes in the workflow). Unfinished
+  // timeframes keep their previously published results.
+  timeBudgetMin: num(env.SCAN_TIME_BUDGET_MIN, 24),
+  intradayIncludeGroups: String(env.INTRADAY_INCLUDE_GROUPS || 'true').toLowerCase() !== 'false',
   outDir: argValue('--out', 'data'),
 };
+let deadline = Infinity;
+
+/* ------------------------------------------------------ sectors & themes */
+// GICS sectors with their SPDR sector ETFs (the tile badge shows the ETF's own signal).
+const SECTORS = [
+  { key: 'Information Technology', label: 'Information Technology', etf: 'XLK' },
+  { key: 'Communication Services', label: 'Communication Services', etf: 'XLC' },
+  { key: 'Consumer Discretionary', label: 'Consumer Discretionary', etf: 'XLY' },
+  { key: 'Consumer Staples', label: 'Consumer Staples', etf: 'XLP' },
+  { key: 'Energy', label: 'Energy', etf: 'XLE' },
+  { key: 'Financials', label: 'Financials', etf: 'XLF' },
+  { key: 'Health Care', label: 'Health Care', etf: 'XLV' },
+  { key: 'Industrials', label: 'Industrials', etf: 'XLI' },
+  { key: 'Materials', label: 'Materials', etf: 'XLB' },
+  { key: 'Real Estate', label: 'Real Estate', etf: 'XLRE' },
+  { key: 'Utilities', label: 'Utilities', etf: 'XLU' },
+];
+
+// Starter theme lists. Edit freely, or put your own list in themes.json at the
+// repo root (same shape) to replace these. Tickers that aren't listed or have
+// no data are skipped automatically.
+const THEMES = [
+  { key: 'semis', label: 'Semiconductors', etf: 'SMH', tickers: ['NVDA', 'AMD', 'AVGO', 'TSM', 'ASML', 'QCOM', 'TXN', 'INTC', 'MU', 'AMAT', 'LRCX', 'KLAC', 'ADI', 'MRVL', 'NXPI', 'MCHP', 'ON', 'MPWR', 'SWKS', 'QRVO', 'TER', 'ENTG', 'ARM', 'GFS', 'COHR', 'ALAB', 'CRDO', 'SITM', 'LSCC', 'AMKR', 'ONTO', 'FORM', 'RMBS'] },
+  { key: 'ai', label: 'AI & data centers', etf: 'AIQ', tickers: ['NVDA', 'AMD', 'AVGO', 'MRVL', 'ANET', 'VRT', 'SMCI', 'DELL', 'CRWV', 'NBIS', 'ORCL', 'MSFT', 'GOOGL', 'META', 'AMZN', 'PLTR', 'AI', 'SOUN', 'BBAI', 'APLD', 'PATH', 'SNOW'] },
+  { key: 'quantum', label: 'Quantum computing', etf: 'QTUM', tickers: ['IONQ', 'RGTI', 'QBTS', 'QUBT', 'ARQQ', 'IBM', 'HON', 'GOOGL'] },
+  { key: 'nuclear', label: 'Nuclear & uranium', etf: 'URA', tickers: ['CCJ', 'UEC', 'NXE', 'UUUU', 'DNN', 'LEU', 'SMR', 'OKLO', 'NNE', 'BWXT', 'CEG', 'VST', 'TLN', 'GEV'] },
+  { key: 'clean', label: 'Solar & clean energy', etf: 'ICLN', tickers: ['FSLR', 'ENPH', 'SEDG', 'RUN', 'NXT', 'ARRY', 'SHLS', 'PLUG', 'BE', 'NEE', 'AES', 'CSIQ', 'JKS'] },
+  { key: 'cyber', label: 'Cybersecurity', etf: 'CIBR', tickers: ['CRWD', 'PANW', 'FTNT', 'ZS', 'OKTA', 'NET', 'S', 'QLYS', 'TENB', 'RPD', 'CHKP', 'VRNS', 'CYBR'] },
+  { key: 'software', label: 'Cloud & software', etf: 'IGV', tickers: ['MSFT', 'ORCL', 'CRM', 'NOW', 'ADBE', 'INTU', 'SNOW', 'DDOG', 'MDB', 'NET', 'PLTR', 'WDAY', 'TEAM', 'HUBS', 'SHOP', 'APP'] },
+  { key: 'crypto', label: 'Crypto & bitcoin miners', etf: 'IBIT', tickers: ['COIN', 'MSTR', 'MARA', 'RIOT', 'CLSK', 'HUT', 'CIFR', 'IREN', 'WULF', 'BITF', 'HOOD', 'GLXY', 'CRCL', 'BTDR', 'CORZ'] },
+  { key: 'ev', label: 'EVs & autonomy', etf: 'DRIV', tickers: ['TSLA', 'RIVN', 'LCID', 'NIO', 'XPEV', 'LI', 'GM', 'F', 'QS'] },
+  { key: 'space', label: 'Space & defense', etf: 'ITA', tickers: ['LMT', 'NOC', 'RTX', 'GD', 'LHX', 'BA', 'HII', 'RKLB', 'ASTS', 'LUNR', 'PL', 'RDW', 'KTOS', 'AVAV'] },
+  { key: 'gold', label: 'Gold & silver miners', etf: 'GDX', tickers: ['NEM', 'AEM', 'B', 'GOLD', 'KGC', 'AU', 'GFI', 'WPM', 'FNV', 'RGLD', 'AGI', 'HMY', 'EGO', 'PAAS', 'AG'] },
+  { key: 'oil', label: 'Oil & gas', etf: 'XOP', tickers: ['XOM', 'CVX', 'COP', 'EOG', 'OXY', 'DVN', 'FANG', 'APA', 'CTRA', 'EQT', 'AR', 'RRC', 'SLB', 'HAL', 'BKR', 'MPC', 'PSX', 'VLO'] },
+];
+
+function loadThemes() {
+  const file = path.join(__dirname, '..', 'themes.json');
+  try {
+    if (!fs.existsSync(file)) return THEMES;
+    const json = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const list = Array.isArray(json) ? json : json.themes;
+    if (!Array.isArray(list)) throw new Error('expected an array of themes');
+    const ok = list.filter(t => t && t.key && t.label && Array.isArray(t.tickers));
+    log(`Using ${ok.length} themes from themes.json`);
+    return ok.map(t => ({ ...t, tickers: t.tickers.map(x => String(x).toUpperCase().trim()).filter(Boolean) }));
+  } catch (e) {
+    log(`themes.json ignored (${e.message}); using built-in themes`);
+    return THEMES;
+  }
+}
 
 const RTH_OPEN = 9 * 60 + 30;   // 09:30 ET in minutes
 const RTH_CLOSE = 16 * 60;      // 16:00 ET
@@ -112,6 +182,9 @@ const limiter = {
 let requestCount = 0;
 
 async function alpacaGet(url, attempt = 0) {
+  if (Date.now() > deadline) {
+    throw new Error(`Stopped after ${CFG.timeBudgetMin} minutes (SCAN_TIME_BUDGET_MIN) so the site can still deploy. Lower INTRADAY_MAX_SYMBOLS, or raise SCAN_TIME_BUDGET_MIN together with timeout-minutes.`);
+  }
   await limiter.acquire();
   requestCount++;
   let res;
@@ -146,11 +219,182 @@ async function fetchUniverse() {
   const assets = await alpacaGet(`${CFG.tradingBase}/v2/assets?status=active&asset_class=us_equity`);
   if (!Array.isArray(assets)) throw new Error('Unexpected response from the Alpaca assets endpoint');
   const exchanges = new Set(CFG.exchanges);
-  return assets
+  const names = {};
+  const symbols = assets
     .filter(a => a && a.tradable && a.status === 'active' && exchanges.has(String(a.exchange).toUpperCase()))
-    .map(a => String(a.symbol))
-    .filter(sym => /^[A-Z]{1,5}(\.[A-Z])?$/.test(sym))   // plain tickers and class shares like BRK.B
+    .filter(a => /^[A-Z]{1,5}(\.[A-Z])?$/.test(String(a.symbol)))   // plain tickers and class shares like BRK.B
+    .map(a => { const sym = String(a.symbol); const n = cleanName(a.name); if (n) names[sym] = n; return sym; })
     .sort();
+  return { symbols, names };
+}
+
+/* "Apple Inc. Common Stock" -> "Apple Inc." */
+function cleanName(raw) {
+  let s = String(raw || '').replace(/\s+/g, ' ').trim();
+  s = s.replace(/\s+(Class [A-Z]\s+)?(Common Stock|Common Shares|Ordinary Shares|Subordinate Voting Shares|American Depositary Shares|American Depository Shares|ADSs?|ADRs?|Depositary Shares|Shares of Beneficial Interest|New)\b.*$/i, '');
+  s = s.replace(/\s+Class [A-Z]$/i, '').replace(/[,;]\s*$/, '').trim();
+  return s;
+}
+
+/* ---------------------------------------------- index member lists */
+const UA = 'TradeWithBK-screener/1.0 (scheduled GitHub Action; contact via repository)';
+const TICKER_RE = /^[A-Z]{1,5}(\.[A-Z])?$/;
+
+async function fetchText(url) {
+  const res = await fetch(url, { headers: { 'User-Agent': UA, Accept: 'text/html,text/csv,*/*' }, signal: AbortSignal.timeout(30000) });
+  if (!res.ok) throw new Error(`HTTP ${res.status} for ${url}`);
+  return res.text();
+}
+
+function parseCsv(text) {
+  const rows = [];
+  let row = [], field = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) {
+      if (ch === '"') { if (text[i + 1] === '"') { field += '"'; i++; } else q = false; }
+      else field += ch;
+    } else if (ch === '"') q = true;
+    else if (ch === ',') { row.push(field); field = ''; }
+    else if (ch === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+    else if (ch !== '\r') field += ch;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(c => c.trim() !== ''));
+}
+
+function htmlText(s) {
+  return String(s)
+    .replace(/<sup\b[\s\S]*?<\/sup>/gi, '')
+    .replace(/<style\b[\s\S]*?<\/style>/gi, '')
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;|&#160;/g, ' ')
+    .replace(/&amp;/g, '&').replace(/&#39;|&#x27;/g, "'").replace(/&quot;/g, '"')
+    .replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&#8211;|&ndash;/g, '–')
+    .replace(/\s+/g, ' ').trim();
+}
+
+function parseHtmlTables(html) {
+  const tables = [];
+  const tableRe = /<table\b([^>]*)>([\s\S]*?)<\/table>/gi;
+  let m;
+  while ((m = tableRe.exec(html))) {
+    const idMatch = m[1].match(/\bid="([^"]*)"/i);
+    const rows = [];
+    const rowRe = /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi;
+    let r;
+    while ((r = rowRe.exec(m[2]))) {
+      const cells = [];
+      const cellRe = /<(td|th)\b[^>]*>([\s\S]*?)<\/\1>/gi;
+      let c;
+      while ((c = cellRe.exec(r[1]))) cells.push(htmlText(c[2]));
+      if (cells.length) rows.push(cells);
+    }
+    tables.push({ id: idMatch ? idMatch[1] : '', rows });
+  }
+  return tables;
+}
+
+function normTicker(raw) {
+  let t = String(raw || '').toUpperCase();
+  if (t.includes(':')) t = t.split(':').pop();
+  return t.replace(/\s+/g, '').replace(/[^A-Z.]/g, '');
+}
+
+/* Turns a table (header row + data rows) into [{ t, name, sector }]. */
+function membersFromRows(rows, { sectorIsGics = true } = {}) {
+  if (!rows.length) return [];
+  const header = rows[0].map(h => h.toLowerCase());
+  const ti = header.findIndex(h => /^(symbol|ticker)\b/.test(h));
+  if (ti < 0) return [];
+  const ni = header.findIndex(h => /^(security|company|name)\b/.test(h));
+  const si = sectorIsGics ? header.findIndex(h => /gics sector/.test(h) || h === 'sector') : -1;
+  const out = [];
+  for (const row of rows.slice(1)) {
+    const t = normTicker(row[ti]);
+    if (!TICKER_RE.test(t)) continue;
+    out.push({ t, name: ni >= 0 ? row[ni] : '', sector: si >= 0 ? row[si] : '' });
+  }
+  return out;
+}
+
+async function fetchWikiIndex(url, minCount, opts) {
+  const tables = parseHtmlTables(await fetchText(url));
+  const ordered = [...tables.filter(t => t.id === 'constituents'), ...tables.filter(t => t.id !== 'constituents')];
+  for (const tbl of ordered) {
+    const members = membersFromRows(tbl.rows, opts);
+    if (members.length >= minCount) return members;
+  }
+  throw new Error(`no table with at least ${minCount} members at ${url}`);
+}
+
+// Last-resort snapshot; the live list from Wikipedia is used whenever it loads.
+const DOW_SNAPSHOT = ['AAPL', 'AMGN', 'AMZN', 'AXP', 'BA', 'CAT', 'CRM', 'CSCO', 'CVX', 'DIS', 'GS', 'HD', 'HON', 'IBM', 'JNJ', 'JPM', 'KO', 'MCD', 'MMM', 'MRK', 'MSFT', 'NKE', 'NVDA', 'PG', 'SHW', 'TRV', 'UNH', 'V', 'VZ', 'WMT'];
+
+const INDEX_SOURCES = {
+  sp500: {
+    label: 'S&P 500',
+    min: 450,
+    loaders: [
+      ['GitHub datasets/s-and-p-500-companies', async () => {
+        const rows = parseCsv(await fetchText('https://raw.githubusercontent.com/datasets/s-and-p-500-companies/main/data/constituents.csv'));
+        return membersFromRows(rows);
+      }],
+      ['Wikipedia', () => fetchWikiIndex('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies', 450)],
+    ],
+  },
+  ndx: {
+    label: 'Nasdaq-100',
+    min: 90,
+    loaders: [['Wikipedia', () => fetchWikiIndex('https://en.wikipedia.org/wiki/Nasdaq-100', 90)]],
+  },
+  dow: {
+    label: 'Dow 30',
+    min: 28,
+    loaders: [
+      ['Wikipedia', () => fetchWikiIndex('https://en.wikipedia.org/wiki/Dow_Jones_Industrial_Average', 28, { sectorIsGics: false })],
+      ['built-in snapshot', async () => DOW_SNAPSHOT.map(t => ({ t, name: '', sector: '' }))],
+    ],
+  },
+};
+
+/* Downloads index lists; falls back to the previously published list, never fails the scan. */
+async function buildGroups(previousUniverse) {
+  const indexes = {};
+  const sectorOf = {};
+  const indexNames = {};
+  for (const [key, src] of Object.entries(INDEX_SOURCES)) {
+    let done = false;
+    for (const [source, load] of src.loaders) {
+      if (source === 'built-in snapshot' && previousUniverse && previousUniverse.indexes && previousUniverse.indexes[key]) break;
+      try {
+        const members = await load();
+        if (members.length < src.min) throw new Error(`only ${members.length} members`);
+        indexes[key] = { label: src.label, source, asOf: new Date().toISOString(), tickers: [...new Set(members.map(m => m.t))].sort() };
+        for (const m of members) {
+          if (m.sector && !sectorOf[m.t]) sectorOf[m.t] = m.sector;
+          if (m.name && !indexNames[m.t]) indexNames[m.t] = m.name;
+        }
+        log(`${src.label}: ${indexes[key].tickers.length} members from ${source}`);
+        done = true;
+        break;
+      } catch (e) {
+        log(`${src.label}: ${source} failed (${e.message})`);
+      }
+    }
+    if (!done && previousUniverse && previousUniverse.indexes && previousUniverse.indexes[key]) {
+      indexes[key] = { ...previousUniverse.indexes[key], stale: true };
+      for (const t of indexes[key].tickers) {
+        const sec = previousUniverse.sectorOf && previousUniverse.sectorOf[t];
+        if (sec && !sectorOf[t]) sectorOf[t] = sec;
+      }
+      log(`${src.label}: kept the previously published list`);
+    }
+  }
+  const knownSectors = new Set(SECTORS.map(x => x.key));
+  for (const [t, sec] of Object.entries(sectorOf)) if (!knownSectors.has(sec)) delete sectorOf[t];
+  return { indexes, sectorOf, indexNames, themes: loadThemes() };
 }
 
 /* ------------------------------------------------------------------- bars */
@@ -158,6 +402,14 @@ async function fetchBars(symbols, timeframe, start, end, label) {
   const out = new Map();
   const batches = chunk(symbols, CFG.batchSize);
   let done = 0;
+  let lastLog = Date.now();
+  const progress = force => {
+    if (force || Date.now() - lastLog > 20000) {
+      lastLog = Date.now();
+      log(`${label}: ${done}/${batches.length} batches done, ${requestCount} requests so far`);
+    }
+  };
+  log(`${label}: downloading ${timeframe} bars for ${symbols.length} symbols in ${batches.length} batches`);
   await pool(batches, CFG.concurrency, async batch => {
     let token = null;
     do {
@@ -180,9 +432,10 @@ async function fetchBars(symbols, timeframe, start, end, label) {
         for (const b of bars) arr.push(b);
       }
       token = json.next_page_token || null;
+      progress(false);
     } while (token);
     done++;
-    if (done % 10 === 0 || done === batches.length) log(`${label}: ${done}/${batches.length} batches, ${requestCount} requests so far`);
+    progress(done === batches.length);
   });
   for (const arr of out.values()) arr.sort((a, b) => (a.t < b.t ? -1 : a.t > b.t ? 1 : 0));
   return out;
@@ -255,10 +508,17 @@ function buildFile(tf, symbols, getCandles, dataEnd, universe) {
   const series = {};
   let errors = 0;
   const errorSamples = [];
+  const btSettings = { ...core.DEFAULT_SETTINGS, ...CFG.params, ...CFG.backtest, timeframe: tf };
+  const btResults = [];
+  const btSignals = {};
 
   for (const sym of symbols) {
     try {
-      const m = core.computeMetrics(getCandles(sym) || [], CFG.params);
+      const candles = getCandles(sym) || [];
+      const m = core.computeMetrics(candles, CFG.params);
+      const bt = core.backtestCandles(candles, btSettings);
+      btResults.push(bt);
+      if (bt.signals.length) btSignals[sym] = bt.signals.map(core.packSignal);
       rows.push({
         ticker: sym,
         time: m.time,
@@ -292,30 +552,47 @@ function buildFile(tf, symbols, getCandles, dataEnd, universe) {
     }
   }
 
-  return {
+  const generatedAt = new Date().toISOString();
+  const backtest = roundNumbers(core.summarizeBacktest(btResults, btSettings));
+  const main = {
     version: 1,
     timeframe: tf,
-    generatedAt: new Date().toISOString(),
+    generatedAt,
     dataEnd: dataEnd.toISOString(),
     source: `Alpaca ${CFG.feed.toUpperCase()} feed, ${CFG.adjustment}-adjusted`,
     params: CFG.params,
     universe: { ...universe, analyzed: rows.length, errors, errorSamples },
     stale: false,
+    backtest,
     rows,
     series,
   };
+  const btFile = { version: 1, timeframe: tf, generatedAt, thresholds: backtest.thresholds, signals: btSignals };
+  return { main, bt: btFile };
 }
 
-async function fetchPrevious(tf) {
+/* Rounds every non-integer number in a plain object to 2 decimals (for the backtest summary). */
+function roundNumbers(obj) {
+  return JSON.parse(JSON.stringify(obj, (k, v) => (typeof v === 'number' && !Number.isInteger(v) ? Math.round(v * 100) / 100 : v)));
+}
+
+async function fetchPrevious(name) {
   if (!CFG.previousBaseUrl) return null;
   try {
-    const res = await fetch(`${CFG.previousBaseUrl}/data/${tf}.json`, { signal: AbortSignal.timeout(20000) });
+    const res = await fetch(`${CFG.previousBaseUrl}/data/${name}`, { signal: AbortSignal.timeout(30000) });
     if (!res.ok) return null;
-    const json = await res.json();
-    return json && Array.isArray(json.rows) && json.rows.length ? json : null;
+    return await res.json();
   } catch {
     return null;
   }
+}
+
+function logResult(tf, res) {
+  const b = res.main.backtest;
+  const c10 = b.curl.horizons[10] || {};
+  log(`${tf}: ${res.main.rows.length} analysed, ${Object.keys(res.main.series).length} charts, ` +
+    `backtest ${b.curl.count} Early Curls / ${b.approaching.count} Approaching` +
+    (c10.n ? ` (Early Curl +10 candles: ${Math.round(c10.winRate)}% up, avg ${c10.avg}%)` : ''));
 }
 
 function writeJson(file, obj) {
@@ -328,8 +605,12 @@ function writeJson(file, obj) {
 /* -------------------------------------------------------------------- main */
 async function main() {
   const t0 = Date.now();
+  deadline = t0 + CFG.timeBudgetMin * 60000;
   const results = {};
   let failure = null;
+  let groups = null;
+  let universeNames = {};
+  const analysed = new Set();
 
   try {
     if (!CFG.keyId || !CFG.secret) {
@@ -340,8 +621,15 @@ async function main() {
     // The free plan cannot read SIP data from the most recent 15 minutes.
     const dataEnd = new Date(Date.now() - 16 * 60 * 1000);
 
-    const symbols = await fetchUniverse();
+    const { symbols, names } = await fetchUniverse();
     log(`Universe: ${symbols.length} listed symbols on ${CFG.exchanges.join(', ')}`);
+
+    groups = await buildGroups(await fetchPrevious('universe.json'));
+    const forced = new Set();
+    for (const ix of Object.values(groups.indexes)) ix.tickers.forEach(t => forced.add(t));
+    for (const th of groups.themes) { th.tickers.forEach(t => forced.add(t)); if (th.etf) forced.add(th.etf); }
+    for (const sec of SECTORS) forced.add(sec.etf);
+    universeNames = names;
 
     const dailyStart = new Date(dataEnd.getTime() - CFG.dailyLookbackDays * 86400000);
     const dailyBars = await fetchBars(symbols, '1Day', dailyStart, dataEnd, 'Daily');
@@ -349,12 +637,15 @@ async function main() {
     for (const [sym, bars] of dailyBars) daily.set(sym, toDailyCandles(bars, dataEnd).slice(-CFG.keepCandles));
 
     const liquid = [];
+    let forcedIn = 0;
     for (const [sym, candles] of daily) {
       const st = liquidityStats(candles);
-      if (st && st.lastClose >= CFG.minPrice && st.avgVolume >= CFG.minAvgVolume) liquid.push({ sym, ...st });
+      if (!st) continue;
+      const passes = st.lastClose >= CFG.minPrice && st.avgVolume >= CFG.minAvgVolume;
+      if (passes || forced.has(sym)) { liquid.push({ sym, forced: forced.has(sym), ...st }); if (!passes) forcedIn++; }
     }
     liquid.sort((a, b) => b.avgDollarVolume - a.avgDollarVolume);
-    log(`${liquid.length} symbols pass price ≥ $${CFG.minPrice} and 20-day avg volume ≥ ${CFG.minAvgVolume}`);
+    log(`${liquid.length} symbols scanned: pass price ≥ $${CFG.minPrice} and 20-day avg volume ≥ ${CFG.minAvgVolume}, plus ${forcedIn} index/theme members below the filter`);
 
     const universe = {
       listed: symbols.length,
@@ -365,12 +656,16 @@ async function main() {
 
     if (CFG.timeframes.includes('1D')) {
       results['1D'] = buildFile('1D', liquid.map(x => x.sym), sym => daily.get(sym), dataEnd, universe);
-      log(`1D: ${results['1D'].rows.length} analysed, ${Object.keys(results['1D'].series).length} charts`);
+      results['1D'].main.rows.forEach(r => analysed.add(r.ticker));
+      logResult('1D', results['1D']);
     }
 
     const intradayTfs = CFG.timeframes.filter(tf => tf !== '1D');
     if (intradayTfs.length && CFG.intradayMax > 0) {
-      const subset = liquid.slice(0, CFG.intradayMax).map(x => x.sym);
+      const top = liquid.slice(0, CFG.intradayMax).map(x => x.sym);
+      const members = CFG.intradayIncludeGroups ? liquid.filter(x => x.forced).map(x => x.sym) : [];
+      const subset = [...new Set([...top, ...members])];
+      log(`Intraday: ${top.length} most-traded + ${subset.length - top.length} more index/theme members`);
       const intradayStart = new Date(dataEnd.getTime() - CFG.intradayLookbackDays * 86400000);
       const bars30 = await fetchBars(subset, '30Min', intradayStart, dataEnd, 'Intraday');
       for (const tf of intradayTfs) {
@@ -380,7 +675,7 @@ async function main() {
           candles.set(sym, aggregateSession(bars30.get(sym) || [], minutes, dataEnd).slice(-CFG.keepCandles));
         }
         results[tf] = buildFile(tf, subset, sym => candles.get(sym), dataEnd, { ...universe, intradaySubset: subset.length });
-        log(`${tf}: ${results[tf].rows.length} analysed, ${Object.keys(results[tf].series).length} charts`);
+        logResult(tf, results[tf]);
       }
     }
   } catch (e) {
@@ -391,19 +686,45 @@ async function main() {
   // Write what succeeded; for anything that failed, keep the previously published results.
   for (const tf of CFG.timeframes) {
     const file = path.join(CFG.outDir, `${tf}.json`);
-    if (results[tf]) { writeJson(file, results[tf]); continue; }
+    const btPath = path.join(CFG.outDir, `bt-${tf}.json`);
+    if (results[tf]) {
+      writeJson(file, results[tf].main);
+      writeJson(btPath, results[tf].bt);
+      continue;
+    }
 
     const reason = failure ? failure.message
       : (tf !== '1D' && CFG.intradayMax <= 0 ? 'Intraday scan is disabled (INTRADAY_MAX_SYMBOLS=0).' : 'Timeframe was not scanned.');
-    const previous = await fetchPrevious(tf);
-    if (previous) {
+    const previous = await fetchPrevious(`${tf}.json`);
+    if (previous && Array.isArray(previous.rows) && previous.rows.length) {
       previous.stale = true;
       previous.staleReason = reason;
       writeJson(file, previous);
       log(`${tf}: kept previous results from ${previous.generatedAt}`);
+      const prevBt = await fetchPrevious(`bt-${tf}.json`);
+      if (prevBt && prevBt.signals) writeJson(btPath, prevBt);
     } else {
       writeJson(file, { version: 1, timeframe: tf, generatedAt: new Date().toISOString(), error: reason, rows: [], series: {} });
     }
+  }
+
+  const universePath = path.join(CFG.outDir, 'universe.json');
+  if (groups) {
+    const names = {};
+    for (const t of analysed) names[t] = universeNames[t] || groups.indexNames[t] || '';
+    for (const [t, n] of Object.entries(groups.indexNames)) if (!names[t] && analysed.has(t)) names[t] = n;
+    writeJson(universePath, {
+      version: 1,
+      generatedAt: new Date().toISOString(),
+      names,
+      indexes: groups.indexes,
+      sectorOf: groups.sectorOf,
+      sectors: SECTORS,
+      themes: groups.themes,
+    });
+  } else {
+    const previous = await fetchPrevious('universe.json');
+    if (previous) writeJson(universePath, previous);
   }
 
   log(`Done in ${((Date.now() - t0) / 1000).toFixed(0)} s with ${requestCount} Alpaca requests.`);
@@ -417,4 +738,7 @@ if (require.main === module) {
   main().catch(e => { console.error(e); process.exitCode = 1; });
 }
 
-module.exports = { CFG, etParts, toDailyCandles, aggregateSession, liquidityStats, buildFile, main };
+module.exports = {
+  CFG, etParts, toDailyCandles, aggregateSession, liquidityStats, buildFile, main,
+  cleanName, parseCsv, parseHtmlTables, membersFromRows, buildGroups, THEMES, SECTORS,
+};
