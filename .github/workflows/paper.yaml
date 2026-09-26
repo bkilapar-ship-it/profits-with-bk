@@ -1,0 +1,140 @@
+name: Paper trading
+
+# Trades the Uptrend Dip / Downtrend Rip setups on your Alpaca PAPER account
+# (simulated money only). This workflow only ever manages orders; it never
+# touches GitHub Pages or the deployed site — "Market scan and deploy" reads
+# whatever this workflow leaves in the paper-state branch and publishes
+# data/paper.json on its own, normal schedule.
+#
+# State (open positions, pending orders, trade history, pause/resume) lives
+# in state.json on the orphan "paper-state" branch of this repository, which
+# this workflow creates automatically the first time it runs.
+
+on:
+  schedule:
+    # Times are UTC. Both a summer (EDT) and winter (EST) line are given for each
+    # target US-Eastern time, same pattern as scan.yml.
+    - cron: '35 13 * * 1-5'   # ~9:35 ET (EDT) — place today's entries
+    - cron: '35 14 * * 1-5'   # ~9:35 ET (EST)
+    - cron: '55 19 * * 1-5'   # ~15:55 ET (EDT) — flatten anything due its 3-session time exit
+    - cron: '55 20 * * 1-5'   # ~15:55 ET (EST)
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'What to run (leave as "auto" for a normal scheduled run)'
+        type: choice
+        default: auto
+        options: [auto, entry, exit, reconcile]
+      action:
+        description: 'Pause or resume paper trading (takes effect immediately)'
+        type: choice
+        default: none
+        options: [none, pause, resume]
+      force:
+        description: 'Bypass the once-per-day guard (for testing only — can duplicate orders if used carelessly)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write   # only this workflow needs to push to the paper-state branch; scan.yml stays read-only
+
+concurrency:
+  group: paper-trading
+  cancel-in-progress: false   # never cancel a run that might be mid-way through placing/closing orders
+
+jobs:
+  trade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Check out paper-state branch
+        id: state_checkout
+        continue-on-error: true   # fails harmlessly the very first time, before the branch exists
+        uses: actions/checkout@v6
+        with:
+          ref: paper-state
+          path: paper-state
+
+      - name: Create the paper-state branch if this is the first run
+        if: steps.state_checkout.outcome == 'failure'
+        run: |
+          set -e
+          # actions/checkout leaves a partially-initialized .git folder behind even when
+          # it fails (it sets up the remote before the fetch of a not-yet-existing branch
+          # fails), so start from a genuinely clean directory rather than assuming it's empty.
+          rm -rf paper-state
+          mkdir -p paper-state
+          cd paper-state
+          git init -q -b paper-state
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          echo "Paper trading state for Trade With BK. Bot-managed — do not hand-edit; use the workflow_dispatch pause/resume action instead." > README.md
+          git add README.md
+          git commit -q -m "Initialize paper-state branch"
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push -q -u origin paper-state
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Decide today's mode
+        id: pick_mode
+        run: |
+          mode="${{ inputs.mode || 'auto' }}"
+          if [ "$mode" = "auto" ]; then
+            case "${{ github.event.schedule }}" in
+              '35 13 * * 1-5'|'35 14 * * 1-5') mode="entry" ;;
+              '55 19 * * 1-5'|'55 20 * * 1-5') mode="exit" ;;
+              *) mode="reconcile" ;;
+            esac
+          fi
+          echo "mode=$mode" >> "$GITHUB_OUTPUT"
+          echo "Running in mode: $mode"
+
+      - name: Run paper trading
+        env:
+          ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          MODE: ${{ steps.pick_mode.outputs.mode }}
+          ACTION: ${{ inputs.action || 'none' }}
+          FORCE: ${{ inputs.force || 'false' }}
+          PAPER_STATE_DIR: paper-state
+          # The live setups.json this repo publishes. Override with a repository variable
+          # (Settings -> Secrets and variables -> Actions -> Variables -> PAGES_BASE_URL) if
+          # you use a custom domain — otherwise this default matches standard GitHub Pages.
+          PAPER_SETUPS_URL: ${{ vars.PAGES_BASE_URL && format('{0}/data/setups.json', vars.PAGES_BASE_URL) || format('https://{0}.github.io/{1}/data/setups.json', github.repository_owner, github.event.repository.name) }}
+          # --- Adjustable trading rules ---
+          PAPER_PER_TRADE: '5000'
+          PAPER_MAX_OPEN: '10'
+          PAPER_MAX_NEW_PER_DAY: '3'
+          PAPER_TARGET_ATR: '1.5'
+          PAPER_STOP_ATR: '3'
+          PAPER_HOLD_SESSIONS: '3'
+          PAPER_TRADE_DIP: 'true'
+          PAPER_TRADE_RIP: 'true'
+          PAPER_SP500_ONLY: 'true'
+          PAPER_REVIEW_AFTER: '100'
+          PAPER_SUCCESS_AVG_PCT: '0.3'
+          PAPER_START_CAPITAL: '100000'
+          PAPER_DEFAULT_STATUS: 'paused'   # first run only; resume explicitly via workflow_dispatch when ready
+        run: node scanner/paper.js
+
+      - name: Commit and push the updated state
+        run: |
+          cd paper-state
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add state.json
+          if git diff --cached --quiet; then
+            echo "No change to paper trading state."
+          else
+            git commit -q -m "Paper trading: ${{ steps.pick_mode.outputs.mode }} run, $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+            git push -q origin paper-state
+          fi
