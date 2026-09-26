@@ -976,6 +976,7 @@ const state = {
   paperTab: 'overview',
   paperFilter: { strategy: 'all', result: 'all' },
   paperSide: 'all',
+  watchSource: 'scan',            // 'scan' = daily scan data (no key) | 'live' = Twelve Data
   paperLimit: 20,
 };
 const sortOf = () => state.sort[state.strategy];
@@ -994,7 +995,7 @@ function init() {
     'statusText', 'progressBar', 'emptyState', 'noMatch', 'resultsCards', 'resultsTable', 'resultsBody',
     'shownCount', 'showMore', 'settingsSheet', 'closeSettings', 'settingsError', 'periodsHint',
     'providerSelect', 'apiKey', 'saveKey', 'keyStatus', 'forgetKey', 'clearCacheBtn', 'resetSettings',
-    'detail', 'detailBody', 'detailClose', 'setupArea', 'tfSwitch', 'strategyTabs', 'toolbar', 'statusRow', 'strategyIntro', 'layoutToggle', 'openPaper', 'paperPage', 'scannerPage',
+    'detail', 'detailBody', 'detailClose', 'setupArea', 'tfSwitch', 'strategyTabs', 'toolbar', 'statusRow', 'strategyIntro', 'layoutToggle', 'openPaper', 'paperPage', 'scannerPage', 'useScanData', 'watchMissing',
   ].forEach(id => { els[id] = $(id); });
   SETTING_FIELDS.forEach(([, id]) => { els[id] = $(id); });
 
@@ -1049,7 +1050,7 @@ function init() {
   els.statChips.addEventListener('click', e => {
     const b = e.target.closest('[data-filter]');
     if (!b) return;
-    state.statusFilter[state.mode] = b.dataset.filter;
+    state.statusFilter[filterKey()] = b.dataset.filter;
     state.visibleLimit = CONFIG.PAGE_SIZE;
     render();
   });
@@ -1062,8 +1063,14 @@ function init() {
   // Watchlist
   els.addTicker.addEventListener('click', addTickerFromInput);
   els.tickerInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addTickerFromInput(); } });
+  state.watchSource = storage.get('watchSource') === 'live' ? 'live' : 'scan';
   els.tickers.addEventListener('input', () => storage.set('tickers', els.tickers.value));
-  els.scanBtn.addEventListener('click', scan);
+  els.tickers.addEventListener('input', debounce(() => { if (state.watchSource === 'scan') render(); }, 300));
+  els.scanBtn.addEventListener('click', () => {
+    if (state.watchSource !== 'live') { setWatchSource('live'); }
+    scan();
+  });
+  els.useScanData.addEventListener('click', () => setWatchSource('scan'));
   els.stopBtn.addEventListener('click', () => { abortFlag = true; setStatus('Stopping…'); });
   els.clearBtn.addEventListener('click', clearAll);
   els.watchKeyNote.addEventListener('click', e => {
@@ -1215,7 +1222,7 @@ function setStrategy(strategy) {
 
 function setView(view, keepScroll) {
   if (!VIEWS[view]) view = 'all';
-  const mode = view === 'watchlist' ? 'watchlist' : 'market';
+  const mode = view === 'watchlist' && state.watchSource === 'live' ? 'watchlist' : 'market';
   if (state.scanning && (mode !== 'watchlist' || view !== state.view)) { setStatus('Stop the watchlist scan before switching.'); return; }
   state.view = view;
   state.mode = mode;
@@ -1233,7 +1240,7 @@ function setView(view, keepScroll) {
 
   if (isSetupStrategy()) {
     if (mode === 'market') loadSetups();
-    else setStatus(state.watchRows.size ? '' : 'Add tickers and tap Scan watchlist. Setups use daily candles.');
+    else setStatus(state.watchRows.size ? '' : 'Tap Scan again to download live daily candles.');
     render();
     return;
   }
@@ -1242,7 +1249,7 @@ function setView(view, keepScroll) {
     else { updateScanInfo(state.marketFile); setStatus(summaryText()); render(); }
   } else {
     setProgress(0);
-    setStatus(state.watchRows.size ? summaryText() : 'Add tickers and tap Scan watchlist.');
+    setStatus(state.watchRows.size ? summaryText() : 'Tap Scan again to download live prices.');
     render();
   }
 }
@@ -1487,7 +1494,7 @@ function onSettingsChanged() {
 
   if (state.scanning || state.watchRows.size === 0) { render(); return; }
   if (s.timeframe !== state.scannedTimeframe) {
-    setStatus(`Timeframe changed to ${s.timeframe}. Tap Scan watchlist to load ${s.timeframe} candles.`);
+    setStatus(`Timeframe changed to ${s.timeframe}. Tap Scan again to load ${s.timeframe} candles.`);
     return;
   }
   // Re-score from already-downloaded candles, no new API calls.
@@ -1507,10 +1514,54 @@ function updateKeyStatus() {
   const hasKey = !!storage.get('apikey');
   els.keyStatus.textContent = hasKey ? `A key is saved in this browser for ${p.label}.` : `No key saved. ${p.keyHelp}`;
   els.forgetKey.hidden = !hasKey;
-  els.watchKeyNote.className = hasKey ? 'key-note' : 'key-note warn';
-  els.watchKeyNote.innerHTML = hasKey
-    ? `Live data from ${escapeHtml(p.label)} with your saved key.`
-    : `No ${escapeHtml(p.label)} key saved, so only AAPL will load. <button type="button" class="btn btn-small" data-open-key>Add free key</button>`;
+  if (els.scanBtn) renderWatchPanel();
+}
+
+/* ---------- Watchlist source ---------- */
+// The Watchlist tab keeps its own signal filter (default: show every ticker).
+function filterKey() { return state.view === 'watchlist' ? 'watchlist' : state.mode; }
+
+function watchSet() { return new Set(parseTickers(els.tickers.value).valid); }
+
+function setWatchSource(src) {
+  if (state.scanning) return;
+  state.watchSource = src === 'live' ? 'live' : 'scan';
+  storage.set('watchSource', state.watchSource);
+  if (state.view === 'watchlist') setView('watchlist', true);
+}
+
+/* Updates the watchlist panel: buttons, key note and tickers missing from the daily scan. */
+function renderWatchPanel() {
+  const live = state.watchSource === 'live';
+  els.scanBtn.textContent = live ? 'Scan again' : 'Live refresh';
+  els.scanBtn.classList.toggle('btn-primary', live);
+  els.useScanData.hidden = !live || state.scanning;
+  const p = PROVIDERS[activeProviderId];
+  const hasKey = !!storage.get('apikey');
+  if (live) {
+    els.watchKeyNote.className = hasKey ? 'key-note' : 'key-note warn';
+    els.watchKeyNote.innerHTML = hasKey
+      ? `Live prices from ${escapeHtml(p.label)} with your saved key.`
+      : `Live refresh needs a free ${escapeHtml(p.label)} key (only AAPL works without one). <button type="button" class="btn btn-small" data-open-key>Add free key</button>`;
+  } else {
+    els.watchKeyNote.className = 'key-note';
+    els.watchKeyNote.innerHTML = `Your stocks come from the daily scan, so no key is needed. It updates hourly in market hours and after the close. <b>Live refresh</b> downloads prices right now and needs a free ${escapeHtml(p.label)} key.`;
+  }
+  // tickers the daily scan doesn't cover
+  let missing = [];
+  if (!live) {
+    const w = [...watchSet()];
+    if (isSetupStrategy()) {
+      const st = state.setups && state.setups.status;
+      if (st) missing = w.filter(t => !st[t]);
+    } else if (state.marketFile) {
+      missing = w.filter(t => !state.marketRows.has(t));
+    }
+  }
+  els.watchMissing.hidden = !missing.length;
+  if (missing.length) {
+    els.watchMissing.innerHTML = `Not in the latest scan: <b>${missing.map(escapeHtml).join(', ')}</b>. Add ${missing.length === 1 ? 'it' : 'them'} to <b>watchlist.txt</b> in your repository to always include ${missing.length === 1 ? 'it' : 'them'}, or use Live refresh.`;
+  }
 }
 
 /* ---------- Tickers ---------- */
@@ -1534,6 +1585,7 @@ function addTickerFromInput() {
   storage.set('tickers', els.tickers.value);
   els.tickerInput.value = '';
   els.tickerInput.focus();
+  if (state.watchSource === 'scan') render();
 }
 
 function addToWatchlist(ticker) {
@@ -1541,7 +1593,7 @@ function addToWatchlist(ticker) {
   if (!existing.includes(ticker)) els.tickers.value = [...existing, ticker].join(', ');
   storage.set('tickers', els.tickers.value);
   setView('watchlist');
-  setStatus(`${ticker} is in your watchlist. Tap Scan watchlist to load its live data and chart.`);
+  setStatus(`${ticker} is in your watchlist.`);
 }
 
 function clearAll() {
@@ -1552,7 +1604,7 @@ function clearAll() {
   state.watchBacktest = null;
   closeDetail();
   setProgress(0);
-  setStatus('Cleared. Add tickers and tap Scan watchlist.');
+  setStatus('Cleared. Add tickers to build your watchlist.');
   render();
 }
 
@@ -1666,6 +1718,9 @@ function scopedRows() {
     rows = set ? rows.filter(r => set.has(r.ticker)) : [];
   } else if (state.view === 'sectors') {
     rows = state.group ? rows.filter(r => state.group.tickers.has(r.ticker)) : [];
+  } else if (state.view === 'watchlist') {
+    const w = watchSet();
+    rows = rows.filter(r => w.has(r.ticker));
   }
   return rows;
 }
@@ -1691,7 +1746,7 @@ function statusRank(row) {
 
 function filteredSortedRows(scoped) {
   let rows = scoped;
-  const f = state.statusFilter[state.mode];
+  const f = state.statusFilter[filterKey()];
   if (f === 'signals') rows = rows.filter(r => r.result && r.result.status !== 'none');
   else if (f === 'curl' || f === 'approaching') rows = rows.filter(r => r.result && r.result.status === f);
   if (state.findText) {
@@ -1826,7 +1881,7 @@ function renderChips(scoped) {
     if (r.result.status === 'curl') curl++;
     else if (r.result.status === 'approaching') appr++;
   }
-  const f = state.statusFilter[state.mode];
+  const f = state.statusFilter[filterKey()];
   const chip = (key, label, n, cls = '') =>
     `<button type="button" class="chip ${cls}${f === key ? ' active' : ''}" data-filter="${key}" aria-pressed="${f === key}"><span class="chip-n">${fmtInt(n)}</span><span>${label}</span></button>`;
   els.statChips.innerHTML =
@@ -1839,12 +1894,16 @@ function renderChips(scoped) {
 function emptyMessage(scoped) {
   const market = state.mode === 'market';
   if (!market) {
-    return state.watchRows.size ? null : ['Your watchlist results will appear here.', 'Add tickers above and tap Scan watchlist.'];
+    return state.watchRows.size ? null : ['Live results will appear here.', 'Tap Scan again to download live prices for your tickers.'];
   }
   if (!state.marketFile) {
     return state.marketError
       ? [state.marketError, 'Set up the scheduled GitHub Action (see README), or use the Watchlist tab to scan tickers live.']
       : ['Loading results…', ''];
+  }
+  if (state.view === 'watchlist') {
+    if (!watchSet().size) return ['Your watchlist is empty.', 'Add tickers above. They are matched against the daily scan, so no key is needed.'];
+    if (!scoped.length) return ['None of your tickers are in the latest scan.', 'Add them to watchlist.txt in your repository, or use Live refresh.'];
   }
   const v = VIEWS[state.view];
   if (v.index && !(state.universe && state.universe.indexSets[v.index])) {
@@ -1866,7 +1925,8 @@ function render() {
     b.setAttribute('aria-selected', String(on));
   });
   els.tfSwitch.hidden = setupMode;
-  els.watchPanel.hidden = market;
+  els.watchPanel.hidden = state.view !== 'watchlist';
+  if (state.view === 'watchlist') renderWatchPanel();
   els.reloadMarket.hidden = !market;
   els.scanInfo.hidden = !market;
   els.sectorBoard.hidden = !boardMode;
@@ -1916,7 +1976,7 @@ function render() {
   const noMatch = !empty && filtered.length === 0;
   els.noMatch.hidden = !noMatch;
   if (noMatch) {
-    const f = state.statusFilter[state.mode];
+    const f = state.statusFilter[filterKey()];
     els.noMatch.innerHTML = state.findText
       ? `<p><strong>No match for “${escapeHtml(state.findText)}” here.</strong></p><p>${f !== 'all' ? 'It may have no signal right now. Tap “All stocks” to include every stock.' : 'Check the spelling, or try another tab.'}</p>`
       : `<p><strong>No ${f === 'curl' ? 'Early Bullish Curls' : f === 'approaching' ? 'Approaching Crossovers' : 'signals'} in this list right now.</strong></p><p>Tap “All stocks” to see everything, or loosen the rules in Filters &amp; settings.</p>`;
@@ -2102,8 +2162,8 @@ function matchesFind(ticker) {
 function setupItems(kind) {
   const sp = state.universe && state.universe.indexSets.sp500;
   if (state.mode === 'watchlist') {
-    if (!state.watchRows.size) return { items: [], message: ['Your watchlist results will appear here.', 'Add tickers above and tap Scan watchlist. Setups are checked on daily candles.'] };
-    if (state.scannedTimeframe !== '1D') return { items: [], message: ['Your watchlist was scanned on intraday candles.', 'Tap Scan watchlist to load the daily candles this setup needs.'] };
+    if (!state.watchRows.size) return { items: [], message: ['Live results will appear here.', 'Tap Scan again to download live daily candles for your tickers.'] };
+    if (state.scannedTimeframe !== '1D') return { items: [], message: ['Your watchlist was scanned on intraday candles.', 'Tap Scan again to load the daily candles this setup needs.'] };
     const items = [];
     for (const row of state.watchRows.values()) {
       if (!row.candles) continue;
@@ -2121,23 +2181,40 @@ function setupItems(kind) {
     items = items.filter(x => set.has(x.ticker));
   } else if (state.view === 'sectors') {
     items = state.group ? items.filter(x => state.group.tickers.has(x.ticker)) : [];
+  } else if (state.view === 'watchlist') {
+    const w = watchSet();
+    if (!w.size) return { items: [], message: ['Your watchlist is empty.', 'Add tickers above. They are matched against the daily scan, so no key is needed.'] };
+    items = items.filter(x => w.has(x.ticker));
   }
   return { items };
 }
 
 /* For the Watchlist tab: how close each ticker is to the setup today. */
+function statusLabel(kind, r5, vs200, rsi) {
+  return kind === 'dip'
+    ? `${pctText(r5)} in 5 sessions (needs −10%), ${pctText(vs200)} vs 200-day (needs above)`
+    : `${pctText(r5)} in 5 sessions (needs +10%), RSI ${isNum(rsi) ? rsi.toFixed(0) : '—'} (needs 70+), ${pctText(vs200)} vs 200-day (needs below)`;
+}
+
 function watchlistSetupStatus(kind, withSetup) {
   const rows = [];
+  if (state.mode !== 'watchlist') {
+    const st = (state.setups && state.setups.status) || {};
+    for (const t of watchSet()) {
+      if (!matchesFind(t) || withSetup.has(t)) continue;
+      const v = st[t];
+      const label = v ? statusLabel(kind, v[1], v[2], v[3]) : 'Not in the latest scan';
+      rows.push(`<div class="track-row"><div><span class="ticker">${escapeHtml(t)}</span><small>${escapeHtml(companyName(t))}</small></div><b class="${v ? 'muted' : 'down'}">${escapeHtml(label)}</b></div>`);
+    }
+    return rows.join('');
+  }
   for (const row of state.watchRows.values()) {
     if (!matchesFind(row.ticker)) continue;
     if (!row.candles) { rows.push(`<div class="track-row"><div><span class="ticker">${escapeHtml(row.ticker)}</span></div><b class="down">${escapeHtml(row.error || 'No data')}</b></div>`); continue; }
     if (withSetup.has(row.ticker)) continue;
     const ind = setupIndicators(row.candles);
     const f = setupFlags(ind, row.candles.length - 1);
-    const label = !f ? 'Not enough history (needs about 205 daily candles)'
-      : kind === 'dip'
-        ? `${pctText(f.r5 * 100)} in 5 sessions (needs −10%), ${pctText(f.vs200 * 100)} vs 200-day (needs above)`
-        : `${pctText(f.r5 * 100)} in 5 sessions (needs +10%), RSI ${isNum(f.rsi) ? f.rsi.toFixed(0) : '—'} (needs 70+), ${pctText(f.vs200 * 100)} vs 200-day (needs below)`;
+    const label = !f ? 'Not enough history (needs about 205 daily candles)' : statusLabel(kind, f.r5 * 100, f.vs200 * 100, f.rsi);
     rows.push(`<div class="track-row"><div><span class="ticker">${escapeHtml(row.ticker)}</span><small>${escapeHtml(companyName(row.ticker))}</small></div><b class="muted">${escapeHtml(label)}</b></div>`);
   }
   return rows.join('');
@@ -2183,7 +2260,8 @@ function renderSetups(kind) {
   const lastCandle = watch ? (() => { for (const r of state.watchRows.values()) if (r.candles) return String(r.candles[r.candles.length - 1].t).slice(0, 10); return null; })() : asOfDate;
   const asOf = escapeHtml(fmtSession(lastCandle));
   const next = escapeHtml(fmtSession(lastCandle ? addSessions(lastCandle, 1) : ''));
-  const scopeNote = state.view === 'all'
+  const watchView = state.view === 'watchlist';
+  const scopeNote = watchView && !watch ? 'Your watchlist, from the daily scan.' : state.view === 'all'
     ? 'Includes stocks outside the S&amp;P 500. Those weren’t part of the test, so they are marked.'
     : state.view === 'sp500' ? 'S&amp;P 500 stocks, the group the rules were tested on.'
     : watch ? 'Checked live on your watchlist’s daily candles.'
@@ -2199,7 +2277,7 @@ function renderSetups(kind) {
     ${section('Tracker: signals from the last 5 sessions', tracked.length
         ? `Assumes the tested entry (the open after the signal). ${counts.target} hit target, ${counts.stop} stopped, ${counts.closed} closed at day 3 (${closedUp} up), ${counts.open} still open.`
         : '', tracked.length ? `<div class="panel track-list">${tracked.map(trackRow).join('')}</div>` : '<div class="empty small"><p>No signals in the last 5 sessions.</p></div>')}
-    ${watch ? section('The rest of your watchlist', 'How far each stock is from qualifying today.', `<div class="panel track-list">${watchlistSetupStatus(kind, withSetup) || '<p class="hint">Every ticker has a setup today.</p>'}</div>`) : ''}
+    ${watchView ? section('The rest of your watchlist', 'How far each stock is from qualifying today.', `<div class="panel track-list">${watchlistSetupStatus(kind, withSetup) || '<p class="hint">Every ticker has a setup today.</p>'}</div>`) : ''}
     <p class="disclaimer">Rules-based output from a backtested model, not financial advice. Always check the live price and news before trading.</p>`;
 }
 

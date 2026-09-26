@@ -97,8 +97,10 @@
     </div>
     <label for="tickers" class="field-label">Your tickers, separated by commas or new lines</label>
     <textarea id="tickers" rows="3" spellcheck="false" placeholder="AAPL, NVDA, AMD, PLTR, BBAI, TSLA"></textarea>
+    <p id="watchMissing" class="hint" hidden></p>
     <div class="btn-row">
-      <button id="scanBtn" type="button" class="btn btn-primary">Scan watchlist</button>
+      <button id="scanBtn" type="button" class="btn">Live refresh</button>
+      <button id="useScanData" type="button" class="btn" hidden>Use daily scan data</button>
       <button id="stopBtn" type="button" class="btn" hidden>Stop</button>
       <button id="clearBtn" type="button" class="btn btn-ghost">Clear</button>
     </div>
