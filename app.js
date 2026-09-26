@@ -2886,6 +2886,26 @@ function drawChart(canvas, r, markers = []) {
  * it: orders are placed by the job, never from the browser.
  * ========================================================================= */
 const PAPER_TABS = [['overview', 'Overview'], ['positions', 'Positions'], ['orders', 'Orders'], ['history', 'History'], ['rules', 'Rules']];
+
+/** Best-effort owner/repo from a standard *.github.io Pages URL (returns null for a custom domain). */
+function repoInfo() {
+  const m = location.hostname.match(/^([^.]+)\.github\.io$/i);
+  if (!m) return null;
+  const owner = m[1];
+  const seg = location.pathname.split('/').filter(Boolean)[0];
+  return { owner, repo: seg || `${owner}.github.io` };
+}
+function actionsUrl(workflowFile) {
+  const r = repoInfo();
+  return r ? `https://github.com/${r.owner}/${r.repo}/actions/workflows/${workflowFile}` : null;
+}
+function pauseResumeNote() {
+  const url = actionsUrl('paper.yml');
+  const link = url
+    ? `<a href="${url}" target="_blank" rel="noopener">Actions → Paper trading → Run workflow</a>`
+    : `<b>Actions → Paper trading → Run workflow</b>`;
+  return `Pause or resume it from GitHub, not from this page: open ${link}, choose <b>pause</b> or <b>resume</b> in the “action” list, and run it. Leave “mode” as <b>auto</b>. It takes effect on that run, right away.`;
+}
 const STRAT_NAME = { dip: 'Uptrend Dip', rip: 'Downtrend Rip' };
 
 function setPage(page) {
@@ -2905,7 +2925,7 @@ function setPage(page) {
 function loadPaper(force = false) {
   if (state.paperLoading && !force) return state.paperLoading;
   state.paperError = '';
-  state.paperLoading = fetch(`${CONFIG.MARKET_DATA_DIR}paper.json`, { cache: 'no-cache' })
+  const req = fetch(`${CONFIG.MARKET_DATA_DIR}paper.json`, { cache: 'no-cache' })
     .then(res => {
       if (res.status === 404) return null;
       if (!res.ok) throw new ScreenerError(`Could not load paper trading results (HTTP ${res.status}).`, 'api');
@@ -2913,8 +2933,13 @@ function loadPaper(force = false) {
     })
     .then(j => { state.paper = j; })
     .catch(e => { state.paper = null; state.paperError = errorMessage(e); })
-    .then(() => { if (state.page === 'paper') renderPaper(); return state.paper; });
-  return state.paperLoading;
+    .then(() => {
+      state.paperLoading = null;   // done either way, so a null result renders as "not started", not a stuck spinner
+      if (state.page === 'paper') renderPaper();
+      return state.paper;
+    });
+  state.paperLoading = req;
+  return req;
 }
 
 function money(x, signed = false) {
@@ -3171,6 +3196,7 @@ function paperRules(P) {
   return `
     <section class="panel pcard">
       <div class="prow"><h2>Status</h2><span class="pill ${P.status === 'running' ? 'pill-curl' : 'pill-none'}">${P.simulated ? 'Simulated' : P.status === 'running' ? 'Running' : 'Paused'}</span></div>
+      <p class="hint">${pauseResumeNote()}</p>
       <p class="hint">Locked to Alpaca paper trading. It can’t place real trades.</p>
     </section>
     <section class="panel pcard">
@@ -3209,8 +3235,9 @@ function renderPaper() {
       }).join('')}
     </nav>`;
   if (!P) {
+    const notStarted = !state.paperError && !state.paperLoading;
     els.paperPage.innerHTML = head + `<div class="empty"><p><strong>${escapeHtml(state.paperError || (state.paperLoading ? 'Loading…' : 'Paper trading hasn’t started yet.'))}</strong></p>
-      <p>Once the paper-trading job is switched on, it trades every new setup with virtual money and publishes the results here each day.</p></div>`;
+      ${notStarted ? `<p>${pauseResumeNote()}</p><p class="hint">It publishes its first results here shortly after that run finishes.</p>` : ''}</div>`;
     return;
   }
   const st = paperStats(P);

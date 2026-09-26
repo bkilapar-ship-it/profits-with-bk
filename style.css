@@ -502,6 +502,7 @@ tbody tr.row-approaching { box-shadow: inset 3px 0 0 var(--approach); }
 .track-row b { font-size: 0.86rem; text-align: right; }
 
 
+.hint a, .empty a { color: var(--brand); font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
 /* ---------- Paper trading ---------- */
 .appbar-actions { display: flex; align-items: center; gap: 8px; }
 .paper-btn.active { background: var(--navy); border-color: var(--navy); color: #fff; }
