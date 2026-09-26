@@ -1,0 +1,22 @@
+{
+ "version": 1,
+ "status": "paused",
+ "startedAt": null,
+ "lastEntryRunDate": null,
+ "lastExitRunDate": null,
+ "spyBaseline": null,
+ "positions": {},
+ "pendingEntries": {},
+ "pendingCloses": {},
+ "trades": [],
+ "equity": [],
+ "lastOrders": {
+  "forDate": null,
+  "entries": [],
+  "skipped": []
+ },
+ "lastExits": {
+  "forDate": null,
+  "exits": []
+ }
+}
