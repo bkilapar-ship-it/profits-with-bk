@@ -1,7 +1,7 @@
 {
  "version": 1,
- "status": "paused",
- "startedAt": null,
+ "status": "running",
+ "startedAt": "2026-09-26",
  "lastEntryRunDate": null,
  "lastExitRunDate": null,
  "spyBaseline": null,
@@ -9,7 +9,14 @@
  "pendingEntries": {},
  "pendingCloses": {},
  "trades": [],
- "equity": [],
+ "equity": [
+  {
+   "d": "2026-09-26",
+   "value": 100000,
+   "pct": 0,
+   "spy": null
+  }
+ ],
  "lastOrders": {
   "forDate": null,
   "entries": [],
