@@ -1,0 +1,50 @@
+name: Research - stocks outside the S&P 500
+
+# One-off research run: tests the Uptrend Dip / Downtrend Rip rules on liquid stocks
+# outside the S&P 500 (the SOFI / MSTR kind), 2016 onward, using your Alpaca keys.
+# Read-only: it downloads market data and never places or touches orders.
+# Runs only when you start it from the Actions tab.
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_symbols:
+        description: 'Limit the number of stocks for a quick trial run (0 = all, the real test)'
+        default: '0'
+      min_dollar_volume:
+        description: 'Minimum median daily trading value, in dollars'
+        default: '20000000'
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Run the research
+        env:
+          ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          ALPACA_FEED: 'sip'
+          RESEARCH_MAX_SYMBOLS: ${{ inputs.max_symbols }}
+          RESEARCH_MIN_DOLLAR_VOL: ${{ inputs.min_dollar_volume }}
+          RESEARCH_OUT: research-out
+        run: node scanner/research.js
+
+      - name: Save the results as a downloadable file
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: research-results
+          path: research-out/
+          if-no-files-found: warn
