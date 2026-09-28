@@ -763,7 +763,7 @@ function escapeHtml(str) {
  * Late entry (one session late) only if day 1 moved against the bounce:
  * dip -> day 1 closed below its open; rip -> day 1 closed above its open.
  * ========================================================================= */
-const SETUP = { HOLD: 3, TARGET_ATR: 1.5, STOP_ATR: 3, LOOKBACK: 6, MIN_PRICE: 5, MIN_LIQUIDITY: 20e6 };
+const SETUP = { HOLD: 3, CHASE: 0.02, TARGET_ATR: 1.5, STOP_ATR: 3, LOOKBACK: 6, MIN_PRICE: 5, MIN_LIQUIDITY: 20e6 };
 const NONSP_MIN_LIQUIDITY = 100e6;   // $/day floor for the Non-S&P 500 browsing pool -- a higher bar than the general $20M floor
 
 // NYSE full-day holidays (update once a year).
@@ -824,13 +824,14 @@ function setupFlags(ind, i) {
   };
 }
 
-/** Estimated levels for a trade entered near `ref` (the signal close, used only as an estimate
- *  until the real fill is known): target 1.5 ATR, stop 3 ATR. Entry itself has no price cap --
- *  the plan is simply "at the next session's open, whatever that is". */
+/** Levels for a trade entered around `ref`: target 1.5 ATR, stop 3 ATR, 2% entry cap. Tested against
+ *  no cap across the full 2000-2026 run: the cap helps Dip (skips the weaker gapped-up entries) and
+ *  costs Rip a little (its best trades tend to gap down hard) -- kept on both for one simple rule. */
 function setupLevels(kind, ref, atr) {
   const long = kind === 'dip';
   return {
     ref,
+    entryLimit: long ? ref * (1 + SETUP.CHASE) : ref * (1 - SETUP.CHASE),
     target: long ? ref + SETUP.TARGET_ATR * atr : ref - SETUP.TARGET_ATR * atr,
     stop: long ? ref - SETUP.STOP_ATR * atr : ref + SETUP.STOP_ATR * atr,
   };
@@ -2053,7 +2054,7 @@ const STRATEGY_INFO = {
     headline: 'In 2019–2026, 37% of trades reached +5% within 3 sessions, 37% lost, and the average trade made +0.9%.',
     rules: ['Close above its 200-day moving average', 'Down 10% or more over the last 5 sessions',
             'At least one of: closed in the bottom 20% of the day’s range, a new 20-day closing low, or 3 lower closes in a row'],
-    plan: ['Buy at the next session’s open, whatever it is -- no price cap.',
+    plan: ['Buy at the next session’s open. Best at or below the signal close; avoid paying more than 2% above it.',
            'Target: entry + 1.5 × ATR (the stock’s average daily range).',
            'Disaster stop: entry − 3 × ATR. Tighter stops did worse in testing.',
            'Sell at the close of the 3rd session if neither level is hit.',
@@ -2069,7 +2070,7 @@ const STRATEGY_INFO = {
     summary: 'Shorts a sharp rally in a stock that is still in a long-term downtrend, and covers within 3 sessions.',
     headline: 'In 2019–2026 (excluding the unusual 2020), shorts averaged +0.6% and 59% were profitable.',
     rules: ['Close below its 200-day moving average', 'Up 10% or more over the last 5 sessions', 'RSI(14) at 70 or above'],
-    plan: ['Short at the next session’s open, whatever it is -- no price cap.',
+    plan: ['Short at the next session’s open. Best at or above the signal close; avoid shorting more than 2% below it.',
            'Target: entry − 1.5 × ATR.',
            'Disaster stop: entry + 3 × ATR. Losses on a short have no ceiling, so always use it.',
            'Cover at the close of the 3rd session if neither level is hit.',
@@ -2109,7 +2110,7 @@ function levelsHtml(kind, lv, exitDate) {
   const long = kind === 'dip';
   const rel = v => pctText((v / lv.ref - 1) * 100);
   return `<div class="levels">
-    <div><span>${long ? 'Buy' : 'Short'}</span><b>at the open</b><small>no price cap</small></div>
+    <div><span>${long ? 'Buy up to' : 'Short down to'}</span><b>${fmtPrice(lv.entryLimit)}</b></div>
     <div><span>Target</span><b class="up">${fmtPrice(lv.target)}</b><small>${rel(lv.target)}</small></div>
     <div><span>Stop</span><b class="down">${fmtPrice(lv.stop)}</b><small>${rel(lv.stop)}</small></div>
     <div><span>Exit by</span><b>${escapeHtml(fmtSession(exitDate))}</b><small>at the close</small></div>
@@ -3268,7 +3269,7 @@ function paperOrders(P) {
       <div><div class="prow"><b>${escapeHtml(e.ticker)} <small class="muted">${escapeHtml(companyName(e.ticker))}</small></b><span class="pill pill-loading">Queued</span></div>
       <small class="muted">${escapeHtml(STRAT_NAME[e.strategy])}: ${e.strategy === 'dip' ? `${signedPct(e.vs200)} vs 200-day, ${signedPct(e.chg5d)} in 5 sessions` : `${signedPct(e.chg5d)} in 5 sessions`}</small>
       <div class="card-tags left" style="margin:4px 0">${tagBadge(e.tag)}</div>
-      <div class="small">${e.strategy === 'dip' ? 'Buy' : 'Short'} <b>${e.shares}</b> shares (about ${money(e.size)}), market order</div></div>
+      <div class="small">${e.strategy === 'dip' ? 'Buy' : 'Short'} <b>${e.shares}</b> shares (about ${money(e.size)}), limit ${fmtPrice(e.limit)}</div></div>
     </div>`;
   const line = (a, b) => `<div class="track-row"><b>${escapeHtml(a)}</b><span class="muted right">${escapeHtml(b)}</span></div>`;
   const noMatch = q ? `<p class="hint">No match for “${escapeHtml(q)}”.</p>` : '';

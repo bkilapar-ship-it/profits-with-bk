@@ -202,7 +202,7 @@ The MACD curl itself showed no edge on this horizon. These two setups did.
 | Price | ≥ $5 | ≥ $5 |
 
 **Trade plan (tested)**
-- **Entry:** the next session's open, whatever it is — no price cap. An earlier version tested a 2% chase limit; buying/shorting flat at the open tested at least as well without it.
+- **Entry:** the next session's open. Best at or below the signal close for longs (at or above it for shorts); the order won't fill more than 2% past it. Tested against no cap across the full 2000–2026 run: the cap helps Dip and costs Rip a little, kept on both for one simple rule.
 - **Target:** 1.5 × ATR(14) from entry.
 - **Stop:** a 3 × ATR(14) "disaster stop". Tighter stops made results worse over a 3-day hold.
 - **Time exit:** the close of the 3rd session.
@@ -389,7 +389,7 @@ A second, separate workflow (`.github/workflows/paper.yml`) trades every Uptrend
 **Liquidity is a hard floor here, not just a display demotion:** a candidate under $20M/day traded is skipped outright, logged as such, regardless of how well it otherwise ranks.
 
 **How a day works**
-1. **~9:35 ET** — reads the site's published `data/setups.json` for signals from the prior close, ranks them (the same priority ranking described in section 5 — bearish engulfing / RSI(5) ≥ 90 first, then the usual strength measure), and places a **market** order — buy or short at whatever the price is, no cap — for every candidate the sleeve can still afford, in ranked order, skipping any below the liquidity floor or once spendable cash runs out.
+1. **~9:35 ET** — reads the site's published `data/setups.json` for signals from the prior close, ranks them (the same priority ranking described in section 5 — bearish engulfing / RSI(5) ≥ 90 first, then the usual strength measure), and places a **limit** day order, capped at 2% past the signal close, for every candidate the sleeve can still afford, in ranked order, skipping any below the liquidity floor or once spendable cash runs out. A candidate that's gapped away past the cap simply won't fill and cancels itself at the close.
 2. Once an entry **fills**, a separate **OCO exit order** (`time_in_force: "gtc"`) is attached immediately: a take-profit limit and a stop. A GTC OCO, rather than folding the stop into the entry as a single "bracket" order, avoids any ambiguity about whether a same-day ("day") bracket could let the protective stop itself expire at the end of the entry day — the exit legs are unambiguously live until one of them fills or the position is closed.
 3. **~15:55 ET** — any position that has reached its held-for-3-sessions limit has its OCO order cancelled and is flattened with a market order, regardless of price.
 4. Every run also reconciles: it checks Alpaca's actual positions and orders against what it last knew, records any trade that closed since the previous run (by target, by stop, by the time exit above, or — rarely — a change you made by hand on the Alpaca dashboard, recorded as "manual"), and refreshes the account's equity history.
@@ -398,7 +398,7 @@ A second, separate workflow (`.github/workflows/paper.yml`) trades every Uptrend
 
 **Where the state lives:** open positions, pending orders, trade history and the pause/resume flag are kept in `state.json` on an orphan `paper-state` branch of this repository, created automatically the first time `paper.yml` runs. It's plain JSON, readable in the GitHub UI, and never touched by hand — use the pause/resume action above instead of editing it. The market-scan workflow checks out that branch **read-only** and turns it into the public `data/paper.json` the app reads, on its own existing schedule; it never places or touches an order itself, so a scan re-run can never duplicate trading activity.
 
-**Adjusting the rules:** edit the `env:` block of the "Run paper trading" step in `paper.yml` — `PAPER_RESERVE_PCT`, `PAPER_SIZE_PCT`, `PAPER_TARGET_ATR`, `PAPER_STOP_ATR`, `PAPER_TRADE_DIP` / `PAPER_TRADE_RIP`, `PAPER_SP500_ONLY`, `PAPER_REVIEW_AFTER`, `PAPER_SUCCESS_AVG_PCT`. Defaults match what's described above: 10% reserve, 15% of the sleeve per trade. Keep the rules fixed while a test is running so the results stay comparable; changing them mid-test starts a fresh comparison in spirit even though the trade history keeps accumulating.
+**Adjusting the rules:** edit the `env:` block of the "Run paper trading" step in `paper.yml` — `PAPER_RESERVE_PCT`, `PAPER_SIZE_PCT`, `PAPER_CHASE`, `PAPER_TARGET_ATR`, `PAPER_STOP_ATR`, `PAPER_TRADE_DIP` / `PAPER_TRADE_RIP`, `PAPER_SP500_ONLY`, `PAPER_REVIEW_AFTER`, `PAPER_SUCCESS_AVG_PCT`. Defaults match what's described above: 10% reserve, 15% of the sleeve per trade. Keep the rules fixed while a test is running so the results stay comparable; changing them mid-test starts a fresh comparison in spirit even though the trade history keeps accumulating.
 
 **Tagging:** every placed trade records which priority tier it came from (`bearEngulf`, `rsi5_90`, `green_or_sweep`, or `normal`) in `state.json` and the exported `data/paper.json`, so live results can eventually be checked against the specific research finding that motivated each ranking rule.
 
@@ -412,7 +412,24 @@ A second, separate workflow (`.github/workflows/paper.yml`) trades every Uptrend
 
 **Limitations:** entries land within the first hour after the open (whenever the ~9:35 ET run happens to fire, GitHub Actions cron isn't second-precise), not the literal opening print; paper-account shorting can behave a little more permissively than a real margin account would; dividends and other corporate actions on held positions aren't specially handled (Alpaca's own account equity reflects them regardless). This is a paper account: no real money is ever at risk, and none of this is financial advice.
 
-## 11. Limitations
+## 11. WhatsApp alerts (optional)
+
+Alerts go to your own WhatsApp through **CallMeBot**, a free, unofficial gateway that is for personal use only. Messages arrive **from CallMeBot's shared bot number**, not from your own number and not from a number you own, in a chat with the contact you save in step 1. It can change or stop working, so treat alerts as a convenience, never as something to rely on. With no secrets set, the code does nothing.
+
+**What you get, and when**
+- **New setups**, once per new signal date, from the first scan after the close (about 6:45 pm ET), listing the top Dip and Rip names. If there are none you get a short "no new setups" message, which also tells you the scan ran.
+- **Paper entries** placed (about 9:35 ET), **time exits** sent (about 3:55 ET), and **trades that closed** (target, stop or time).
+- **Failures:** a failed paper-trading run, or the first failed market scan.
+
+**What you do not get:** real-time alerts. Messages are sent by the scheduled workflows, so they arrive when a run finishes, usually within the hour, sometimes later, and a run that GitHub skips sends nothing. Dip and Rip signals are built from the daily close, so hourly runs do not create new ones. A stop or target that fills at Alpaca is reported at the next paper-trading run, not the moment it happens.
+
+**Setup (about 5 minutes)**
+1. On https://www.callmebot.com, open the WhatsApp page and copy the bot's current phone number (it changes from time to time). Save it as a contact and rename it something like **BK Alerts**, so the alerts sit in one clearly labelled chat. If alerts ever stop, check the CallMeBot page for a changed number and re-save it.
+2. Send that contact this exact message from your WhatsApp: `I allow callmebot to send me messages`. Within a couple of minutes it replies with your API key. If nothing arrives, try again after 24 hours.
+3. In your repo: Settings → Secrets and variables → Actions → New repository secret. Add `CALLMEBOT_PHONE` (your number with country code, like `+14155551234`) and `CALLMEBOT_APIKEY` (the key from the reply). Keep both out of the code and the repo.
+4. Actions → **Alert test** → Run workflow. You should get a WhatsApp message within a minute, and the run goes red if it could not be sent.
+
+## 12. Limitations
 
 - **Delay and freshness.** On Alpaca's free plan, SIP data from the most recent 15 minutes isn't available, so the scan reads data up to 16 minutes old. It then uses only completed candles. GitHub also doesn't guarantee exact cron timing, and scheduled runs can start several minutes late or occasionally be skipped at busy times.
 - **Scheduled runs pause after inactivity.** In public repositories, GitHub disables scheduled workflows after 60 days with no repository activity. GitHub emails you. Re-enable it in the Actions tab, or push any commit.
@@ -422,6 +439,6 @@ A second, separate workflow (`.github/workflows/paper.yml`) trades every Uptrend
 - **Data terms.** The site publishes indicator values and, by default, chart data derived from Alpaca's feed. Check Alpaca's market-data terms before making the site public. Set `INCLUDE_CHART_SERIES: 'false'` to publish less.
 - **Watchlist mode limits.** Twelve Data's free plan allows a small number of requests per minute and per day. Check their pricing page. The page paces requests with the **Requests / minute** setting and caches candles (60 min for 1D, 15 min for 4H, 5 min for 1H).
 
-## 12. Disclaimer
+## 13. Disclaimer
 
 This software is provided for educational and research purposes only. It identifies technical indicator conditions and **does not** provide investment, financial, or trading advice. A detected "Early Bullish Curl" does not mean a price will rise, and MACD crossovers frequently fail. Setup Strength is a checklist-match score, not a probability. You are solely responsible for any decisions you make. Past indicator behavior does not guarantee future results.
