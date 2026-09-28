@@ -592,6 +592,16 @@ function buildFile(tf, symbols, getCandles, dataEnd, universe) {
 /* Uptrend Dip / Downtrend Rip setups over the last few completed daily candles. */
 function buildSetupsFile(symbols, getCandles, groups) {
   const lastDate = {};
+  const r2 = x => (isNum(x) ? Math.round(x * 100) / 100 : null);
+  // SPY's own 20-day trend: "with the market" for a Dip is when this is <= 0 (the market itself has
+  // been falling); for a Rip, "with the market" is when this is > 0. Display-only for Dip/Rip badges;
+  // also the entry gate for the Non-S&P 500 browsing pool.
+  let market = null;
+  const spy = getCandles('SPY');
+  if (spy && spy.length > 21) {
+    const last = spy[spy.length - 1], prior = spy[spy.length - 21];
+    if (isNum(last.c) && isNum(prior.c) && prior.c > 0) market = { asOf: String(last.t).slice(0, 10), chg20d: r2((last.c / prior.c - 1) * 100) };
+  }
   for (const sym of symbols) {
     const c = getCandles(sym);
     if (c && c.length) lastDate[sym] = String(c[c.length - 1].t).slice(0, 10);
@@ -600,7 +610,6 @@ function buildSetupsFile(symbols, getCandles, groups) {
   const sp500 = new Set((groups && groups.indexes.sp500 && groups.indexes.sp500.tickers) || []);
   const items = [];
   const status = {};   // ticker -> [close, 5-session change %, % vs 200-day, RSI]: powers the Watchlist tab without a data key
-  const r2 = x => (isNum(x) ? Math.round(x * 100) / 100 : null);
   for (const sym of symbols) {
     if (lastDate[sym] !== asOf) continue;                     // skip halted / stale tickers
     const candles = getCandles(sym);
@@ -616,6 +625,7 @@ function buildSetupsFile(symbols, getCandles, groups) {
     nextSession: asOf ? core.addSessions(asOf, 1) : null,
     rules: core.SETUP,
     sp500Listed: sp500.size > 0,
+    market,
     dip: clean.filter(x => x.kind === 'dip'),
     rip: clean.filter(x => x.kind === 'rip'),
     status,
@@ -683,6 +693,7 @@ async function main() {
     for (const th of groups.themes) { th.tickers.forEach(t => forced.add(t)); if (th.etf) forced.add(th.etf); }
     for (const sec of SECTORS) forced.add(sec.etf);
     for (const t of loadWatchlistFile()) forced.add(t);
+    forced.add('SPY');   // needed for the market-direction badge and the Non-S&P 500 pool's regime gate
     universeNames = names;
 
     const dailyStart = new Date(dataEnd.getTime() - CFG.dailyLookbackDays * 86400000);

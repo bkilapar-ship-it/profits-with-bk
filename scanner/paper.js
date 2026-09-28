@@ -8,10 +8,17 @@
  * live brokerage account: the base URL always points at paper-api.alpaca.markets
  * unless explicitly overridden.
  *
+ * Capital structure: 10% of the account is held in permanent reserve, never
+ * spent. Each trade (Dip and Rip share one pool) is sized at 15% of the
+ * *sleeve's* current value (the other 90%) -- not a fixed dollar amount, so
+ * winnings compound. There is no cap on how many positions can be open, or
+ * how many new trades happen in a day: the only limit is whether the sleeve
+ * still has spendable cash left once the reserve is set aside.
+ *
  * Order mechanics (see README section "Paper trading" for the reasoning):
- *   Entry — a plain LIMIT order, time_in_force "day", so it cancels itself if
- *           the market never reaches the entry price by the close. This keeps
- *           entries confined to "near today's open", matching the backtest.
+ *   Entry — a plain MARKET order, time_in_force "day": buy or short at
+ *           whatever the price is, no price cap. This matches the tested
+ *           rule ("enter at the next session's open, whatever it is").
  *   Exit  — once an entry fills, a separate OCO order (time_in_force "gtc") is
  *           attached: a take-profit limit and a stop order. Using a GTC OCO,
  *           rather than folding the stop into the entry as a "bracket" order,
@@ -20,6 +27,14 @@
  *   Time exit — a position that reaches its held-for-N-sessions limit has its
  *           OCO cancelled and is flattened with Alpaca's position-close
  *           endpoint (a market order), regardless of price.
+ *
+ * Ranking (when several signals compete for the sleeve's spendable cash on
+ * one day): Dip and Rip candidates carry a "priority" tier computed once in
+ * app.js (bearish engulfing first for Dip, RSI(5) >= 90 first for Rip; green
+ * closes and 10-day-low sweeps last for Dip) and serialized into setups.json,
+ * so the app's own display order and this script's fill order always agree.
+ * Each placed trade is tagged with which tier it came from, so live results
+ * can be checked against the research that motivated the rule.
  *
  * State (open positions, pending orders, trade history, pause/resume) is kept
  * in state.json on the orphan "paper-state" branch of this repository, read
@@ -66,13 +81,11 @@ const CFG = {
   dataBase: (env.ALPACA_DATA_BASE || 'https://data.alpaca.markets').replace(/\/+$/, ''),
   feed: (env.ALPACA_FEED || 'sip').toLowerCase(),
 
-  perTrade: num(env.PAPER_PER_TRADE, 5000),
-  maxOpen: num(env.PAPER_MAX_OPEN, 10),
-  maxNewPerDay: num(env.PAPER_MAX_NEW_PER_DAY, 3),
+  reservePct: num(env.PAPER_RESERVE_PCT, 0.10),     // held back, never spent
+  sizePct: num(env.PAPER_SIZE_PCT, 0.15),           // per trade, as a share of the sleeve's current value
   targetAtr: num(env.PAPER_TARGET_ATR, 1.5),
   stopAtr: num(env.PAPER_STOP_ATR, 3),
   holdSessions: num(env.PAPER_HOLD_SESSIONS, core.SETUP.HOLD),
-  chase: num(env.PAPER_CHASE, core.SETUP.CHASE),
   tradeDip: bool(env.PAPER_TRADE_DIP, true),
   tradeRip: bool(env.PAPER_TRADE_RIP, true),
   sp500Only: bool(env.PAPER_SP500_ONLY, true),
@@ -95,10 +108,13 @@ const CFG = {
 };
 
 const RULES = () => ({
-  perTrade: CFG.perTrade, maxOpen: CFG.maxOpen, maxNewPerDay: CFG.maxNewPerDay,
-  targetAtr: CFG.targetAtr, stopAtr: CFG.stopAtr, holdSessions: CFG.holdSessions, chase: CFG.chase,
+  reservePct: CFG.reservePct, sizePct: CFG.sizePct,
+  targetAtr: CFG.targetAtr, stopAtr: CFG.stopAtr, holdSessions: CFG.holdSessions,
+  minLiquidity: core.SETUP.MIN_LIQUIDITY,
   strategies: { dip: CFG.tradeDip, rip: CFG.tradeRip, macd: false },
-  sp500Only: CFG.sp500Only, ranking: 'Strongest move first', reviewAfter: CFG.reviewAfter, successAvgPct: CFG.successAvgPct,
+  sp500Only: CFG.sp500Only,
+  ranking: 'Bearish engulfing first for Dip / RSI(5) ≥ 90 first for Rip, then the usual strength measure',
+  reviewAfter: CFG.reviewAfter, successAvgPct: CFG.successAvgPct,
 });
 
 const isNum = v => typeof v === 'number' && Number.isFinite(v);
@@ -276,7 +292,7 @@ async function reconcileClosedPositions(state, livePositions) {
     const usd = (long ? exit - pos.entry : pos.entry - exit) * shares;
     const pct = (long ? exit / pos.entry - 1 : 1 - exit / pos.entry) * 100;
     state.trades.push({
-      ticker, strategy: pos.strategy, side: pos.side, signalDate: pos.signalDate, signalClose: pos.signalClose,
+      ticker, strategy: pos.strategy, side: pos.side, tag: pos.tag, signalDate: pos.signalDate, signalClose: pos.signalClose,
       entryDate: pos.entryDate, exitDate: exitAt.slice(0, 10), entry: r2(pos.entry), exit: r2(exit), shares,
       how, usd: r2(usd), pct: r2(pct),
     });
@@ -309,7 +325,7 @@ async function reconcilePendingEntries(state) {
         log(`  ${ticker}: FILLED at ${entry} but the protective OCO order failed (${e.message}). ` +
           `This position has NO automatic stop — check the Alpaca dashboard.`);
       }
-      state.positions[ticker] = { strategy: p.strategy, side: p.side, signalDate: p.signalDate, signalClose: p.signalClose,
+      state.positions[ticker] = { strategy: p.strategy, side: p.side, tag: p.tag, signalDate: p.signalDate, signalClose: p.signalClose,
         entryDate: order.filled_at ? order.filled_at.slice(0, 10) : todayEastern(), entry: r2(entry), shares, target, stop, ocoOrderId: ocoId };
       log(`  ${ticker}: entry filled at ${entry} (${shares} shares), OCO target ${target} / stop ${stop}${ocoId ? '' : ' — OCO FAILED'}`);
       delete state.pendingEntries[ticker];
@@ -342,16 +358,31 @@ async function fetchSetups() {
   return j;
 }
 
+/** Tags WHY a candidate ranked where it did, so live results can be checked against the research
+ *  that motivated the rule (paper trading data is filterable/inspectable by this tag). */
+function candidateTag(kind, c) {
+  if (kind === 'dip') return c.bearEngulf ? 'bearEngulf' : (c.green || c.sweep10) ? 'green_or_sweep' : 'normal';
+  return (isNum(c.rsi5) && c.rsi5 >= 90) ? 'rsi5_90' : 'normal';
+}
+
+/** Same priority-tiered ranking as the app's own default sort (see app.js's setupPriority):
+ *  bearish engulfing first for Dip, RSI(5) >= 90 first for Rip; each tier then by the usual
+ *  strength measure. The "priority" field is computed once in app.js and carried through
+ *  setups.json, so both places always agree on the order. */
 function rankCandidates(setups, state) {
   const held = new Set([...Object.keys(state.positions), ...Object.keys(state.pendingEntries)]);
   const pick = (kind, enabled) => {
     if (!enabled) return [];
     return (setups[kind] || [])
       .filter(x => x.sessionsAgo === 0 && !held.has(x.ticker) && (!CFG.sp500Only || x.sp500))
-      .sort((a, b) => (kind === 'dip' ? b.vs200 - a.vs200 : b.chg5d - a.chg5d));
+      .sort((a, b) => (a.priority - b.priority) || (kind === 'dip' ? b.vs200 - a.vs200 : b.chg5d - a.chg5d));
   };
   return [...pick('dip', CFG.tradeDip), ...pick('rip', CFG.tradeRip)];
 }
+
+/** Current sleeve value: total account equity minus the untouched reserve. Trades are sized as
+ *  a share of THIS, not of the whole account -- so the reserve genuinely never gets spent. */
+function sleeveEquity(totalEquity) { return totalEquity * (1 - CFG.reservePct); }
 
 async function runEntries(state, setups) {
   const today = todayEastern();
@@ -364,39 +395,47 @@ async function runEntries(state, setups) {
   const clock = await getClock().catch(() => null);
   if (clock && !clock.is_open && !CFG.force) { log('Market is not open right now; skipping entries.'); return; }
 
-  const openCount = Object.keys(state.positions).length + Object.keys(state.pendingEntries).length;
-  const slots = Math.max(0, Math.min(CFG.maxNewPerDay, CFG.maxOpen - openCount));
-  const candidates = rankCandidates(setups, state);
+  const account = await getAccount().catch(e => { log(`Could not read the account (${e.message}); skipping entries.`); return null; });
+  if (!account) return;
+  const totalEquity = Number(account.equity);
+  const sleeve = sleeveEquity(totalEquity);
+  const reserveFloor = totalEquity * CFG.reservePct;
+  let spendable = Number(account.cash) - reserveFloor;   // never dip into the reserve to fund a new trade
+  log(`  account equity $${totalEquity.toFixed(0)} | sleeve (90%) $${sleeve.toFixed(0)} | reserve floor $${reserveFloor.toFixed(0)} | spendable now $${spendable.toFixed(0)}`);
 
+  const candidates = rankCandidates(setups, state);
   const entries = [], skipped = [];
-  let taken = 0;
+  const shortableCache = new Map();
+
   for (let rank = 0; rank < candidates.length; rank++) {
     const c = candidates[rank];
     const long = c.kind === 'dip';
-    if (taken >= slots) {
-      skipped.push({ ticker: c.ticker, strategy: c.kind, reason: openCount + slots >= CFG.maxOpen && slots === CFG.maxOpen - openCount
-        ? `All ${CFG.maxOpen} position slots in use` : `Daily limit of ${CFG.maxNewPerDay} reached (ranked ${rank + 1})` });
+    if (isNum(c.dollarVol) && c.dollarVol < core.SETUP.MIN_LIQUIDITY) {
+      skipped.push({ ticker: c.ticker, strategy: c.kind, reason: `Below the $${(core.SETUP.MIN_LIQUIDITY / 1e6).toFixed(0)}M/day liquidity floor` });
+      continue;
+    }
+    const size = CFG.sizePct * sleeve;
+    if (size > spendable) {
+      skipped.push({ ticker: c.ticker, strategy: c.kind, reason: 'The sleeve has no spare cash left today' });
       continue;
     }
     if (!long) {
-      const asset = await getAsset(c.ticker);
+      if (!shortableCache.has(c.ticker)) shortableCache.set(c.ticker, await getAsset(c.ticker));
+      const asset = shortableCache.get(c.ticker);
       if (!asset || asset.shortable === false || asset.easy_to_borrow === false) {
         skipped.push({ ticker: c.ticker, strategy: c.kind, reason: 'Not available to short on this account' });
         continue;
       }
     }
-    const limit = r2(c.levels ? c.levels.entryLimit : (long ? c.close * (1 + CFG.chase) : c.close * (1 - CFG.chase)));
-    const shares = Math.max(1, Math.floor(CFG.perTrade / c.close));
+    const shares = Math.max(1, Math.floor(size / c.close));
+    const tag = candidateTag(c.kind, c);
     try {
-      const order = await alpaca('POST', '/v2/orders', {
-        symbol: c.ticker, qty: String(shares), side: long ? 'buy' : 'sell', type: 'limit',
-        time_in_force: 'day', limit_price: String(limit),
-      });
-      state.pendingEntries[c.ticker] = { orderId: order.id, strategy: c.kind, side: long ? 'long' : 'short',
-        limit, shares, signalDate: c.signalDate, signalClose: c.close, atr: c.atr, placedAt: new Date().toISOString() };
-      entries.push({ rank: taken + 1, ticker: c.ticker, strategy: c.kind, limit, shares, vs200: r2(c.vs200), chg5d: r2(c.chg5d) });
-      taken++;
-      log(`  placed entry: ${c.ticker} (${c.kind}) ${shares} shares, limit ${limit}`);
+      const order = await alpaca('POST', '/v2/orders', { symbol: c.ticker, qty: String(shares), side: long ? 'buy' : 'sell', type: 'market', time_in_force: 'day' });
+      state.pendingEntries[c.ticker] = { orderId: order.id, strategy: c.kind, side: long ? 'long' : 'short', tag,
+        size, shares, signalDate: c.signalDate, signalClose: c.close, atr: c.atr, placedAt: new Date().toISOString() };
+      entries.push({ rank: rank + 1, ticker: c.ticker, strategy: c.kind, tag, size: r2(size), shares, vs200: r2(c.vs200), chg5d: r2(c.chg5d) });
+      spendable -= size;
+      log(`  placed entry: ${c.ticker} (${c.kind}, ${tag}) ${shares} shares (~$${size.toFixed(0)}), market order`);
     } catch (e) {
       skipped.push({ ticker: c.ticker, strategy: c.kind, reason: `Order failed: ${e.message.slice(0, 120)}` });
       log(`  ${c.ticker}: order failed — ${e.message}`);
@@ -476,7 +515,7 @@ function renderPublicJson(state, getCandles) {
   };
   const positions = Object.entries(state.positions).map(([ticker, p]) => {
     const now = closeOf(ticker) ?? p.now ?? p.entry;
-    return { ticker, strategy: p.strategy, side: p.side, shares: p.shares, entry: p.entry, entryDate: p.entryDate,
+    return { ticker, strategy: p.strategy, side: p.side, tag: p.tag, shares: p.shares, entry: p.entry, entryDate: p.entryDate,
       signalDate: p.signalDate, signalClose: p.signalClose, now: r2(now), target: p.target, stop: p.stop,
       day: Math.min(CFG.holdSessions, dayCount(p.entryDate)), exitDate: core.addSessions(p.entryDate, CFG.holdSessions - 1) };
   });
@@ -499,10 +538,11 @@ function renderPublicJson(state, getCandles) {
   // to keep this render step free of any live network calls); it catches up next time paper.yml runs.
   const equity = needsFreshRow ? [...state.equity, { d: today, value, pct, spy: lastRecorded ? lastRecorded.spy : null }] : state.equity;
 
+  const reserve = Math.round(value * CFG.reservePct);
   return {
     version: 1, simulated: false, generatedAt: new Date().toISOString(), asOf: today,
     status: state.status, startedAt: state.startedAt, broker: 'Alpaca paper account',
-    rules: RULES(), account: { start: CFG.startCapital, value, inTrades },
+    rules: RULES(), account: { start: CFG.startCapital, value, inTrades, reserve, sleeve: value - reserve },
     backtest: { profitable: 60, avgPct: 0.99, hitTarget: 18, stopped: 2, period: '2019–2026, S&P 500' },
     equity,
     positions,
