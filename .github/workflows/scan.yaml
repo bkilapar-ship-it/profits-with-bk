@@ -64,11 +64,21 @@ jobs:
           CONCURRENCY: '8'
           INCLUDE_CHART_SERIES: 'true'
           PAPER_STATE_DIR: paper-state   # read-only here; only paper.yml ever writes to it
+          CALLMEBOT_PHONE: ${{ secrets.CALLMEBOT_PHONE }}
+          CALLMEBOT_APIKEY: ${{ secrets.CALLMEBOT_APIKEY }}
         run: node scanner/scan.js --out _site/data
 
       - name: Warn if the scan failed
         if: steps.scan.outcome == 'failure'
         run: echo "::warning::The market scan failed. The site was still deployed with the previous results (if any). Open the 'Run market scan' step for details."
+
+      - name: Alert if the scan failed
+        if: steps.scan.outcome == 'failure'
+        env:
+          PREVIOUS_BASE_URL: ${{ steps.pages.outputs.base_url }}
+          CALLMEBOT_PHONE: ${{ secrets.CALLMEBOT_PHONE }}
+          CALLMEBOT_APIKEY: ${{ secrets.CALLMEBOT_APIKEY }}
+        run: node scanner/notify.js scanfail
 
       - name: Assemble site
         run: |

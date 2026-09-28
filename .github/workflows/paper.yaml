@@ -117,6 +117,7 @@ jobs:
           # only limit is whether the sleeve still has spendable cash once the reserve is set aside.
           PAPER_RESERVE_PCT: '0.10'
           PAPER_SIZE_PCT: '0.15'
+          PAPER_CHASE: '0.02'
           PAPER_TARGET_ATR: '1.5'
           PAPER_STOP_ATR: '3'
           PAPER_HOLD_SESSIONS: '3'
@@ -127,6 +128,8 @@ jobs:
           PAPER_SUCCESS_AVG_PCT: '0.3'
           PAPER_START_CAPITAL: '100000'
           PAPER_DEFAULT_STATUS: 'paused'   # first run only; resume explicitly via workflow_dispatch when ready
+          CALLMEBOT_PHONE: ${{ secrets.CALLMEBOT_PHONE }}
+          CALLMEBOT_APIKEY: ${{ secrets.CALLMEBOT_APIKEY }}
         run: node scanner/paper.js
 
       - name: Commit and push the updated state
@@ -141,3 +144,10 @@ jobs:
             git commit -q -m "Paper trading: ${{ steps.pick_mode.outputs.mode }} run, $(date -u +%Y-%m-%dT%H:%M:%SZ)"
             git push -q origin paper-state
           fi
+
+      - name: Alert if the run failed
+        if: failure()
+        env:
+          CALLMEBOT_PHONE: ${{ secrets.CALLMEBOT_PHONE }}
+          CALLMEBOT_APIKEY: ${{ secrets.CALLMEBOT_APIKEY }}
+        run: node scanner/notify.js failure "Paper trading"

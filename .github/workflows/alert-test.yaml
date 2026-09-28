@@ -1,0 +1,30 @@
+name: Alert test
+
+# Sends one WhatsApp test message, so you can confirm your CallMeBot setup works.
+# Run it from the Actions tab after adding the CALLMEBOT_PHONE and CALLMEBOT_APIKEY secrets.
+# It goes red on purpose if the message could not be sent.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Send a test message
+        env:
+          CALLMEBOT_PHONE: ${{ secrets.CALLMEBOT_PHONE }}
+          CALLMEBOT_APIKEY: ${{ secrets.CALLMEBOT_APIKEY }}
+        run: node scanner/notify.js test
