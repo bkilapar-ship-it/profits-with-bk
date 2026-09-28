@@ -30,6 +30,7 @@
 const fs = require('fs');
 const path = require('path');
 const core = require('../app.js');
+const notify = require('./notify.js');
 
 /* ------------------------------------------------------------------ config */
 const env = process.env;
@@ -776,8 +777,11 @@ async function main() {
   }
 
   const setupsPath = path.join(CFG.outDir, 'setups.json');
-  if (setupsOut) writeJson(setupsPath, setupsOut);
-  else {
+  if (setupsOut) {
+    writeJson(setupsPath, setupsOut);
+    // WhatsApp alert, once per new signal date (does nothing unless the CALLMEBOT_* secrets are set).
+    try { await notify.setupsAlert(setupsOut, await fetchPrevious('setups.json')); } catch (e) { log(`Alert step skipped: ${e.message}`); }
+  } else {
     const previous = await fetchPrevious('setups.json');
     if (previous) { previous.stale = true; writeJson(setupsPath, previous); }
   }

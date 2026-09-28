@@ -16,9 +16,12 @@
  * still has spendable cash left once the reserve is set aside.
  *
  * Order mechanics (see README section "Paper trading" for the reasoning):
- *   Entry — a plain MARKET order, time_in_force "day": buy or short at
- *           whatever the price is, no price cap. This matches the tested
- *           rule ("enter at the next session's open, whatever it is").
+ *   Entry — a plain LIMIT day order, capped at 2% past the signal close
+ *           (above it for a long, below it for a short). It cancels itself
+ *           if the market never reaches that price by the close, so a
+ *           gapped-away open is skipped rather than chased. Tested against
+ *           no cap across 2000-2026: helps Dip, costs Rip a little, kept on
+ *           both for one simple rule.
  *   Exit  — once an entry fills, a separate OCO order (time_in_force "gtc") is
  *           attached: a take-profit limit and a stop order. Using a GTC OCO,
  *           rather than folding the stop into the entry as a "bracket" order,
@@ -63,6 +66,7 @@
 const fs = require('fs');
 const path = require('path');
 const core = require('../app.js');
+const notify = require('./notify.js');
 
 /* ------------------------------------------------------------------ config */
 const env = process.env;
@@ -83,6 +87,7 @@ const CFG = {
 
   reservePct: num(env.PAPER_RESERVE_PCT, 0.10),     // held back, never spent
   sizePct: num(env.PAPER_SIZE_PCT, 0.15),           // per trade, as a share of the sleeve's current value
+  chase: num(env.PAPER_CHASE, core.SETUP.CHASE),    // entry price cap: skip if the market has already moved further than this
   targetAtr: num(env.PAPER_TARGET_ATR, 1.5),
   stopAtr: num(env.PAPER_STOP_ATR, 3),
   holdSessions: num(env.PAPER_HOLD_SESSIONS, core.SETUP.HOLD),
@@ -108,7 +113,7 @@ const CFG = {
 };
 
 const RULES = () => ({
-  reservePct: CFG.reservePct, sizePct: CFG.sizePct,
+  reservePct: CFG.reservePct, sizePct: CFG.sizePct, chase: CFG.chase,
   targetAtr: CFG.targetAtr, stopAtr: CFG.stopAtr, holdSessions: CFG.holdSessions,
   minLiquidity: core.SETUP.MIN_LIQUIDITY,
   strategies: { dip: CFG.tradeDip, rip: CFG.tradeRip, macd: false },
@@ -427,15 +432,20 @@ async function runEntries(state, setups) {
         continue;
       }
     }
-    const shares = Math.max(1, Math.floor(size / c.close));
+    const limit = r2(long ? c.close * (1 + CFG.chase) : c.close * (1 - CFG.chase));
+    const shares = Math.max(1, Math.floor(size / limit));
     const tag = candidateTag(c.kind, c);
     try {
-      const order = await alpaca('POST', '/v2/orders', { symbol: c.ticker, qty: String(shares), side: long ? 'buy' : 'sell', type: 'market', time_in_force: 'day' });
+      // A plain LIMIT day order: it fills only within 2% of the signal close, and cancels itself if
+      // the market never reaches that price by the close, so a gapped-away open is simply skipped
+      // rather than chased. Tested against no cap across 2000-2026: helps Dip, costs Rip a little,
+      // kept on both for one simple rule.
+      const order = await alpaca('POST', '/v2/orders', { symbol: c.ticker, qty: String(shares), side: long ? 'buy' : 'sell', type: 'limit', time_in_force: 'day', limit_price: String(limit) });
       state.pendingEntries[c.ticker] = { orderId: order.id, strategy: c.kind, side: long ? 'long' : 'short', tag,
-        size, shares, signalDate: c.signalDate, signalClose: c.close, atr: c.atr, placedAt: new Date().toISOString() };
-      entries.push({ rank: rank + 1, ticker: c.ticker, strategy: c.kind, tag, size: r2(size), shares, vs200: r2(c.vs200), chg5d: r2(c.chg5d) });
+        size, shares, limit, signalDate: c.signalDate, signalClose: c.close, atr: c.atr, placedAt: new Date().toISOString() };
+      entries.push({ rank: rank + 1, ticker: c.ticker, strategy: c.kind, tag, size: r2(size), shares, limit, vs200: r2(c.vs200), chg5d: r2(c.chg5d) });
       spendable -= size;
-      log(`  placed entry: ${c.ticker} (${c.kind}, ${tag}) ${shares} shares (~$${size.toFixed(0)}), market order`);
+      log(`  placed entry: ${c.ticker} (${c.kind}, ${tag}) ${shares} shares, limit ${limit}`);
     } catch (e) {
       skipped.push({ ticker: c.ticker, strategy: c.kind, reason: `Order failed: ${e.message.slice(0, 120)}` });
       log(`  ${c.ticker}: order failed — ${e.message}`);
@@ -559,6 +569,9 @@ function dayCount(entryDate) {
 }
 
 /* ------------------------------------------------------------------ main */
+/** Alerts must never break trading: run them, log any error, carry on. */
+async function alertSafely(fn) { try { await fn(); } catch (e) { log(`Alert skipped: ${e.message}`); } }
+
 async function main() {
   assertPaperOnly();
   if (!CFG.keyId || !CFG.secret) throw new Error('ALPACA_KEY_ID and ALPACA_SECRET_KEY are not set.');
@@ -576,10 +589,12 @@ async function main() {
   // below), even if the mode-specific step that follows fails partway through — e.g. a
   // transient network error fetching setups.json shouldn't discard fills/closures that were
   // already detected earlier in this same run.
+  const tradesBefore = state.trades.length, entryRunBefore = state.lastEntryRunDate;
   try {
     log('Reconciling fills and closures…');
     await reconcile(state);
     await updateEquitySnapshot(state);
+    await alertSafely(() => notify.closedAlert(state.trades.slice(tradesBefore)));
 
     if (CFG.mode === 'entry') {
       if (state.status !== 'running') { log('Paused: not placing new entries.'); }
@@ -587,10 +602,12 @@ async function main() {
         const setups = await fetchSetups();
         log(`Setups as of ${setups.asOf} (next session ${setups.nextSession}); placing entries…`);
         await runEntries(state, setups);
+        if (state.lastEntryRunDate !== entryRunBefore) await alertSafely(() => notify.entriesAlert(state.lastOrders));
       }
     } else if (CFG.mode === 'exit') {
       log('Checking for positions due their time exit…');
       await runExits(state);
+      await alertSafely(() => notify.exitsAlert(state.lastExits));
     } else if (CFG.mode === 'reconcile') {
       log('Reconcile-only run; no new orders.');
     } else {
