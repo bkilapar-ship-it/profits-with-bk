@@ -1,6 +1,6 @@
 {
  "version": 1,
- "status": "running",
+ "status": "paused",
  "startedAt": "2026-09-26",
  "lastEntryRunDate": null,
  "lastExitRunDate": null,
@@ -12,6 +12,12 @@
  "equity": [
   {
    "d": "2026-09-26",
+   "value": 100000,
+   "pct": 0,
+   "spy": null
+  },
+  {
+   "d": "2026-09-28",
    "value": 100000,
    "pct": 0,
    "spy": null
