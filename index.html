@@ -65,13 +65,32 @@
   </nav>
 
   <nav id="tabs" class="tabs" role="tablist" aria-label="Stock lists">
-    <button type="button" role="tab" data-view="all">All US</button>
-    <button type="button" role="tab" data-view="watchlist">Watchlist</button>
     <button type="button" role="tab" data-view="sp500">S&amp;P 500</button>
+    <button type="button" role="tab" data-view="nonsp" hidden>Non-S&amp;P 500</button>
     <button type="button" role="tab" data-view="ndx">Nasdaq-100</button>
     <button type="button" role="tab" data-view="dow">Dow 30</button>
+    <button type="button" role="tab" data-view="all">All US</button>
     <button type="button" role="tab" data-view="sectors">Sectors &amp; themes</button>
+    <button type="button" role="tab" data-view="watchlist">Watchlist</button>
   </nav>
+
+  <!-- Shared search & sort: right below the tabs, so it never needs scrolling to reach -->
+  <div id="toolbar" class="list-toolbar">
+    <label class="find">
+      <span class="sr-only">Find a ticker or company</span>
+      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>
+      <input id="findTicker" type="search" placeholder="Find ticker or company" autocomplete="off" spellcheck="false">
+    </label>
+    <div class="sort">
+      <label class="sr-only" for="sortKey">Sort by</label>
+      <select id="sortKey"></select>
+      <button id="sortDir" type="button" class="btn btn-small" aria-label="Toggle sort direction">↓</button>
+    </div>
+    <div id="layoutToggle" class="layout-toggle" role="group" aria-label="Layout">
+      <button id="layoutCards" type="button" class="btn btn-small">Cards</button>
+      <button id="layoutTable" type="button" class="btn btn-small">Table</button>
+    </div>
+  </div>
 
   <section class="controls">
     <div id="tfSwitch" class="tf-switch" role="radiogroup" aria-label="Timeframe">
@@ -111,23 +130,6 @@
   <section id="groupHeader" class="group-header" hidden></section>
   <section id="sectorBoard" class="board" hidden></section>
 
-  <!-- Shared search & sort -->
-  <div id="toolbar" class="list-toolbar">
-    <label class="find">
-      <span class="sr-only">Find a ticker or company</span>
-      <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>
-      <input id="findTicker" type="search" placeholder="Find ticker or company" autocomplete="off" spellcheck="false">
-    </label>
-    <div class="sort">
-      <label class="sr-only" for="sortKey">Sort by</label>
-      <select id="sortKey"></select>
-      <button id="sortDir" type="button" class="btn btn-small" aria-label="Toggle sort direction">↓</button>
-    </div>
-    <div id="layoutToggle" class="layout-toggle" role="group" aria-label="Layout">
-      <button id="layoutCards" type="button" class="btn btn-small">Cards</button>
-      <button id="layoutTable" type="button" class="btn btn-small">Table</button>
-    </div>
-  </div>
   <div id="statusRow" class="status-row">
     <p id="statusText" class="status-text" aria-live="polite"></p>
     <div class="progress" aria-hidden="true"><div id="progressBar" class="progress-bar"></div></div>

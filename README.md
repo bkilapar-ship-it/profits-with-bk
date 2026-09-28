@@ -202,7 +202,7 @@ The MACD curl itself showed no edge on this horizon. These two setups did.
 | Price | ≥ $5 | ≥ $5 |
 
 **Trade plan (tested)**
-- **Entry:** the next session's open. Best at or below the signal close for longs (at or above it for shorts). Avoid chasing more than 2% past it.
+- **Entry:** the next session's open, whatever it is — no price cap. An earlier version tested a 2% chase limit; buying/shorting flat at the open tested at least as well without it.
 - **Target:** 1.5 × ATR(14) from entry.
 - **Stop:** a 3 × ATR(14) "disaster stop". Tighter stops made results worse over a 3-day hold.
 - **Time exit:** the close of the 3rd session.
@@ -219,12 +219,22 @@ The MACD curl itself showed no edge on this horizon. These two setups did.
   - 69% were profitable, or 59% excluding 2020.
   - It beat the average stock in 24 of 26 years.
 
+**Ranking, when more signals appear than there is room to trade**
+- **Uptrend Dip:** a **bearish engulfing** candle on the signal day ranks first (a hard sell-off after opening firm — a "selling flush" that tested meaningfully stronger than the setup on its own, holding up across all three research eras). A **green close**, or a candle that swept the 10-day low and closed back above it (a likely second leg down, not a fresh flush), ranks last. Everything else sorts by uptrend strength as before.
+- **Downtrend Rip:** RSI(5) of 90 or more — the most stretched, exhausted rallies — ranks first; they tested roughly double the average edge with about half the tail risk. Everything else sorts by the size of the rally as before.
+- This is the **default** sort only. Explicitly choosing a different sort (price, RSI, ticker, …) always sorts purely by that measure, with no tier grouping.
+
+**Liquidity:** signals on stocks trading under **$20M a day** are pushed to the bottom of the All US, Watchlist, and Sectors & themes lists (tagged "Low liquidity"), regardless of the chosen sort — a toggle turns this off. A "Liquidity" sort option is also available. This is a display-only ranking aid; see section 10 for how paper trading treats it (a hard floor, not just a demotion).
+
 **In the app:** the **Uptrend Dip** and **Downtrend Rip** tabs show:
-- **New setups** from the latest completed daily candle, with buy/short limit, target, stop and exit date.
+- **New setups** from the latest completed daily candle, with the entry rule, target, stop and exit date.
 - **One session late:** yesterday's setups, marked OK or skip according to the late-entry rule.
 - **Tracker:** how every signal from the last 5 sessions has played out, assuming the tested entry.
+- Badges: **Selling flush** (bearish engulfing), **Second leg down** (swept its 10-day low), **Closed green**, **Blow-off rally** (Rip, RSI(5) ≥ 90), and **With/Against the market** (whether the S&P 500 itself has moved with or against the setup over the last 20 sessions — informational only; research found downsizing or skipping "against" signals cost more than it protected).
 
 A switch limits the list to S&P 500 stocks, which is what was tested and is the default. Exit dates skip weekends and NYSE holidays. The holiday list is `MARKET_HOLIDAYS` in `app.js`, so update it once a year.
+
+**Non-S&P 500 (Uptrend Dip only):** a separate tab for liquid stocks outside the S&P 500 ($100M+ traded a day — the SOFI/MSTR kind), browsable at any time but only showing new setups when the S&P 500 itself has fallen over the last 20 sessions; research found this pool has no edge otherwise. Not extended to Downtrend Rip, and not traded by paper trading (see section 10) — browsing only.
 
 **Be aware**
 - **Bunched signals:** signals cluster in sell-offs (dips) and rebounds (rips). Taking many at once is one big market bet.
@@ -374,8 +384,12 @@ A second, separate workflow (`.github/workflows/paper.yml`) trades every Uptrend
 
 **Setup:** none needed beyond what you already have. It reuses the same `ALPACA_KEY_ID` / `ALPACA_SECRET_KEY` secrets as the market scan; no new secrets. It starts **paused** the first time it ever runs, so nothing is traded until you explicitly resume it (see below).
 
+**Capital structure:** 10% of the account is held in a permanent **reserve** and never spent. Each trade — Dip and Rip share one pool — is sized at 15% of the **sleeve's** current value (the other 90%), not a fixed dollar amount, so winnings compound. There's no cap on how many positions can be open or how many new trades happen in a day; the only real limit is whether the sleeve still has spendable cash left once the reserve is set aside. A full 2000–2026 simulation of this structure returned +18.34%/year compounded, against +3.25%/year for the older fixed-$5,000/10-position/3-per-day rules — but with individual years ranging from −12.2% to +138.0%, and a worse worst-case drawdown (−20.8% against −6.5%). This is a real trade-off for materially faster compounding, not a free improvement — see the trading strategy guide for the full comparison.
+
+**Liquidity is a hard floor here, not just a display demotion:** a candidate under $20M/day traded is skipped outright, logged as such, regardless of how well it otherwise ranks.
+
 **How a day works**
-1. **~9:35 ET** — reads the site's published `data/setups.json` for signals from the prior close, ranks them (strongest uptrend first for dips, biggest rally first for rips — the rule that did best on crowded days in the research), and places **limit** entry orders for as many as the daily/position caps allow. Each order is `time_in_force: "day"`, so it cancels itself if the market never reaches the entry price by the close, matching the backtest's "enter near today's open, or skip" rule.
+1. **~9:35 ET** — reads the site's published `data/setups.json` for signals from the prior close, ranks them (the same priority ranking described in section 5 — bearish engulfing / RSI(5) ≥ 90 first, then the usual strength measure), and places a **market** order — buy or short at whatever the price is, no cap — for every candidate the sleeve can still afford, in ranked order, skipping any below the liquidity floor or once spendable cash runs out.
 2. Once an entry **fills**, a separate **OCO exit order** (`time_in_force: "gtc"`) is attached immediately: a take-profit limit and a stop. A GTC OCO, rather than folding the stop into the entry as a single "bracket" order, avoids any ambiguity about whether a same-day ("day") bracket could let the protective stop itself expire at the end of the entry day — the exit legs are unambiguously live until one of them fills or the position is closed.
 3. **~15:55 ET** — any position that has reached its held-for-3-sessions limit has its OCO order cancelled and is flattened with a market order, regardless of price.
 4. Every run also reconciles: it checks Alpaca's actual positions and orders against what it last knew, records any trade that closed since the previous run (by target, by stop, by the time exit above, or — rarely — a change you made by hand on the Alpaca dashboard, recorded as "manual"), and refreshes the account's equity history.
@@ -384,7 +398,9 @@ A second, separate workflow (`.github/workflows/paper.yml`) trades every Uptrend
 
 **Where the state lives:** open positions, pending orders, trade history and the pause/resume flag are kept in `state.json` on an orphan `paper-state` branch of this repository, created automatically the first time `paper.yml` runs. It's plain JSON, readable in the GitHub UI, and never touched by hand — use the pause/resume action above instead of editing it. The market-scan workflow checks out that branch **read-only** and turns it into the public `data/paper.json` the app reads, on its own existing schedule; it never places or touches an order itself, so a scan re-run can never duplicate trading activity.
 
-**Adjusting the rules:** edit the `env:` block of the "Run paper trading" step in `paper.yml` — `PAPER_PER_TRADE`, `PAPER_MAX_OPEN`, `PAPER_MAX_NEW_PER_DAY`, `PAPER_TARGET_ATR`, `PAPER_STOP_ATR`, `PAPER_TRADE_DIP` / `PAPER_TRADE_RIP`, `PAPER_SP500_ONLY`, `PAPER_REVIEW_AFTER`, `PAPER_SUCCESS_AVG_PCT`. Defaults match what's described in the app: $5,000 per trade, 10 open positions, 3 new trades a day. Keep the rules fixed while a test is running so the results stay comparable; changing them mid-test starts a fresh comparison in spirit even though the trade history keeps accumulating.
+**Adjusting the rules:** edit the `env:` block of the "Run paper trading" step in `paper.yml` — `PAPER_RESERVE_PCT`, `PAPER_SIZE_PCT`, `PAPER_TARGET_ATR`, `PAPER_STOP_ATR`, `PAPER_TRADE_DIP` / `PAPER_TRADE_RIP`, `PAPER_SP500_ONLY`, `PAPER_REVIEW_AFTER`, `PAPER_SUCCESS_AVG_PCT`. Defaults match what's described above: 10% reserve, 15% of the sleeve per trade. Keep the rules fixed while a test is running so the results stay comparable; changing them mid-test starts a fresh comparison in spirit even though the trade history keeps accumulating.
+
+**Tagging:** every placed trade records which priority tier it came from (`bearEngulf`, `rsi5_90`, `green_or_sweep`, or `normal`) in `state.json` and the exported `data/paper.json`, so live results can eventually be checked against the specific research finding that motivated each ranking rule.
 
 **If you use a custom domain** for GitHub Pages, set a repository variable `PAGES_BASE_URL` (Settings → Secrets and variables → Actions → Variables) to your site's base URL, e.g. `https://screener.example.com`, so the entry job fetches `setups.json` from the right place. Without it, the default assumes the standard `https://<owner>.github.io/<repo>` address.
 

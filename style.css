@@ -494,6 +494,13 @@ tbody tr.row-approaching { box-shadow: inset 3px 0 0 var(--approach); }
 .card-tags.left { justify-content: flex-start; }
 .tag.good { color: var(--curl); background: var(--curl-bg); }
 .tag.warn { color: var(--approach); background: var(--approach-bg); }
+.market-gate { display: flex; flex-direction: column; gap: 4px; margin-bottom: 12px; }
+.market-gate b { font-size: 0.9rem; }
+.market-gate p { margin: 0; font-size: 0.86rem; color: var(--muted); line-height: 1.4; }
+.market-gate.open b { color: var(--curl); }
+.market-gate.closed b { color: var(--approach); }
+.liquidity-toggle { display: flex; align-items: center; gap: 8px; font-size: 0.84rem; color: var(--muted); margin: 8px 0; }
+.liquidity-toggle input { accent-color: var(--brand); }
 .empty.small { padding: 18px 14px; }
 .track-list { padding: 4px 14px; }
 .track-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; }

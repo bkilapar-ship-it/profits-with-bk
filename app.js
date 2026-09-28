@@ -763,7 +763,8 @@ function escapeHtml(str) {
  * Late entry (one session late) only if day 1 moved against the bounce:
  * dip -> day 1 closed below its open; rip -> day 1 closed above its open.
  * ========================================================================= */
-const SETUP = { HOLD: 3, CHASE: 0.02, TARGET_ATR: 1.5, STOP_ATR: 3, LOOKBACK: 6, MIN_PRICE: 5 };
+const SETUP = { HOLD: 3, TARGET_ATR: 1.5, STOP_ATR: 3, LOOKBACK: 6, MIN_PRICE: 5, MIN_LIQUIDITY: 20e6 };
+const NONSP_MIN_LIQUIDITY = 100e6;   // $/day floor for the Non-S&P 500 browsing pool -- a higher bar than the general $20M floor
 
 // NYSE full-day holidays (update once a year).
 const MARKET_HOLIDAYS = new Set([
@@ -788,36 +789,48 @@ function setupIndicators(candles) {
   const o = candles.map(x => x.o), h = candles.map(x => x.h), l = candles.map(x => x.l), c = candles.map(x => x.c);
   const v = candles.map(x => (isNum(x.v) ? x.v : NaN));
   const tr = c.map((_, i) => (i === 0 ? h[0] - l[0] : Math.max(h[i] - l[i], Math.abs(h[i] - c[i - 1]), Math.abs(l[i] - c[i - 1]))));
-  return { o, h, l, c, v, vsma: sma(v, CONFIG.VOLUME_SMA), s200: sma(c, 200), rsi: rsiWilder(c, 14), atr: sma(tr, 14) };
+  const vsma = sma(v, CONFIG.VOLUME_SMA);
+  return {
+    o, h, l, c, v, vsma, s200: sma(c, 200), rsi: rsiWilder(c, 14), rsi5: rsiWilder(c, 5), atr: sma(tr, 14),
+    dollarVol: c.map((price, i) => (isNum(price) && isNum(vsma[i]) ? price * vsma[i] : null)),
+  };
 }
 
 /** Setup flags for candle i (null if not enough history). */
 function setupFlags(ind, i) {
-  const { h, l, c, v, vsma, s200, rsi, atr } = ind;
+  const { o, h, l, c, v, vsma, s200, rsi, rsi5, atr, dollarVol } = ind;
   if (i < 200 || !isNum(s200[i]) || !isNum(atr[i]) || !isNum(c[i - 5]) || c[i - 5] <= 0) return null;
   const r5 = c[i] / c[i - 5] - 1;
   const rng = h[i] - l[i];
   const clv = rng > 0 ? (c[i] - l[i]) / rng : 0.5;
-  let prior20min = Infinity;
+  let prior20min = Infinity, prior10min = Infinity;
   for (let k = i - 20; k < i; k++) prior20min = Math.min(prior20min, c[k]);
+  for (let k = i - 10; k < i; k++) prior10min = Math.min(prior10min, l[k]);
   const newLow20 = c[i] < prior20min;
   const down3 = c[i] < c[i - 1] && c[i - 1] < c[i - 2] && c[i - 2] < c[i - 3];
   const bottom20 = clv <= 0.2;
   const priceOk = c[i] >= SETUP.MIN_PRICE;
+  const green = c[i] > o[i];
+  // Bearish engulfing: yesterday closed green, today closes red, today's body engulfs yesterday's.
+  const bearEngulf = i > 0 && c[i - 1] > o[i - 1] && c[i] < o[i] && o[i] >= c[i - 1] && c[i] <= o[i - 1];
+  // Swept the 10-day low but closed back above it: a second leg down, not a fresh flush.
+  const sweep10 = l[i] < prior10min && c[i] > prior10min;
   return {
     dip: priceOk && c[i] > s200[i] && r5 <= -0.10 && (bottom20 || newLow20 || down3),
     rip: priceOk && c[i] < s200[i] && r5 >= 0.10 && isNum(rsi[i]) && rsi[i] >= 70,
-    r5, clv, bottom20, newLow20, down3, vs200: c[i] / s200[i] - 1, rsi: rsi[i], atr: atr[i],
+    r5, clv, bottom20, newLow20, down3, vs200: c[i] / s200[i] - 1, rsi: rsi[i], rsi5: rsi5[i], atr: atr[i],
     relVol: isNum(v[i]) && isNum(vsma[i]) && vsma[i] > 0 ? v[i] / vsma[i] : null,
+    dollarVol: dollarVol[i], green, bearEngulf, sweep10,
   };
 }
 
-/** Levels for a trade entered around `ref`: target 1.5 ATR, stop 3 ATR, 2% chase limit. */
+/** Estimated levels for a trade entered near `ref` (the signal close, used only as an estimate
+ *  until the real fill is known): target 1.5 ATR, stop 3 ATR. Entry itself has no price cap --
+ *  the plan is simply "at the next session's open, whatever that is". */
 function setupLevels(kind, ref, atr) {
   const long = kind === 'dip';
   return {
     ref,
-    entryLimit: long ? ref * (1 + SETUP.CHASE) : ref * (1 - SETUP.CHASE),
     target: long ? ref + SETUP.TARGET_ATR * atr : ref - SETUP.TARGET_ATR * atr,
     stop: long ? ref - SETUP.STOP_ATR * atr : ref + SETUP.STOP_ATR * atr,
   };
@@ -850,6 +863,19 @@ function trackSetup(kind, candles, i, atr) {
   return { state: 'open', day: after, entry, now: lastClose, pct: ret(lastClose), levels: lv };
 }
 
+/**
+ * A single number for ranking when signals outnumber tradeable slots: lower sorts first.
+ * Dip:  0 = bearish engulfing (a selling flush -- bounces best), 1 = ordinary, 2 = green
+ *       close or a swept 10-day low (a second leg down or the bounce already started -- rank last).
+ * Rip:  0 = RSI(5) >= 90 (the most exhausted, best-performing rallies), 1 = everything else.
+ * Within a tier, cards are still sorted by the usual key (uptrend/downtrend strength, or rally size).
+ */
+function setupPriority(kind, f) {
+  if (kind === 'dip') return f.bearEngulf ? 0 : (f.green || f.sweep10) ? 2 : 1;
+  if (kind === 'rip') return isNum(f.rsi5) && f.rsi5 >= 90 ? 0 : 1;
+  return 1;
+}
+
 /** Everything the app needs about one setup signal at candle i. */
 function describeSetup(kind, candles, ind, i, f) {
   const n = candles.length;
@@ -857,7 +883,9 @@ function describeSetup(kind, candles, ind, i, f) {
   const sessionsAgo = n - 1 - i;
   const out = {
     kind, signalDate, sessionsAgo,
-    close: candles[i].c, chg5d: f.r5 * 100, rsi: f.rsi, vs200: f.vs200 * 100, atr: f.atr, atrPct: (f.atr / candles[i].c) * 100, relVol: f.relVol,
+    close: candles[i].c, chg5d: f.r5 * 100, rsi: f.rsi, rsi5: f.rsi5, vs200: f.vs200 * 100, atr: f.atr, atrPct: (f.atr / candles[i].c) * 100,
+    relVol: f.relVol, dollarVol: f.dollarVol, green: f.green, bearEngulf: f.bearEngulf, sweep10: f.sweep10,
+    priority: setupPriority(kind, f),
     reasons: kind === 'dip' ? [f.bottom20 && 'closed near the day’s low', f.newLow20 && 'new 20-day low', f.down3 && '3 down days in a row'].filter(Boolean) : [],
     levels: setupLevels(kind, candles[i].c, f.atr),
     entryDate: addSessions(signalDate, 1),
@@ -918,19 +946,21 @@ const SORTS = {
   macd: [['score', 'Setup Strength', 'desc'], ['btc', 'Bars To Cross', 'asc'], ['price', 'Price', 'desc'], ['relVol', 'Relative volume', 'desc'],
          ['rsi', 'RSI', 'desc'], ['gap', 'MACD Gap', 'desc'], ['ticker', 'Ticker', 'asc']],
   dip: [['vs200', 'Uptrend strength (vs 200-day)', 'desc'], ['chg5d', '5-day drop', 'asc'], ['price', 'Price', 'desc'], ['relVol', 'Relative volume', 'desc'],
-        ['rsi', 'RSI', 'asc'], ['atrPct', 'Volatility (ATR %)', 'desc'], ['ticker', 'Ticker', 'asc']],
+        ['rsi', 'RSI', 'asc'], ['atrPct', 'Volatility (ATR %)', 'desc'], ['liquidity', 'Liquidity', 'desc'], ['ticker', 'Ticker', 'asc']],
   rip: [['chg5d', '5-day rally', 'desc'], ['vs200', 'Downtrend depth (vs 200-day)', 'asc'], ['price', 'Price', 'desc'], ['relVol', 'Relative volume', 'desc'],
-        ['rsi', 'RSI', 'desc'], ['atrPct', 'Volatility (ATR %)', 'desc'], ['ticker', 'Ticker', 'asc']],
+        ['rsi', 'RSI', 'desc'], ['rsi5', 'RSI(5)', 'desc'], ['atrPct', 'Volatility (ATR %)', 'desc'], ['liquidity', 'Liquidity', 'desc'], ['ticker', 'Ticker', 'asc']],
 };
 // List sub-tabs. "index" views filter by index membership.
 const VIEWS = {
   all: { label: 'All US' },
   watchlist: { label: 'Watchlist' },
   sp500: { label: 'S&P 500', index: 'sp500' },
+  nonsp: { label: 'Non-S&P 500', dipOnly: true },   // liquid, non-index stocks; only meaningful for Uptrend Dip
   ndx: { label: 'Nasdaq-100', index: 'ndx' },
   dow: { label: 'Dow 30', index: 'dow' },
   sectors: { label: 'Sectors & themes' },
 };
+const MIN_LIQUIDITY = 20e6;   // $/day floor: below this, Dip/Rip signals are pushed to the bottom, tagged, never paper-traded
 
 const SETTING_FIELDS = [
   ['fast', 'setFast', 'int'], ['slow', 'setSlow', 'int'], ['signal', 'setSignal', 'int'],
@@ -978,6 +1008,10 @@ const state = {
   paperSide: 'all',
   watchSource: 'scan',            // 'scan' = daily scan data (no key) | 'live' = Twelve Data
   paperLimit: 20,
+  liquidityDemote: true,
+  paperFindPositions: '',
+  paperFindOrders: '',
+  paperFindHistory: '',
 };
 const sortOf = () => state.sort[state.strategy];
 const isSetupStrategy = () => state.strategy !== 'macd';
@@ -1064,6 +1098,7 @@ function init() {
   els.addTicker.addEventListener('click', addTickerFromInput);
   els.tickerInput.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); addTickerFromInput(); } });
   state.watchSource = storage.get('watchSource') === 'live' ? 'live' : 'scan';
+  state.liquidityDemote = storage.get('liquidityDemote') !== 'false';
   els.tickers.addEventListener('input', () => storage.set('tickers', els.tickers.value));
   els.tickers.addEventListener('input', debounce(() => { if (state.watchSource === 'scan') render(); }, 300));
   els.scanBtn.addEventListener('click', () => {
@@ -1145,6 +1180,15 @@ function init() {
     if (e.target.closest('[data-back]')) { state.group = null; render(); }
   });
 
+  // Setup area: the liquidity-demote toggle (All US / Watchlist / Sectors & themes)
+  els.setupArea.addEventListener('change', e => {
+    if (e.target && e.target.id === 'liquidityToggle') {
+      state.liquidityDemote = e.target.checked;
+      storage.set('liquidityDemote', String(state.liquidityDemote));
+      render();
+    }
+  });
+
   // Opening details
   const openFromEvent = e => {
     const el = e.target.closest('[data-ticker]');
@@ -1217,7 +1261,11 @@ function setStrategy(strategy) {
     b.classList.toggle('active', on);
     b.setAttribute('aria-selected', String(on));
   });
-  setView(state.subByStrategy[strategy] || DEFAULT_SUBVIEW[strategy], true);
+  const nonspBtn = els.tabs.querySelector('[data-view="nonsp"]');
+  if (nonspBtn) nonspBtn.hidden = strategy !== 'dip';
+  let want = state.subByStrategy[strategy] || DEFAULT_SUBVIEW[strategy];
+  if (want === 'nonsp' && strategy !== 'dip') want = DEFAULT_SUBVIEW[strategy];
+  setView(want, true);
 }
 
 function setView(view, keepScroll) {
@@ -2005,7 +2053,7 @@ const STRATEGY_INFO = {
     headline: 'In 2019–2026, 37% of trades reached +5% within 3 sessions, 37% lost, and the average trade made +0.9%.',
     rules: ['Close above its 200-day moving average', 'Down 10% or more over the last 5 sessions',
             'At least one of: closed in the bottom 20% of the day’s range, a new 20-day closing low, or 3 lower closes in a row'],
-    plan: ['Buy at the next session’s open. Best at or below the signal close; avoid paying more than 2% above it.',
+    plan: ['Buy at the next session’s open, whatever it is -- no price cap.',
            'Target: entry + 1.5 × ATR (the stock’s average daily range).',
            'Disaster stop: entry − 3 × ATR. Tighter stops did worse in testing.',
            'Sell at the close of the 3rd session if neither level is hit.',
@@ -2021,7 +2069,7 @@ const STRATEGY_INFO = {
     summary: 'Shorts a sharp rally in a stock that is still in a long-term downtrend, and covers within 3 sessions.',
     headline: 'In 2019–2026 (excluding the unusual 2020), shorts averaged +0.6% and 59% were profitable.',
     rules: ['Close below its 200-day moving average', 'Up 10% or more over the last 5 sessions', 'RSI(14) at 70 or above'],
-    plan: ['Short at the next session’s open. Best at or above the signal close; avoid shorting more than 2% below it.',
+    plan: ['Short at the next session’s open, whatever it is -- no price cap.',
            'Target: entry − 1.5 × ATR.',
            'Disaster stop: entry + 3 × ATR. Losses on a short have no ceiling, so always use it.',
            'Cover at the close of the 3rd session if neither level is hit.',
@@ -2061,22 +2109,39 @@ function levelsHtml(kind, lv, exitDate) {
   const long = kind === 'dip';
   const rel = v => pctText((v / lv.ref - 1) * 100);
   return `<div class="levels">
-    <div><span>${long ? 'Buy up to' : 'Short down to'}</span><b>${fmtPrice(lv.entryLimit)}</b></div>
+    <div><span>${long ? 'Buy' : 'Short'}</span><b>at the open</b><small>no price cap</small></div>
     <div><span>Target</span><b class="up">${fmtPrice(lv.target)}</b><small>${rel(lv.target)}</small></div>
     <div><span>Stop</span><b class="down">${fmtPrice(lv.stop)}</b><small>${rel(lv.stop)}</small></div>
     <div><span>Exit by</span><b>${escapeHtml(fmtSession(exitDate))}</b><small>at the close</small></div>
   </div>`;
 }
 
+/** "With"/"against" the market: for a Dip, with = the index itself has fallen over 20 sessions;
+ *  for a Rip, with = the index has risen. Display-only -- both trade as normal either way; research
+ *  found skipping or downsizing the "against" trades cost more than it protected. */
+function marketTag(kind) {
+  const m = state.setups && state.setups.market;
+  if (!m || !isNum(m.chg20d)) return '';
+  const marketFell = m.chg20d <= 0;
+  const withMarket = kind === 'dip' ? marketFell : !marketFell;
+  return `<span class="tag ${withMarket ? 'good' : ''}" title="The S&amp;P 500 is ${marketFell ? 'down' : 'up'} ${Math.abs(m.chg20d).toFixed(1)}% over the last 20 sessions">${withMarket ? 'With' : 'Against'} the market</span>`;
+}
+
 function setupTags(x) {
-  const tags = [];
+  const tags = [marketTag(x.kind)];
   if (!x.sp500) tags.push('<span class="tag warn">Not in S&amp;P 500: untested</span>');
+  if (isNum(x.dollarVol) && x.dollarVol < SETUP.MIN_LIQUIDITY) tags.push('<span class="tag warn">Low liquidity</span>');
   if (x.kind === 'dip') {
+    if (x.bearEngulf) tags.push('<span class="tag good" title="Sold off hard after opening firm -- often a final flush before a bounce">Selling flush</span>');
+    if (x.sweep10) tags.push('<span class="tag warn" title="Undercut its 10-day low and recovered -- a second leg down, not a fresh flush">Second leg down</span>');
+    if (x.green && !x.bearEngulf) tags.push('<span class="tag">Closed green</span>');
     if (x.vs200 > 10) tags.push(`<span class="tag good">Strong uptrend: ${pctText(x.vs200)} vs 200-day</span>`);
     else if (x.vs200 < 1) tags.push(`<span class="tag warn">Barely above 200-day (${pctText(x.vs200)})</span>`);
     for (const r of x.reasons || []) tags.push(`<span class="tag">${escapeHtml(r)}</span>`);
   } else {
+    if (isNum(x.rsi5) && x.rsi5 >= 90) tags.push('<span class="tag good" title="RSI(5) of 90 or more -- the most stretched, exhausted rallies tested best">Blow-off rally</span>');
     tags.push(`<span class="tag">RSI ${isNum(x.rsi) ? x.rsi.toFixed(0) : '—'}</span>`);
+    tags.push(`<span class="tag">RSI(5) ${isNum(x.rsi5) ? x.rsi5.toFixed(0) : '—'}</span>`);
     tags.push(`<span class="tag">${pctText(x.vs200)} vs 200-day</span>`);
   }
   return tags.join('');
@@ -2133,23 +2198,48 @@ function setupSortValue(x, key) {
     case 'chg5d': return x.chg5d;
     case 'vs200': return x.vs200;
     case 'rsi': return isNum(x.rsi) ? x.rsi : null;
+    case 'rsi5': return isNum(x.rsi5) ? x.rsi5 : null;
     case 'atrPct': return x.atrPct;
+    case 'liquidity': return isNum(x.dollarVol) ? x.dollarVol : null;
     case 'ticker': return x.ticker;
     default: return null;
   }
 }
 
+/** Is this the strategy's own default sort, at its default direction? Only then does the tested
+ *  priority ranking (bearish engulfing / RSI(5) first, green closes and sweeps last) apply --
+ *  an explicit choice of a different key always sorts purely by that key, no tier grouping. */
+function isDefaultSort(so) {
+  const def = SORTS[state.strategy] && SORTS[state.strategy][0];
+  return !!def && so.key === def[0] && so.dir === def[2];
+}
+
+/** Below the $20M/day liquidity floor, on views where it applies: pushed to the bottom, tagged,
+ *  regardless of the chosen sort -- toggle-able, and never applied within a single explicit
+ *  Liquidity sort (that already puts them in plain order by the same measure). */
+function liquidityDemoteActive() {
+  return state.liquidityDemote && ['all', 'watchlist', 'sectors'].includes(state.view) && sortOf().key !== 'liquidity';
+}
+
 function sortSetups(list) {
   const so = sortOf();
   const dir = so.dir === 'asc' ? 1 : -1;
-  return [...list].sort((a, b) => {
+  const useTier = isDefaultSort(so);
+  const byKey = (a, b) => {
     const va = setupSortValue(a, so.key), vb = setupSortValue(b, so.key);
     if (va === null && vb === null) return a.ticker.localeCompare(b.ticker);
     if (va === null) return 1;
     if (vb === null) return -1;
     const cmp = typeof va === 'string' ? va.localeCompare(vb) : va - vb;
     return cmp * dir || a.ticker.localeCompare(b.ticker);
-  });
+  };
+  const cmp = useTier
+    ? (a, b) => (a.priority - b.priority) || byKey(a, b)
+    : byKey;
+  if (!liquidityDemoteActive()) return [...list].sort(cmp);
+  const liquid = [], thin = [];
+  for (const x of list) (isNum(x.dollarVol) && x.dollarVol < SETUP.MIN_LIQUIDITY ? thin : liquid).push(x);
+  return [...liquid.sort(cmp), ...thin.sort(cmp)];
 }
 
 function matchesFind(ticker) {
@@ -2185,6 +2275,8 @@ function setupItems(kind) {
     const w = watchSet();
     if (!w.size) return { items: [], message: ['Your watchlist is empty.', 'Add tickers above. They are matched against the daily scan, so no key is needed.'] };
     items = items.filter(x => w.has(x.ticker));
+  } else if (state.view === 'nonsp') {
+    items = items.filter(x => !x.sp500 && isNum(x.dollarVol) && x.dollarVol >= NONSP_MIN_LIQUIDITY);
   }
   return { items };
 }
@@ -2261,19 +2353,34 @@ function renderSetups(kind) {
   const asOf = escapeHtml(fmtSession(lastCandle));
   const next = escapeHtml(fmtSession(lastCandle ? addSessions(lastCandle, 1) : ''));
   const watchView = state.view === 'watchlist';
-  const scopeNote = watchView && !watch ? 'Your watchlist, from the daily scan.' : state.view === 'all'
+  const nonspView = state.view === 'nonsp';
+  const market = S && S.market;
+  const nonspGated = nonspView && (!market || !isNum(market.chg20d) || market.chg20d > 0);
+  const scopeNote = nonspView ? 'Liquid stocks outside the S&amp;P 500 ($100M+ traded a day), like SOFI or MSTR.'
+    : watchView && !watch ? 'Your watchlist, from the daily scan.' : state.view === 'all'
     ? 'Includes stocks outside the S&amp;P 500. Those weren’t part of the test, so they are marked.'
     : state.view === 'sp500' ? 'S&amp;P 500 stocks, the group the rules were tested on.'
     : watch ? 'Checked live on your watchlist’s daily candles.'
     : state.view === 'sectors' && state.group ? `Stocks in ${escapeHtml(state.group.label)}.` : '';
   const section = (title, sub, body) => `<section class="setup-section"><h2>${title}</h2>${sub ? `<p class="hint">${sub}</p>` : ''}${body}</section>`;
   const withSetup = new Set(items.filter(x => x.sessionsAgo === 0).map(x => x.ticker));
+  const marketLine = market && isNum(market.chg20d)
+    ? `<div class="panel market-gate ${nonspGated ? 'closed' : 'open'}"><b>${nonspGated ? '⏸ Not tradeable right now' : '▶ Tradeable right now'}</b><p>The S&amp;P 500 is ${market.chg20d > 0 ? 'up' : 'down'} ${Math.abs(market.chg20d).toFixed(1)}% over the last 20 sessions. ${nonspGated ? 'Research found this pool has no edge while the market is rising -- new setups are hidden until it falls again.' : 'The market has fallen over 20 sessions, the one condition this pool was found to work in.'}</p></div>`
+    : '';
+  const newSetupsBody = (nonspView && nonspGated)
+    ? marketLine
+    : (fresh.length ? `<div class="cards">${fresh.map(x => setupCard(x, 'new')).join('')}</div>`
+                    : `<div class="empty small"><p>No new ${info.title} setups ${state.findText ? 'matching your search ' : ''}at the ${asOf} close.</p></div>`);
+  const liquidityScoped = ['all', 'watchlist', 'sectors'].includes(state.view);
+  const liquidityToggle = liquidityScoped
+    ? `<label class="liquidity-toggle"><input type="checkbox" id="liquidityToggle" ${state.liquidityDemote ? 'checked' : ''}> Push stocks under $20M/day to the bottom</label>`
+    : '';
   box.innerHTML = `
     <p class="hint setup-scope">${scopeNote} Setups from the close of ${asOf}.${S && S.stale && !watch ? ' ⚠ The latest scan failed, so these may be out of date.' : ''}</p>
-    ${section(`New setups: ${kind === 'dip' ? 'buy' : 'short'} at the ${next} open`, 'Levels are based on the signal close. Recalculate from your actual fill using the note on each card.',
-      fresh.length ? `<div class="cards">${fresh.map(x => setupCard(x, 'new')).join('')}</div>`
-                   : `<div class="empty small"><p>No new ${info.title} setups ${state.findText ? 'matching your search ' : ''}at the ${asOf} close.</p></div>`)}
-    ${late.length ? section('One session late', 'The tested entry was yesterday’s open. A late entry only held up when day 1 moved against the setup.', `<div class="cards">${late.map(x => setupCard(x, 'late')).join('')}</div>`) : ''}
+    ${liquidityToggle}
+    ${nonspView && !nonspGated ? marketLine : ''}
+    ${section(`New setups: ${kind === 'dip' ? 'buy' : 'short'} at the ${next} open`, 'Levels are based on the signal close. Recalculate from your actual fill using the note on each card.', newSetupsBody)}
+    ${(late.length && !(nonspView && nonspGated)) ? section('One session late', 'The tested entry was yesterday’s open. A late entry only held up when day 1 moved against the setup.', `<div class="cards">${late.map(x => setupCard(x, 'late')).join('')}</div>`) : ''}
     ${section('Tracker: signals from the last 5 sessions', tracked.length
         ? `Assumes the tested entry (the open after the signal). ${counts.target} hit target, ${counts.stop} stopped, ${counts.closed} closed at day 3 (${closedUp} up), ${counts.open} still open.`
         : '', tracked.length ? `<div class="panel track-list">${tracked.map(trackRow).join('')}</div>` : '<div class="empty small"><p>No signals in the last 5 sessions.</p></div>')}
@@ -3022,7 +3129,8 @@ function paperOverview(P, st) {
   const weeks = Math.max(1, (new Date(P.asOf) - new Date(P.startedAt)) / 6048e5);
   const perWeek = st.n / weeks;
   const toGo = perWeek > 0 ? Math.ceil(Math.max(0, R.reviewAfter - st.n) / perWeek) : null;
-  const inUseMax = R.perTrade * R.maxOpen;
+  const inUseMax = P.account.sleeve || (P.account.value * (1 - R.reservePct));
+  const avgUsd = st.n ? (P.trades || []).reduce((s, t) => s + (t.usd || 0), 0) / st.n : null;
   const row = (label, paper, bt) => `<tr><td>${label}</td><td class="num"><b>${paper}</b></td><td class="num muted">${bt}</td></tr>`;
   return `
     <section class="panel pcard">
@@ -3036,7 +3144,7 @@ function paperOverview(P, st) {
       <div class="prow"><h2>Results so far</h2><span class="hint">${st.n} closed trade${st.n === 1 ? '' : 's'}</span></div>
       <div class="pgrid">
         ${pstat('Profitable', signedPct(st.winRate, 0).replace('+', ''), `${st.won} won, ${st.lost} lost`)}
-        ${pstat('Avg per trade', signedPct(st.avg), `${money(isNum(st.avg) ? R.perTrade * st.avg / 100 : null, true)} on ${money(R.perTrade)}`, cls(st.avg))}
+        ${pstat('Avg per trade', signedPct(st.avg), avgUsd !== null ? `${money(avgUsd, true)} average` : '', cls(st.avg))}
         ${pstat('Hit target', signedPct(st.hitTarget, 0).replace('+', ''), `sold at +${R.targetAtr} ATR`)}
         ${pstat('Stopped out', signedPct(st.stopped, 0).replace('+', ''), `${st.stoppedN} trade${st.stoppedN === 1 ? '' : 's'}`)}
         ${pstat('Worst trade', st.worst ? signedPct(st.worst.pct) : '—', st.worst ? `${escapeHtml(st.worst.ticker)}, ${escapeHtml(fmtSession(st.worst.exitDate))}` : '', 'down')}
@@ -3061,10 +3169,11 @@ function paperOverview(P, st) {
     </section>
     <section class="panel pcard">
       <h2>Money in use</h2>
-      <div class="prow small"><span>Open positions</span><b>${(P.positions || []).length} of ${R.maxOpen}</b></div>
-      ${meter((P.positions || []).length / R.maxOpen)}
-      <div class="prow small"><span>In trades</span><b>${money(P.account.inTrades)} of ${money(inUseMax)}</b></div>
-      ${meter(P.account.inTrades / inUseMax, 'navy')}
+      <div class="prow small"><span>Open positions</span><b>${(P.positions || []).length}</b></div>
+      <p class="hint">No cap on how many can be open at once -- limited only by the sleeve's spendable cash.</p>
+      <div class="prow small"><span>In trades</span><b>${money(P.account.inTrades)} of ${money(inUseMax)} sleeve</b></div>
+      ${meter(inUseMax ? P.account.inTrades / inUseMax : 0, 'navy')}
+      <div class="prow small"><span>Reserve, untouched</span><b>${money(P.account.reserve)}</b></div>
       <div class="pbtns"><button type="button" class="btn btn-primary" data-paper-tab="positions">Open positions</button><button type="button" class="btn" data-paper-tab="orders">Next orders</button></div>
     </section>
     <section class="panel pcard">
@@ -3072,6 +3181,27 @@ function paperOverview(P, st) {
       ${st.byStrategy.length ? st.byStrategy.map(g => `<div class="track-row"><div><b>${escapeHtml(STRAT_NAME[g.key] || g.key)}</b><small>${g.key === 'rip' ? 'Short' : 'Long'}, ${g.n} trades, ${Math.round(g.won / g.n * 100)}% profitable</small></div><b class="${cls(g.avg)}">${signedPct(g.avg)}</b></div>`).join('') : '<p class="hint">No closed trades yet.</p>'}
       <p class="hint">MACD Curl isn’t paper traded: it showed no edge as a trade signal in the research.</p>
     </section>`;
+}
+
+/** Small badge for a position/order's priority tag, matching the scanner's own badges. */
+function tagBadge(tag) {
+  if (tag === 'bearEngulf') return '<span class="tag good">Selling flush</span>';
+  if (tag === 'rsi5_90') return '<span class="tag good">Blow-off rally</span>';
+  if (tag === 'green_or_sweep') return '<span class="tag">Lower priority pick</span>';
+  return '';
+}
+
+function paperMatchesFind(text, ticker) {
+  if (!text) return true;
+  const q = text.trim().toUpperCase().replace(/^\$/, '');
+  if (!q) return true;
+  return ticker.toUpperCase().includes(q) || (companyName(ticker) || '').toUpperCase().includes(q);
+}
+
+function paperSearchBox(id, value) {
+  return `<label class="find paper-find"><span class="sr-only">Find a ticker or company</span>
+    <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>
+    <input type="search" id="${id}" placeholder="Find ticker or company" value="${escapeHtml(value || '')}" autocomplete="off" spellcheck="false"></label>`;
 }
 
 function positionCard(p) {
@@ -3090,6 +3220,7 @@ function positionCard(p) {
       <span class="tag ${long ? 'good' : 'warn'}">${long ? 'Long' : 'Short'}, ${escapeHtml(STRAT_NAME[p.strategy] || p.strategy)}</span>
       <span class="tag">Day ${p.day} of 3</span>
       <span class="tag">Exits ${escapeHtml(fmtSession(p.exitDate))} close</span>
+      ${tagBadge(p.tag)}
     </div>
     <p class="setup-facts">${long ? 'Bought' : 'Shorted'} ${p.shares} shares at <b>${fmtPrice(p.entry)}</b> (${money(p.shares * p.entry)}) on ${escapeHtml(fmtSession(p.entryDate))}. Last close <b>${fmtPrice(p.now)}</b>.</p>
     <div class="range" aria-label="Price between ${long ? 'stop' : 'target'} and ${long ? 'target' : 'stop'}">
@@ -3103,19 +3234,22 @@ function paperPositions(P) {
   const all = P.positions || [];
   const side = state.paperSide;
   const nLong = all.filter(p => p.side === 'long').length, nShort = all.length - nLong;
-  const pos = side === 'all' ? all : all.filter(p => p.side === side);
+  let pos = side === 'all' ? all : all.filter(p => p.side === side);
+  pos = pos.filter(p => paperMatchesFind(state.paperFindPositions, p.ticker));
   const chip = (key, label, n) => `<button type="button" class="chip${side === key ? ' active' : ''}" data-paper-side="${key}" aria-pressed="${side === key}">${label}<span class="tab-n">(${n})</span></button>`;
   const filters = `<div class="chips side-filter" role="group" aria-label="Filter positions">${chip('all', 'All', all.length)}${chip('long', 'Long', nLong)}${chip('short', 'Short', nShort)}</div>`;
   const openPnl = pos.reduce((s, p) => s + (p.side === 'long' ? p.now - p.entry : p.entry - p.now) * p.shares, 0);
   const cost = pos.reduce((s, p) => s + p.shares * p.entry, 0);
   const exiting = pos.filter(p => p.day >= P.rules.holdSessions - 1).length;
-  const emptyText = side === 'all'
+  const emptyText = state.paperFindPositions ? `<p><strong>No match for “${escapeHtml(state.paperFindPositions)}”.</strong></p>`
+    : side === 'all'
     ? `<p><strong>No open positions.</strong></p><p>${(P.orders && P.orders.entries.length) ? `Next orders: ${P.orders.entries.map(e => escapeHtml(e.ticker)).join(', ')}.` : 'New trades open when setups appear.'}</p>`
     : `<p><strong>No open ${side} positions.</strong></p><p>${side === 'long' ? 'Long trades come from Uptrend Dip setups.' : 'Short trades come from Downtrend Rip setups.'}</p>`;
   return `
+    ${paperSearchBox('paperFindPositions', state.paperFindPositions)}
     ${filters}
     <section class="panel pcard"><div class="pgrid three">
-      ${pstat(side === 'all' ? 'Open' : `Open ${side}`, side === 'all' ? `${pos.length} of ${P.rules.maxOpen}` : String(pos.length))}
+      ${pstat(side === 'all' ? 'Open' : `Open ${side}`, String(pos.length))}
       ${pstat('Open P&amp;L', money(openPnl, true), cost ? signedPct(openPnl / cost * 100) : '', cls(openPnl))}
       ${pstat('Exiting next close', String(exiting))}
     </div></section>
@@ -3125,27 +3259,34 @@ function paperPositions(P) {
 
 function paperOrders(P) {
   const O = P.orders || { entries: [], skipped: [], exits: [] };
+  const q = state.paperFindOrders;
+  const entries = (O.entries || []).filter(e => paperMatchesFind(q, e.ticker));
+  const skipped = (O.skipped || []).filter(x => paperMatchesFind(q, x.ticker));
+  const exits = (O.exits || []).filter(x => paperMatchesFind(q, x.ticker));
   const entry = e => `<div class="order-row">
       <span class="rank">${e.rank}</span>
       <div><div class="prow"><b>${escapeHtml(e.ticker)} <small class="muted">${escapeHtml(companyName(e.ticker))}</small></b><span class="pill pill-loading">Queued</span></div>
       <small class="muted">${escapeHtml(STRAT_NAME[e.strategy])}: ${e.strategy === 'dip' ? `${signedPct(e.vs200)} vs 200-day, ${signedPct(e.chg5d)} in 5 sessions` : `${signedPct(e.chg5d)} in 5 sessions`}</small>
-      <div class="small">${e.strategy === 'dip' ? 'Buy' : 'Short'} <b>${e.shares}</b> shares, limit <b>${fmtPrice(e.limit)}</b> (about ${money(P.rules.perTrade)})</div></div>
+      <div class="card-tags left" style="margin:4px 0">${tagBadge(e.tag)}</div>
+      <div class="small">${e.strategy === 'dip' ? 'Buy' : 'Short'} <b>${e.shares}</b> shares (about ${money(e.size)}), market order</div></div>
     </div>`;
   const line = (a, b) => `<div class="track-row"><b>${escapeHtml(a)}</b><span class="muted right">${escapeHtml(b)}</span></div>`;
+  const noMatch = q ? `<p class="hint">No match for “${escapeHtml(q)}”.</p>` : '';
   return `
+    ${paperSearchBox('paperFindOrders', q)}
     <section class="panel pcard">
-      <div class="prow"><h2>Entering at the open</h2><span class="hint">${O.entries.length} of ${P.rules.maxNewPerDay} daily slots</span></div>
-      <p class="hint">Ranked strongest uptrend first, the order that did best on crowded days in the research.</p>
-      ${O.entries.length ? O.entries.map(entry).join('') : '<p class="hint">No new setups for this open.</p>'}
+      <div class="prow"><h2>Entering at the open</h2><span class="hint">${entries.length} placed</span></div>
+      <p class="hint">Ranked bearish engulfing first for Dip / RSI(5) ≥ 90 first for Rip, then the usual strength measure -- no cap on how many can be taken, only whether the sleeve still has spendable cash.</p>
+      ${entries.length ? entries.map(entry).join('') : (noMatch || '<p class="hint">No new setups for this open.</p>')}
     </section>
     <section class="panel pcard">
-      <div class="prow"><h2>Skipped</h2><span class="hint">${O.skipped.length} signal${O.skipped.length === 1 ? '' : 's'}</span></div>
-      ${O.skipped.length ? O.skipped.map(x => line(x.ticker, x.reason)).join('') : '<p class="hint">Nothing skipped: every signal fit.</p>'}
+      <div class="prow"><h2>Skipped</h2><span class="hint">${skipped.length} signal${skipped.length === 1 ? '' : 's'}</span></div>
+      ${skipped.length ? skipped.map(x => line(x.ticker, x.reason)).join('') : (noMatch || '<p class="hint">Nothing skipped: every signal fit.</p>')}
       <p class="hint">Skipped signals aren’t kept for later. They still show in the scanner’s tracker, so you can compare.</p>
     </section>
     <section class="panel pcard">
       <h2>Exits at the next close</h2>
-      ${O.exits.length ? O.exits.map(x => line(x.ticker, x.note)).join('') : '<p class="hint">No time exits due.</p>'}
+      ${exits.length ? exits.map(x => line(x.ticker, x.note)).join('') : (noMatch || '<p class="hint">No time exits due.</p>')}
     </section>
     <section class="panel pcard">
       <h2>Daily schedule (US Eastern)</h2>
@@ -3159,18 +3300,19 @@ function paperHistory(P, st) {
   if (f.strategy !== 'all') t = t.filter(x => x.strategy === f.strategy);
   if (f.result === 'won') t = t.filter(x => x.usd > 0);
   if (f.result === 'lost') t = t.filter(x => x.usd <= 0);
-  if (state.findText) t = t.filter(x => matchesFind(x.ticker));
+  t = t.filter(x => paperMatchesFind(state.paperFindHistory, x.ticker));
   const shown = t.slice(0, state.paperLimit);
   const chip = (group, key, label) => `<button type="button" class="chip${f[group] === key ? ' active' : ''}" data-paper-filter="${group}:${key}" aria-pressed="${f[group] === key}">${label}</button>`;
   const how = { target: ['Target', 'good'], stop: ['Stop', 'bad'], time: ['Day-3 exit', ''] };
   const tr = x => `<div class="track-row">
-      <div><div class="prow start"><b>${escapeHtml(x.ticker)}</b><span class="tag ${how[x.how][1]}">${how[x.how][0]}</span></div>
+      <div><div class="prow start"><b>${escapeHtml(x.ticker)}</b><span class="tag ${how[x.how][1]}">${how[x.how][0]}</span>${tagBadge(x.tag)}</div>
       <small>${escapeHtml(STRAT_NAME[x.strategy])}, ${escapeHtml(fmtSession(x.entryDate))} to ${escapeHtml(fmtSession(x.exitDate))}</small></div>
       <div class="right"><b class="${cls(x.pct)}">${signedPct(x.pct)}</b><small class="${cls(x.usd)}">${money(x.usd, true)}</small></div>
     </div>`;
   const total = t.reduce((s, x) => s + x.usd, 0);
   const won = t.filter(x => x.usd > 0).length;
   return `
+    ${paperSearchBox('paperFindHistory', state.paperFindHistory)}
     <div class="chips">${chip('strategy', 'all', 'All')}${chip('strategy', 'dip', 'Uptrend Dip')}${chip('strategy', 'rip', 'Downtrend Rip')}${chip('result', 'all', 'Any result')}${chip('result', 'won', 'Won')}${chip('result', 'lost', 'Lost')}</div>
     <section class="panel pcard"><div class="pgrid three">
       ${pstat('Trades', String(t.length))}
@@ -3201,7 +3343,8 @@ function paperRules(P) {
     </section>
     <section class="panel pcard">
       <h2>Money</h2>
-      <div class="kv">${kv('Per trade', money(R.perTrade))}${kv('Max open positions', R.maxOpen)}${kv('Max new trades per day', R.maxNewPerDay)}${kv('Most in trades at once', money(R.perTrade * R.maxOpen))}</div>
+      <div class="kv">${kv('Held in reserve', signedPct(R.reservePct * 100, 0).replace('+', ''))}${kv('Per trade', `${signedPct(R.sizePct * 100, 0).replace('+', '')} of the sleeve`)}${kv('Open positions / new trades per day', 'No cap -- limited by spendable cash')}${kv('Liquidity floor', `$${(R.minLiquidity / 1e6).toFixed(0)}M/day`)}</div>
+      <p class="hint">Dip and Rip share one sleeve (the 90% outside the reserve). Trade size is a share of the sleeve's <em>current</em> value, so it grows and shrinks with the account -- not a fixed dollar amount.</p>
     </section>
     <section class="panel pcard">
       <h2>What it trades</h2>
@@ -3273,6 +3416,11 @@ function initPaper() {
     if (t.dataset.paperMore !== undefined) { state.paperLimit += 20; renderPaper(); return; }
     if (t.dataset.paperCsv !== undefined) paperCsv();
   });
+  els.paperPage.addEventListener('input', debounce(e => {
+    if (e.target && e.target.id === 'paperFindPositions') { state.paperFindPositions = e.target.value; renderPaper(); }
+    else if (e.target && e.target.id === 'paperFindOrders') { state.paperFindOrders = e.target.value; renderPaper(); }
+    else if (e.target && e.target.id === 'paperFindHistory') { state.paperFindHistory = e.target.value; renderPaper(); }
+  }));
 }
 
 /* ---------- Boot ---------- */
