@@ -111,9 +111,12 @@ jobs:
           # you use a custom domain — otherwise this default matches standard GitHub Pages.
           PAPER_SETUPS_URL: ${{ vars.PAGES_BASE_URL && format('{0}/data/setups.json', vars.PAGES_BASE_URL) || format('https://{0}.github.io/{1}/data/setups.json', github.repository_owner, github.event.repository.name) }}
           # --- Adjustable trading rules ---
-          PAPER_PER_TRADE: '5000'
-          PAPER_MAX_OPEN: '10'
-          PAPER_MAX_NEW_PER_DAY: '3'
+          # Capital structure: 10% held in permanent reserve, the rest (the "sleeve") shared by
+          # Dip and Rip. Each trade is 15% of the sleeve's CURRENT value, not a fixed dollar
+          # amount, so winnings compound. No cap on open positions or new trades per day -- the
+          # only limit is whether the sleeve still has spendable cash once the reserve is set aside.
+          PAPER_RESERVE_PCT: '0.10'
+          PAPER_SIZE_PCT: '0.15'
           PAPER_TARGET_ATR: '1.5'
           PAPER_STOP_ATR: '3'
           PAPER_HOLD_SESSIONS: '3'
