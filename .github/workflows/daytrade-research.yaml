@@ -1,0 +1,46 @@
+name: Research - day trading
+
+# One-off research: opening-range breakout on "stocks in play", SPY intraday momentum, and a
+# 15:45 check of the Uptrend Dip / Downtrend Rip signal. Downloads 15-minute bars from 2016 with
+# your Alpaca keys. Read-only: it never places or touches orders. Runs only when you start it.
+
+on:
+  workflow_dispatch:
+    inputs:
+      max_symbols:
+        description: 'Limit the number of stocks for a quick trial run (0 = all, the real test)'
+        default: '0'
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Run the research
+        env:
+          ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          ALPACA_FEED: 'sip'
+          DT_MAX_SYMBOLS: ${{ inputs.max_symbols }}
+          DT_OUT: research-out-daytrade
+          NODE_OPTIONS: '--max-old-space-size=4096'
+        run: node scanner/daytrade.js
+
+      - name: Save the results as a downloadable file
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daytrade-results
+          path: research-out-daytrade/
+          if-no-files-found: warn
