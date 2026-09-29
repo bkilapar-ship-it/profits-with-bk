@@ -1,6 +1,6 @@
 {
  "version": 1,
- "status": "paused",
+ "status": "running",
  "startedAt": "2026-09-26",
  "lastEntryRunDate": "2026-09-28",
  "lastExitRunDate": null,
@@ -36,6 +36,12 @@
    "value": 99957,
    "pct": -0.04,
    "spy": 0.09
+  },
+  {
+   "d": "2026-09-29",
+   "value": 99957,
+   "pct": -0.04,
+   "spy": null
   }
  ],
  "lastOrders": {
