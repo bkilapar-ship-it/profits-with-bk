@@ -5,25 +5,27 @@
  "lastEntryRunDate": "2026-09-30",
  "lastExitRunDate": "2026-09-30",
  "spyBaseline": 764.95,
- "positions": {
-  "CF": {
+ "positions": {},
+ "pendingEntries": {},
+ "pendingCloses": {},
+ "trades": [
+  {
+   "ticker": "CF",
    "strategy": "dip",
    "side": "long",
    "tag": "normal",
    "signalDate": "2026-09-25",
    "signalClose": 114.67,
    "entryDate": "2026-09-28",
+   "exitDate": "2026-09-30",
    "entry": 115.88,
+   "exit": 116.46,
    "shares": 117,
-   "target": 123.49,
-   "stop": 100.67,
-   "ocoOrderId": "faa76c36-f923-4f9b-adde-4cb62990f394",
-   "now": 116.63
+   "how": "time",
+   "usd": 67.86,
+   "pct": 0.5
   }
- },
- "pendingEntries": {},
- "pendingCloses": {},
- "trades": [],
+ ],
  "equity": [
   {
    "d": "2026-09-26",
@@ -45,8 +47,8 @@
   },
   {
    "d": "2026-09-30",
-   "value": 100088,
-   "pct": 0.09,
+   "value": 100078,
+   "pct": 0.08,
    "spy": 0.31
   }
  ],
@@ -57,6 +59,11 @@
  },
  "lastExits": {
   "forDate": "2026-09-30",
-  "exits": []
+  "exits": [
+   {
+    "ticker": "CF",
+    "note": "Sold at the market (3rd session)"
+   }
+  ]
  }
 }
