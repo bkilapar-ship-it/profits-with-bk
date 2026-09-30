@@ -3,7 +3,7 @@
  "status": "running",
  "startedAt": "2026-09-26",
  "lastEntryRunDate": "2026-09-30",
- "lastExitRunDate": null,
+ "lastExitRunDate": "2026-09-30",
  "spyBaseline": 764.95,
  "positions": {
   "CF": {
@@ -18,7 +18,7 @@
    "target": 123.49,
    "stop": 100.67,
    "ocoOrderId": "faa76c36-f923-4f9b-adde-4cb62990f394",
-   "now": 117.61
+   "now": 116.95
   }
  },
  "pendingEntries": {},
@@ -45,9 +45,9 @@
   },
   {
    "d": "2026-09-30",
-   "value": 100202,
-   "pct": 0.2,
-   "spy": 0.5
+   "value": 100125,
+   "pct": 0.12,
+   "spy": 0.25
   }
  ],
  "lastOrders": {
@@ -56,7 +56,7 @@
   "skipped": []
  },
  "lastExits": {
-  "forDate": null,
+  "forDate": "2026-09-30",
   "exits": []
  }
 }
