@@ -108,6 +108,9 @@ const CFG = {
   force: bool(env.FORCE, false),   // bypass the once-per-day guard, for manual testing
 
   rpm: num(env.ALPACA_RPM, 150),
+  cancelTries: num(env.PAPER_CANCEL_TRIES, 12),     // how long to wait for Alpaca to finish cancelling the stop/target orders
+  cancelDelayMs: num(env.PAPER_CANCEL_DELAY_MS, 1500),
+  closeTries: num(env.PAPER_CLOSE_TRIES, 6),        // retries if Alpaca still says the shares are held by an order
   pollTries: num(env.PAPER_POLL_TRIES, 8),
   pollDelayMs: num(env.PAPER_POLL_DELAY_MS, 20000),
 };
@@ -194,6 +197,43 @@ const cancelOrder = id => alpaca('DELETE', `/v2/orders/${id}`).catch(e => {
   throw e;
 });
 const closePositionMarket = symbol => alpaca('DELETE', `/v2/positions/${symbol}`);
+
+const TERMINAL = new Set(['canceled', 'filled', 'expired', 'rejected', 'replaced', 'done_for_day']);
+/** Alpaca cancels asynchronously: the order goes "pending_cancel" first, and until it is truly
+ *  cancelled its shares are still "held", so closing the position is refused ("available: 0").
+ *  Cancel, then wait until the order and both its legs are really done. */
+async function cancelAndWait(orderId, label) {
+  await cancelOrder(orderId).catch(e => log(`  ${label}: could not cancel its OCO (${e.message})`));
+  for (let i = 0; i < CFG.cancelTries; i++) {
+    const o = await getOrder(orderId).catch(() => null);
+    if (!o || (TERMINAL.has(o.status) && (o.legs || []).every(l => TERMINAL.has(l.status)))) return true;
+    await sleep(CFG.cancelDelayMs);
+  }
+  log(`  ${label}: its stop/target order is still not cancelled after waiting; will try to close anyway.`);
+  return false;
+}
+/** Close at market, retrying while Alpaca still reports the shares as held by an order. */
+async function closeWithRetry(symbol) {
+  let last;
+  for (let i = 0; i < CFG.closeTries; i++) {
+    try { return await closePositionMarket(symbol); }
+    catch (e) {
+      last = e;
+      if (!/insufficient qty|held_for_orders|403/i.test(e.message)) throw e;   // a different problem: don't keep hammering
+      await sleep(CFG.cancelDelayMs);
+    }
+  }
+  throw last;
+}
+/** Put a take-profit / stop pair back on a position, using the levels recorded at entry. */
+async function reprotect(ticker, p) {
+  const long = p.side === 'long';
+  const oco = await alpaca('POST', '/v2/orders', {
+    symbol: ticker, qty: String(p.shares), side: long ? 'sell' : 'buy', type: 'limit', time_in_force: 'gtc',
+    order_class: 'oco', take_profit: { limit_price: String(p.target) }, stop_loss: { stop_price: String(p.stop) },
+  });
+  return oco.id;
+}
 
 async function getAsset(symbol) {
   try { return await alpaca('GET', `/v2/assets/${symbol}`); } catch { return null; }
@@ -473,21 +513,28 @@ async function runExits(state) {
   if (clock && !clock.is_open && !CFG.force) { log('Market is not open right now; skipping time exits.'); return; }
 
   const due = Object.entries(state.positions).filter(([, p]) => core.addSessions(p.entryDate, CFG.holdSessions - 1) <= today);
-  const exits = [];
+  const exits = []; let failed = 0;
   for (const [ticker, p] of due) {
+    if (state.pendingCloses[ticker]) { log(`  ${ticker}: a close is already in progress; leaving it.`); continue; }
     log(`  time exit due: ${ticker} (entered ${p.entryDate})`);
-    if (p.ocoOrderId) await cancelOrder(p.ocoOrderId).catch(e => log(`  ${ticker}: could not cancel its OCO (${e.message})`));
+    if (p.ocoOrderId) await cancelAndWait(p.ocoOrderId, ticker);
     state.pendingCloses[ticker] = { reason: 'time' };
     try {
-      await closePositionMarket(ticker);
+      await closeWithRetry(ticker);
       exits.push({ ticker, note: `${p.side === 'long' ? 'Sold' : 'Bought back'} at the market (3rd session)` });
     } catch (e) {
-      log(`  ${ticker}: could not close it (${e.message}) — will retry next run.`);
+      failed++;
+      log(`  ${ticker}: could not close it (${e.message}).`);
       delete state.pendingCloses[ticker];
+      if (p.ocoOrderId) {   // the stop/target were cancelled to make way for the close: never leave a position bare
+        try { p.ocoOrderId = await reprotect(ticker, p); log(`  ${ticker}: stop and target restored (${p.ocoOrderId}); run the exit again to retry.`); }
+        catch (e2) { log(`  ${ticker}: COULD NOT restore its stop/target (${e2.message}). This position has NO automatic stop — check the Alpaca dashboard.`); p.ocoOrderId = null; }
+      }
     }
   }
   state.lastExits = { forDate: today, exits };
-  state.lastExitRunDate = today;
+  if (!failed) state.lastExitRunDate = today;   // a failed close must not use up the day: a plain re-run can retry it
+  else log(`  ${failed} position(s) could not be closed; running the exit again today will retry them.`);
   if (exits.length) { await sleep(CFG.pollDelayMs); await reconcileClosedPositions(state, await getPositions()); }
 }
 
@@ -628,5 +675,5 @@ module.exports = {
   CFG, RULES, defaultState, loadState, saveState, todayEastern, dayCount, main,
   reconcile, reconcileClosedPositions, reconcilePendingEntries, runEntries, runExits, rankCandidates,
   updateEquitySnapshot, renderPublicJson, fetchSetups, assertPaperOnly,
-  alpaca, getClock, getAccount, getPositions, getOpenOrders, getOrder, getAsset, getLatestDailyClose,
+  alpaca, getClock, getAccount, getPositions, getOpenOrders, getOrder, getAsset, getLatestDailyClose, cancelOrder, closePositionMarket,
 };
