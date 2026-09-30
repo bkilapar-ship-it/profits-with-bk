@@ -2,7 +2,7 @@
  "version": 1,
  "status": "running",
  "startedAt": "2026-09-26",
- "lastEntryRunDate": "2026-09-29",
+ "lastEntryRunDate": "2026-09-30",
  "lastExitRunDate": null,
  "spyBaseline": 764.95,
  "positions": {
@@ -18,7 +18,7 @@
    "target": 123.49,
    "stop": 100.67,
    "ocoOrderId": "faa76c36-f923-4f9b-adde-4cb62990f394",
-   "now": 115.71
+   "now": 117.61
   }
  },
  "pendingEntries": {},
@@ -42,10 +42,16 @@
    "value": 99980,
    "pct": -0.02,
    "spy": -0.1
+  },
+  {
+   "d": "2026-09-30",
+   "value": 100202,
+   "pct": 0.2,
+   "spy": 0.5
   }
  ],
  "lastOrders": {
-  "forDate": "2026-09-29",
+  "forDate": "2026-09-30",
   "entries": [],
   "skipped": []
  },
