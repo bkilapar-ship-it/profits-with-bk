@@ -2,7 +2,7 @@
  "version": 1,
  "status": "running",
  "startedAt": "2026-09-26",
- "lastEntryRunDate": "2026-09-30",
+ "lastEntryRunDate": "2026-10-01",
  "lastExitRunDate": "2026-09-30",
  "spyBaseline": 764.95,
  "positions": {},
@@ -50,10 +50,16 @@
    "value": 100068,
    "pct": 0.07,
    "spy": -0.3
+  },
+  {
+   "d": "2026-10-01",
+   "value": 100068,
+   "pct": 0.07,
+   "spy": -0.17
   }
  ],
  "lastOrders": {
-  "forDate": "2026-09-30",
+  "forDate": "2026-10-01",
   "entries": [],
   "skipped": []
  },
