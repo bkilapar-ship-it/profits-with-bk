@@ -1,7 +1,7 @@
 name: Research - day trading
 
 # One-off research: opening-range breakout on "stocks in play", SPY intraday momentum, and a
-# 15:45 check of the Uptrend Dip / Downtrend Rip signal. Downloads 15-minute bars from 2016 with
+# 15:45 check of the Uptrend Dip / Downtrend Rip signal. Downloads 15-minute bars from 2019 with
 # your Alpaca keys. Read-only: it never places or touches orders. Runs only when you start it.
 
 on:
@@ -17,7 +17,7 @@ permissions:
 jobs:
   research:
     runs-on: ubuntu-latest
-    timeout-minutes: 240
+    timeout-minutes: 330
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -32,6 +32,7 @@ jobs:
           ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
           ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
           ALPACA_FEED: 'sip'
+          ALPACA_RPM: '190'
           DT_MAX_SYMBOLS: ${{ inputs.max_symbols }}
           DT_OUT: research-out-daytrade
           NODE_OPTIONS: '--max-old-space-size=4096'
