@@ -3,7 +3,7 @@
  "status": "running",
  "startedAt": "2026-09-26",
  "lastEntryRunDate": "2026-10-01",
- "lastExitRunDate": "2026-09-30",
+ "lastExitRunDate": "2026-10-01",
  "spyBaseline": 764.95,
  "positions": {},
  "pendingEntries": {},
@@ -64,12 +64,7 @@
   "skipped": []
  },
  "lastExits": {
-  "forDate": "2026-09-30",
-  "exits": [
-   {
-    "ticker": "CF",
-    "note": "Sold at the market (3rd session)"
-   }
-  ]
+  "forDate": "2026-10-01",
+  "exits": []
  }
 }
