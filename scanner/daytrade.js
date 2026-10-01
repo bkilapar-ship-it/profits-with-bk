@@ -3,7 +3,7 @@
  * Trade With BK — one-off DAY-TRADING research. Runs in GitHub Actions with your Alpaca keys;
  * read-only (it only downloads market data, never touches orders).
  *
- * Downloads 15-minute bars (2016 onward) for stocks that were S&P 500 members on each date, plus
+ * Downloads 15-minute bars (2019 onward, plus a warm-up year) for stocks that were S&P 500 members on each date, plus
  * SPY, and tests three ideas with the same three-period discipline as the rest of this project:
  *
  *  1. Opening-range breakout (ORB) on "stocks in play". Each morning, rank members by the volume
@@ -32,8 +32,9 @@ const CFG = {
   keyId: env.ALPACA_KEY_ID || '', secret: env.ALPACA_SECRET_KEY || '',
   dataBase: (env.ALPACA_DATA_BASE || 'https://data.alpaca.markets').replace(/\/+$/, ''),
   feed: (env.ALPACA_FEED || 'sip').toLowerCase(),
-  start: env.DT_START || '2015-06-01',          // 200+ trading days of warm-up before the test period
-  testFrom: env.DT_TEST_FROM || '2016-01-01',
+  start: env.DT_START || '2018-01-01',          // a year of warm-up before the test period (the 200-day average needs it)
+  testFrom: env.DT_TEST_FROM || '2019-01-01',
+  checkpoint: Number(env.DT_CHECKPOINT_EVERY || 5),   // save partial results every N batches, so a stopped run still leaves something
   batch: Number(env.DT_BATCH || 8),
   rpm: Number(env.ALPACA_RPM || 180),
   maxSymbols: Number(env.DT_MAX_SYMBOLS || 0),
@@ -41,7 +42,7 @@ const CFG = {
   outDir: env.DT_OUT || 'research-out-daytrade',
   costs: [0, 0.05, 0.10],                        // % round trip per trade
 };
-const ERAS = [['2016-2020', '2016-01-01', '2020-12-31'], ['2021-2023', '2021-01-01', '2023-12-31'], ['2024-2026', '2024-01-01', '2099-12-31']];
+const ERAS = [['2019-2021', '2019-01-01', '2021-12-31'], ['2022-2023', '2022-01-01', '2023-12-31'], ['2024-2026', '2024-01-01', '2099-12-31']];
 const isNum = v => typeof v === 'number' && Number.isFinite(v);
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -235,8 +236,8 @@ function portfolio(dailyRets) {
   return { cagr: (eq ** (1 / yrs) - 1) * 100, dd: dd * 100, sharpe: sd > 0 ? mean / sd * Math.sqrt(252) : NaN, yearly: Object.entries(yearly).map(([y, v]) => `${y} ${f2((v - 1) * 100)}%`).join(', ') };
 }
 
-function report(orb, spy, dips, meta) {
-  const L = []; const say = t => { L.push(t); console.log(t); };
+function report(orb, spy, dips, meta, quiet = false) {
+  const L = []; const say = t => { L.push(t); if (!quiet) console.log(t); };
   say('==================== DAY-TRADING RESEARCH ====================');
   say(`Data: 15-minute bars from ${CFG.testFrom}; point-in-time S&P 500 members plus SPY. ${meta}`);
   // ORB: top N by relative volume each day
@@ -296,31 +297,45 @@ async function main() {
   const spyBars = (await fetchBars(['SPY'])).get('SPY');
   const spy = spyMomentum(prepare(spyBars));
   log(`SPY: ${spyBars.length} bars, ${spy.length} tradable days`);
-  const orb = [], dips = []; let withData = 0;
+  const orb = [], dips = []; let withData = 0, batchNo = 0;
+  const loopStart = Date.now();
   for (let b = 0; b < symbols.length; b += CFG.batch) {
     const chunk = symbols.slice(b, b + CFG.batch);
-    let bars;
-    try { bars = await fetchBars(chunk); } catch (e) { log(`  batch skipped: ${e.message}`); continue; }
-    for (const [sym, list] of bars) {
+    batchNo++;
+    let bars = null;
+    try { bars = await fetchBars(chunk); } catch (e) { log(`  batch ${batchNo} skipped: ${e.message}`); }
+    if (bars) for (const [sym, list] of bars) {
       if (list.length < 3000) continue;
       withData++;
       const P = prepare(list);
       orbCandidates(sym, P, isSp, orb);
       dip345(sym, P, isSp, dips);
     }
-    if ((b / CFG.batch) % 10 === 0) log(`  ${Math.min(b + CFG.batch, symbols.length)}/${symbols.length} symbols, ${requests} requests, ${orb.length} ORB candidates`);
+    const done = Math.min(b + CFG.batch, symbols.length), mins = (Date.now() - loopStart) / 60000;
+    log(`  ${done}/${symbols.length} stocks | ${requests} requests | ${orb.length} candidates | ${mins.toFixed(0)} min elapsed, about ${(mins / done * (symbols.length - done)).toFixed(0)} min to go`);
+    if (batchNo % CFG.checkpoint === 0 && done < symbols.length) {
+      saveOutputs(orb, spy, dips, `PARTIAL RESULT: ${done} of ${symbols.length} stocks downloaded so far, not the full run.`, true);
+      log('  (partial results saved)');
+    }
   }
   const meta = `Stocks with data: ${withData} of ${symbols.length}. ${requests} requests, ${((Date.now() - t0) / 60000).toFixed(0)} min.`;
   log(meta);
+  const summary = saveOutputs(orb, spy, dips, meta, false);
+  if (env.GITHUB_STEP_SUMMARY) fs.appendFileSync(env.GITHUB_STEP_SUMMARY, '```\n' + summary + '\n```\n');
+}
+
+/** Writes the CSVs and the summary. Called every few batches (quiet) and once at the end. */
+function saveOutputs(orb, spy, dips, meta, quiet) {
   fs.mkdirSync(CFG.outDir, { recursive: true });
-  const byDay = new Map(); for (const x of orb) { if (!byDay.has(x.d)) byDay.set(x.d, []); byDay.get(x.d).push(x); }
+  const byDay = new Map();
+  for (const x of orb) { if (!byDay.has(x.d)) byDay.set(x.d, []); byDay.get(x.d).push(x); }
   const topRows = [...byDay.values()].flatMap(list => list.sort((a, b) => b.relvol - a.relvol).slice(0, CFG.topN));
   writeCsv(path.join(CFG.outDir, 'orb_top.csv'), topRows);   // only the stocks actually traded (top N a day), to keep the file small
   writeCsv(path.join(CFG.outDir, 'spy_momentum.csv'), spy);
   writeCsv(path.join(CFG.outDir, 'dip_345.csv'), dips);
-  const summary = report(orb, spy, dips, meta);
+  const summary = report(orb, spy, dips, meta, quiet);
   fs.writeFileSync(path.join(CFG.outDir, 'summary.txt'), summary);
-  if (env.GITHUB_STEP_SUMMARY) fs.appendFileSync(env.GITHUB_STEP_SUMMARY, '```\n' + summary + '\n```\n');
+  return summary;
 }
 
 if (require.main === module) main().catch(e => { console.error(`Research error: ${e.message}`); process.exitCode = 1; });
