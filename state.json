@@ -3,7 +3,7 @@
  "status": "running",
  "startedAt": "2026-09-26",
  "lastEntryRunDate": "2026-10-02",
- "lastExitRunDate": "2026-10-01",
+ "lastExitRunDate": "2026-10-02",
  "spyBaseline": 764.95,
  "positions": {},
  "pendingEntries": {},
@@ -70,7 +70,7 @@
   "skipped": []
  },
  "lastExits": {
-  "forDate": "2026-10-01",
+  "forDate": "2026-10-02",
   "exits": []
  }
 }
