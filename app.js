@@ -758,12 +758,12 @@ function escapeHtml(str) {
  *                closing low OR 3 lower closes in a row).
  * Downtrend Rip: close < 200-day SMA, up >= 10% over 5 sessions, RSI(14) >= 70.
  *
- * Trade plan (tested): enter at the next session's open; target 1.5 x ATR(14);
+ * Trade plan (tested): enter at the next session's open; target 4% from entry;
  * disaster stop 3 x ATR(14); exit at the close of the 3rd session.
  * Late entry (one session late) only if day 1 moved against the bounce:
  * dip -> day 1 closed below its open; rip -> day 1 closed above its open.
  * ========================================================================= */
-const SETUP = { HOLD: 3, CHASE: 0.02, TARGET_ATR: 1.5, STOP_ATR: 3, LOOKBACK: 6, MIN_PRICE: 5, MIN_LIQUIDITY: 20e6 };
+const SETUP = { HOLD: 3, CHASE: 0.02, TARGET_PCT: 0.04, STOP_ATR: 3, LOOKBACK: 6, MIN_PRICE: 5, MIN_LIQUIDITY: 20e6 };
 const NONSP_MIN_LIQUIDITY = 100e6;   // $/day floor for the Non-S&P 500 browsing pool -- a higher bar than the general $20M floor
 
 // NYSE full-day holidays (update once a year).
@@ -824,7 +824,7 @@ function setupFlags(ind, i) {
   };
 }
 
-/** Levels for a trade entered around `ref`: target 1.5 ATR, stop 3 ATR, 2% entry cap. Tested against
+/** Levels for a trade entered around `ref`: target 4%, stop 3 ATR, 2% entry cap. Tested against
  *  no cap across the full 2000-2026 run: the cap helps Dip (skips the weaker gapped-up entries) and
  *  costs Rip a little (its best trades tend to gap down hard) -- kept on both for one simple rule. */
 function setupLevels(kind, ref, atr) {
@@ -832,7 +832,7 @@ function setupLevels(kind, ref, atr) {
   return {
     ref,
     entryLimit: long ? ref * (1 + SETUP.CHASE) : ref * (1 - SETUP.CHASE),
-    target: long ? ref + SETUP.TARGET_ATR * atr : ref - SETUP.TARGET_ATR * atr,
+    target: long ? ref * (1 + SETUP.TARGET_PCT) : ref * (1 - SETUP.TARGET_PCT),
     stop: long ? ref - SETUP.STOP_ATR * atr : ref + SETUP.STOP_ATR * atr,
   };
 }
@@ -2046,38 +2046,37 @@ function render() {
 }
 
 /* ---------- Swing setups: Uptrend Dip / Downtrend Rip ---------- */
-// Figures from the 1996-2026 S&P 500 study (daily candles, costs excluded).
+// Figures from the 2000-2026 S&P 500 study (daily candles; next-open entry within the 2% cap; 4% target, 3 ATR stop, exit at the 3rd close; costs excluded).
 const STRATEGY_INFO = {
   dip: {
     title: 'Uptrend Dip', side: 'Long',
     summary: 'Buys a sharp drop in a stock that is still in a long-term uptrend, and holds for up to 3 sessions.',
-    headline: 'In 2019–2026, 37% of trades reached +5% within 3 sessions, 37% lost, and the average trade made +0.9%.',
+    headline: 'In 2019–2026, 46% of trades hit the +4% target within 3 sessions, 33% lost, and the average trade made +0.9%.',
     rules: ['Close above its 200-day moving average', 'Down 10% or more over the last 5 sessions',
             'At least one of: closed in the bottom 20% of the day’s range, a new 20-day closing low, or 3 lower closes in a row'],
     plan: ['Buy at the next session’s open. Best at or below the signal close; avoid paying more than 2% above it.',
-           'Target: entry + 1.5 × ATR (the stock’s average daily range).',
+           'Target: entry + 4%. A fixed 3–5% target beat the old 1.5 × ATR (about 7%) in a full-account test over 26 years.',
            'Disaster stop: entry − 3 × ATR. Tighter stops did worse in testing.',
            'Sell at the close of the 3rd session if neither level is hit.',
            'One session late? Only enter if day 1 closed below its open.'],
-    stats: [['Signals', '2,546 (about 330 a year)'], ['Reached +5% within 3 sessions', '37%'], ['Losing trades', '37%'],
-            ['Average per trade (+5% target)', '+0.9%'], ['Average per trade (ATR levels)', '+1.0%, 60% profitable'],
-            ['Lost more than 5%', '10% of trades'], ['Worst year', '2022: −0.5% per trade'], ['Strongest version', 'More than 10% above the 200-day: +1.45%']],
+    stats: [['Signals', '2,196 in 2019–2026 (about 290 a year)'], ['Reached +4% within 3 sessions', '46%'], ['Losing trades', '33%'],
+            ['Average per trade (4% target)', '+0.9%, 67% profitable'], ['Lost more than 5%', '9% of trades'],
+            ['Worst year', '2011: −0.05% per trade'], ['Strongest version', 'More than 10% above the 200-day: +1.2%']],
     cautions: ['Signals bunch up in sell-offs. Buying many at once is one big bet on the market bouncing.',
                'Tested on S&P 500 stocks only. Smaller stocks were not tested.'],
   },
   rip: {
     title: 'Downtrend Rip', side: 'Short',
     summary: 'Shorts a sharp rally in a stock that is still in a long-term downtrend, and covers within 3 sessions.',
-    headline: 'In 2019–2026 (excluding the unusual 2020), shorts averaged +0.6% and 59% were profitable.',
+    headline: 'In 2019–2026 (excluding the unusual 2020), shorts averaged +0.5% and 59% were profitable.',
     rules: ['Close below its 200-day moving average', 'Up 10% or more over the last 5 sessions', 'RSI(14) at 70 or above'],
     plan: ['Short at the next session’s open. Best at or above the signal close; avoid shorting more than 2% below it.',
-           'Target: entry − 1.5 × ATR.',
+           'Target: entry − 4%.',
            'Disaster stop: entry + 3 × ATR. Losses on a short have no ceiling, so always use it.',
            'Cover at the close of the 3rd session if neither level is hit.',
            'One session late? Only enter if day 1 closed above its open.'],
-    stats: [['Signals', '734 (about 75 a year outside 2020)'], ['Fell 5% within 3 sessions', '39% (21% excluding 2020)'],
-            ['Rose 5% against you', '15%'], ['Average per short', '+1.7% (+0.6% excluding 2020)'], ['Profitable', '69% (59% excluding 2020)'],
-            ['Beat the average stock', '24 of 26 years']],
+    stats: [['Signals', '734 in 2019–2026 (about 75 a year outside 2020)'], ['Fell 4% within 3 sessions', '40% (29% excluding 2020)'],
+            ['Average per short', '+1.0% (+0.5% excluding 2020)'], ['Profitable', '65% (59% excluding 2020)'], ['Worst year', '2021: −1.4% per trade']],
     cautions: ['Borrow fees, margin and dividends owed while short are not included.',
                'Tested on S&P 500 stocks only. Small caps and meme stocks can squeeze violently; this is not for them.'],
   },
@@ -2170,7 +2169,7 @@ function setupCard(x, mode) {
     ${banner}
     <p class="setup-facts">${escapeHtml(facts)}</p>
     ${showLevels ? levelsHtml(x.kind, lv, exitDate) : ''}
-    ${showLevels ? `<p class="hint">Adjust to your fill: target = fill ${long ? '+' : '−'} ${fmtPrice(SETUP.TARGET_ATR * x.atr)}, stop = fill ${long ? '−' : '+'} ${fmtPrice(SETUP.STOP_ATR * x.atr)}.</p>` : ''}
+    ${showLevels ? `<p class="hint">Adjust to your fill: target = fill ${long ? '+' : '−'} ${(SETUP.TARGET_PCT * 100).toFixed(0)}%, stop = fill ${long ? '−' : '+'} ${fmtPrice(SETUP.STOP_ATR * x.atr)}.</p>` : ''}
     <div class="card-tags left">${setupTags(x)}</div>
   </article>`;
 }
@@ -3146,7 +3145,7 @@ function paperOverview(P, st) {
       <div class="pgrid">
         ${pstat('Profitable', signedPct(st.winRate, 0).replace('+', ''), `${st.won} won, ${st.lost} lost`)}
         ${pstat('Avg per trade', signedPct(st.avg), avgUsd !== null ? `${money(avgUsd, true)} average` : '', cls(st.avg))}
-        ${pstat('Hit target', signedPct(st.hitTarget, 0).replace('+', ''), `sold at +${R.targetAtr} ATR`)}
+        ${pstat('Hit target', signedPct(st.hitTarget, 0).replace('+', ''), `sold at ${targetShort(R)}`)}
         ${pstat('Stopped out', signedPct(st.stopped, 0).replace('+', ''), `${st.stoppedN} trade${st.stoppedN === 1 ? '' : 's'}`)}
         ${pstat('Worst trade', st.worst ? signedPct(st.worst.pct) : '—', st.worst ? `${escapeHtml(st.worst.ticker)}, ${escapeHtml(fmtSession(st.worst.exitDate))}` : '', 'down')}
         ${pstat('Biggest dip in account', signedPct(st.maxDD), 'from its high', st.maxDD < 0 ? 'down' : '')}
@@ -3185,6 +3184,10 @@ function paperOverview(P, st) {
 }
 
 /** Small badge for a position/order's priority tag, matching the scanner's own badges. */
+const poolBadge = x => (x && x.pool === 'nonsp' ? '<span class="tag">Outside S&amp;P 500</span>' : '');
+/** Take-profit wording for the paper page; older published files still carry the ATR multiple. */
+const targetLabel = R => (isNum(R.targetPct) ? `${R.targetPct}% from entry` : isNum(R.targetAtr) ? `${R.targetAtr} × ATR from entry` : 'see Rules');
+const targetShort = R => (isNum(R.targetPct) ? `+${R.targetPct}%` : isNum(R.targetAtr) ? `+${R.targetAtr} ATR` : 'target');
 function tagBadge(tag) {
   if (tag === 'bearEngulf') return '<span class="tag good">Selling flush</span>';
   if (tag === 'rsi5_90') return '<span class="tag good">Blow-off rally</span>';
@@ -3221,7 +3224,7 @@ function positionCard(p) {
       <span class="tag ${long ? 'good' : 'warn'}">${long ? 'Long' : 'Short'}, ${escapeHtml(STRAT_NAME[p.strategy] || p.strategy)}</span>
       <span class="tag">Day ${p.day} of 3</span>
       <span class="tag">Exits ${escapeHtml(fmtSession(p.exitDate))} close</span>
-      ${tagBadge(p.tag)}
+      ${tagBadge(p.tag)}${poolBadge(p)}
     </div>
     <p class="setup-facts">${long ? 'Bought' : 'Shorted'} ${p.shares} shares at <b>${fmtPrice(p.entry)}</b> (${money(p.shares * p.entry)}) on ${escapeHtml(fmtSession(p.entryDate))}. Last close <b>${fmtPrice(p.now)}</b>.</p>
     <div class="range" aria-label="Price between ${long ? 'stop' : 'target'} and ${long ? 'target' : 'stop'}">
@@ -3268,8 +3271,8 @@ function paperOrders(P) {
       <span class="rank">${e.rank}</span>
       <div><div class="prow"><b>${escapeHtml(e.ticker)} <small class="muted">${escapeHtml(companyName(e.ticker))}</small></b><span class="pill pill-loading">Queued</span></div>
       <small class="muted">${escapeHtml(STRAT_NAME[e.strategy])}: ${e.strategy === 'dip' ? `${signedPct(e.vs200)} vs 200-day, ${signedPct(e.chg5d)} in 5 sessions` : `${signedPct(e.chg5d)} in 5 sessions`}</small>
-      <div class="card-tags left" style="margin:4px 0">${tagBadge(e.tag)}</div>
-      <div class="small">${e.strategy === 'dip' ? 'Buy' : 'Short'} <b>${e.shares}</b> shares (about ${money(e.size)}), limit ${fmtPrice(e.limit)}</div></div>
+      <div class="card-tags left" style="margin:4px 0">${tagBadge(e.tag)}${poolBadge(e)}</div>
+      <div class="small">${e.strategy === 'dip' ? 'Buy' : 'Short'} <b>${e.shares}</b> shares (about ${money(e.size)}), limit ${fmtPrice(e.limit)}${e.opg ? ', on the open only' : ''}</div></div>
     </div>`;
   const line = (a, b) => `<div class="track-row"><b>${escapeHtml(a)}</b><span class="muted right">${escapeHtml(b)}</span></div>`;
   const noMatch = q ? `<p class="hint">No match for “${escapeHtml(q)}”.</p>` : '';
@@ -3306,7 +3309,7 @@ function paperHistory(P, st) {
   const chip = (group, key, label) => `<button type="button" class="chip${f[group] === key ? ' active' : ''}" data-paper-filter="${group}:${key}" aria-pressed="${f[group] === key}">${label}</button>`;
   const how = { target: ['Target', 'good'], stop: ['Stop', 'bad'], time: ['Day-3 exit', ''] };
   const tr = x => `<div class="track-row">
-      <div><div class="prow start"><b>${escapeHtml(x.ticker)}</b><span class="tag ${how[x.how][1]}">${how[x.how][0]}</span>${tagBadge(x.tag)}</div>
+      <div><div class="prow start"><b>${escapeHtml(x.ticker)}</b><span class="tag ${how[x.how][1]}">${how[x.how][0]}</span>${tagBadge(x.tag)}${poolBadge(x)}</div>
       <small>${escapeHtml(STRAT_NAME[x.strategy])}, ${escapeHtml(fmtSession(x.entryDate))} to ${escapeHtml(fmtSession(x.exitDate))}</small></div>
       <div class="right"><b class="${cls(x.pct)}">${signedPct(x.pct)}</b><small class="${cls(x.usd)}">${money(x.usd, true)}</small></div>
     </div>`;
@@ -3349,11 +3352,11 @@ function paperRules(P) {
     </section>
     <section class="panel pcard">
       <h2>What it trades</h2>
-      <div class="kv">${kv('Uptrend Dip (long)', R.strategies.dip ? 'On' : 'Off')}${kv('Downtrend Rip (short)', R.strategies.rip ? 'On' : 'Off')}${kv('MACD Curl', R.strategies.macd ? 'On' : 'Off (not tested as a trade signal)')}${kv('Stocks', R.sp500Only ? 'S&amp;P 500 only' : 'All liquid US stocks')}${kv('When signals outnumber slots', escapeHtml(R.ranking))}</div>
+      <div class="kv">${kv('Uptrend Dip (long)', R.strategies.dip ? 'On' : 'Off')}${kv('Downtrend Rip (short)', R.strategies.rip ? 'On' : 'Off')}${kv('MACD Curl', R.strategies.macd ? 'On' : 'Off (not tested as a trade signal)')}${kv('Stocks', R.sp500Only ? (R.nonSp && R.nonSp.enabled ? `S&amp;P 500 first; then up to ${R.nonSp.maxOpen} Uptrend Dips outside it ($${(R.nonSp.minLiquidity / 1e6).toFixed(0)}M+/day${R.nonSp.marketGate ? ', only while the S&amp;P 500 is down over 20 sessions' : ''})` : 'S&amp;P 500 only') : 'All liquid US stocks')}${kv('When signals outnumber slots', escapeHtml(R.ranking))}</div>
     </section>
     <section class="panel pcard">
       <h2>Entries and exits</h2>
-      <div class="kv">${kv('Entry', 'Limit order at the open, up to 2% past the signal close')}${kv('Target', `${R.targetAtr} × ATR from entry`)}${kv('Stop', `${R.stopAtr} × ATR from entry`)}${kv('Time exit', `Close of session ${R.holdSessions}`)}${kv('Late entry', 'Only if day 1 moved against the setup')}</div>
+      <div class="kv">${kv('Entry', R.onOpen ? 'On-the-open limit order, queued the evening before: it fills only in the opening auction, up to 2% past the signal close' : 'Limit order at the open, up to 2% past the signal close')}${kv('Target', targetLabel(R))}${kv('Stop', `${R.stopAtr} × ATR from entry`)}${kv('Time exit', `Close of session ${R.holdSessions}`)}${kv('Late entry', 'Only if day 1 moved against the setup')}</div>
     </section>
     <section class="panel pcard">
       <h2>Review point</h2>
