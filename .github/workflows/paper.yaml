@@ -18,13 +18,19 @@ on:
     - cron: '35 14 * * 1-5'   # ~9:35 ET (EST)
     - cron: '55 19 * * 1-5'   # ~15:55 ET (EDT) — flatten anything due its 3-session time exit
     - cron: '55 20 * * 1-5'   # ~15:55 ET (EST)
+    # On-the-open queue, a free backup to the cron-job.org jobs: evening ~19:30 ET and morning ~8:45 ET. The run itself refuses
+    # to place anything outside Alpaca's 7:00 pm - 9:28 am Eastern window, so the line for the "wrong" season is harmless.
+    - cron: '30 23 * * 1-5'   # ~19:30 ET (EDT)
+    - cron: '30 0 * * 2-6'    # ~19:30 ET (EST), which is 00:30 UTC the next day
+    - cron: '45 12 * * 1-5'   # ~8:45 ET (EDT)
+    - cron: '45 13 * * 1-5'   # ~8:45 ET (EST)
   workflow_dispatch:
     inputs:
       mode:
         description: 'What to run (leave as "auto" for a normal scheduled run)'
         type: choice
         default: auto
-        options: [auto, entry, exit, reconcile]
+        options: [auto, entry, exit, reconcile, queue]
       action:
         description: 'Pause or resume paper trading (takes effect immediately)'
         type: choice
@@ -92,6 +98,7 @@ jobs:
             case "${{ github.event.schedule }}" in
               '35 13 * * 1-5'|'35 14 * * 1-5') mode="entry" ;;
               '55 19 * * 1-5'|'55 20 * * 1-5') mode="exit" ;;
+              '30 23 * * 1-5'|'30 0 * * 2-6'|'45 12 * * 1-5'|'45 13 * * 1-5') mode="queue" ;;
               *) mode="reconcile" ;;
             esac
           fi
@@ -118,12 +125,17 @@ jobs:
           PAPER_RESERVE_PCT: '0.10'
           PAPER_SIZE_PCT: '0.15'
           PAPER_CHASE: '0.02'
-          PAPER_TARGET_ATR: '1.5'
+          PAPER_ON_OPEN: 'true'                  # queue entries the evening before as on-the-open orders ('false' = place ordinary day orders at 9:32 as before)
+          PAPER_TARGET_PCT: '4'                  # fixed take-profit: 4% from the fill price (the stop stays 3 x ATR)
           PAPER_STOP_ATR: '3'
           PAPER_HOLD_SESSIONS: '3'
           PAPER_TRADE_DIP: 'true'
           PAPER_TRADE_RIP: 'true'
           PAPER_SP500_ONLY: 'true'
+          PAPER_TRADE_NONSP: 'true'              # also Uptrend Dips outside the S&P 500, ranked after every S&P signal
+          PAPER_NONSP_MIN_LIQUIDITY: '100000000' # $100M+/day only
+          PAPER_NONSP_MARKET_GATE: 'true'        # only while the S&P 500 is flat/down over 20 sessions ('false' = always)
+          PAPER_NONSP_MAX_OPEN: '2'              # at most 2 open at once, so S&P signals keep their room
           PAPER_REVIEW_AFTER: '100'
           PAPER_SUCCESS_AVG_PCT: '0.3'
           PAPER_START_CAPITAL: '100000'
