@@ -70,29 +70,67 @@ function rankFresh(list, kind) {
     .sort((a, b) => ((a.priority ?? 1) - (b.priority ?? 1)) || (kind === 'dip' ? b.vs200 - a.vs200 : b.chg5d - a.chg5d));
 }
 
-/** One numbered, crisp block per ticker: side implied by its section, entry, target, stop, exit date. */
+/** One numbered, crisp block per ticker: entry, target, stop, exit date. */
 function setupCard(n, x) {
   const lv = x.levels || {};
   return `${n}. ${x.ticker}\nEntry ${money2(lv.entryLimit)} | Target ${money2(lv.target)} | Stop ${money2(lv.stop)}\nExit by ${exitDay(x.exitDate)}`;
 }
 
-function setupsMessage(setups) {
-  const tested = x => !setups.sp500Listed || x.sp500;
-  const dip = rankFresh((setups.dip || []).filter(tested), 'dip');
-  const rip = rankFresh((setups.rip || []).filter(tested), 'rip');
-  const header = `📊 *Trade With BK*: setups for the ${dayLabel(setups.nextSession || setups.asOf)} open`;
-  if (!dip.length && !rip.length) return `${header}\n\nNo new setups.`;
-  const parts = [header];
-  if (dip.length) parts.push(`*Long Setups:*\n${dip.map((x, i) => setupCard(i + 1, x)).join('\n\n')}`);
-  if (rip.length) parts.push(`*Short Setups:*\n${rip.map((x, i) => setupCard(i + 1, x)).join('\n\n')}`);
-  return parts.join('\n\n');
+// Stocks outside the S&P 500 follow the same conditions as the app's Non-S&P 500 tab and paper trading:
+// Uptrend Dip only, $100M+ traded a day, and only while the S&P 500 is flat or down over 20 sessions.
+const NONSP = {
+  minLiquidity: Number(env.ALERT_NONSP_MIN_LIQUIDITY || 100e6),
+  marketGate: String(env.ALERT_NONSP_MARKET_GATE || 'true').toLowerCase() !== 'false',
+};
+
+/** What the alert lists, in order: S&P 500 long, S&P 500 short, then (when allowed) Non-S&P 500 long. */
+function setupSections(setups) {
+  const listed = !!setups.sp500Listed;                       // if membership is unknown, everything counts as S&P 500
+  const inSp = x => !listed || x.sp500;
+  const cards = list => list.map((x, i) => setupCard(i + 1, x));
+  const sections = [], notes = [];
+  const dipSp = rankFresh((setups.dip || []).filter(inSp), 'dip'), ripSp = rankFresh((setups.rip || []).filter(inSp), 'rip');
+  if (dipSp.length) sections.push({ base: 'S&P 500 — Long Setups', cards: cards(dipSp) });
+  if (ripSp.length) sections.push({ base: 'S&P 500 — Short Setups', cards: cards(ripSp) });
+  if (listed) {
+    const ns = rankFresh((setups.dip || []).filter(x => !x.sp500 && isNum(x.dollarVol) && x.dollarVol >= NONSP.minLiquidity), 'dip');
+    const m = setups.market;
+    const gateOpen = !NONSP.marketGate || (m && isNum(m.chg20d) && m.chg20d <= 0);
+    if (ns.length && gateOpen) sections.push({ base: 'Non-S&P 500 — Long Setups', cards: cards(ns) });
+    else if (ns.length) notes.push(`Non-S&P 500: ${ns.length} signal${ns.length === 1 ? '' : 's'} not shown (${m && isNum(m.chg20d) ? `the S&P 500 is up ${m.chg20d.toFixed(1)}% over 20 sessions` : 'no market-trend reading'}).`);
+  }
+  return { sections, notes };
 }
+
+/** The alert as one or more messages, each at most `limit` characters. A section that runs over starts the
+ *  next message with its own heading, marked "(cont.)", so every message makes sense on its own. */
+function setupsMessages(setups, limit = Infinity) {
+  const header = `📊 *Trade With BK*: setups for the ${dayLabel(setups.nextSession || setups.asOf)} open`;
+  const { sections, notes } = setupSections(setups);
+  const msgs = []; let cur = header;
+  const place = (text, alt) => {
+    if ((cur + '\n\n' + text).length > limit) { msgs.push(cur); cur = alt || text; } else cur += '\n\n' + text;
+  };
+  if (!sections.length) place(notes.length ? 'No new S&P 500 setups.' : 'No new setups.');
+  else if (!sections.some(sec => sec.base.startsWith('S&P'))) place('*S&P 500:* no new setups.');
+  for (const sec of sections) {
+    let started = false;
+    for (const card of sec.cards) {
+      place(started ? card : `*${sec.base}:*\n${card}`, `*${sec.base}${started ? ' (cont.)' : ''}:*\n${card}`);
+      started = true;
+    }
+  }
+  for (const n of notes) place(n);
+  msgs.push(cur);
+  return msgs;
+}
+const setupsMessage = setups => setupsMessages(setups).join('\n\n');          // everything as one text (previews and tests)
 
 function entriesMessage(o) {
   const e = (o && o.entries) || [], s = (o && o.skipped) || [];
   if (!e.length && !s.length) return null;
-  const lines = [`✅ Paper entries for the ${dayLabel(o.forDate)} open: ${e.length} placed`];
-  for (const x of e.slice(0, 10)) lines.push(`${x.ticker} ${x.strategy === 'dip' ? 'long' : 'short'} ~$${Math.round(x.size).toLocaleString('en-US')}${TAGS[x.tag] ? ' · ' + TAGS[x.tag] : ''}`);
+  const lines = [o.queued ? `🕘 Paper orders queued for the ${dayLabel(o.forDate)} open: ${e.length}` : `✅ Paper entries for the ${dayLabel(o.forDate)} open: ${e.length} placed`];
+  for (const x of e.slice(0, 10)) lines.push(`${x.ticker} ${x.strategy === 'dip' ? 'long' : 'short'} ~$${Math.round(x.size).toLocaleString('en-US')}${TAGS[x.tag] ? ' · ' + TAGS[x.tag] : ''}${x.pool === 'nonsp' ? ' · non-S&P' : ''}`);
   if (e.length > 10) lines.push(`+${e.length - 10} more`);
   if (s.length) lines.push(`Skipped ${s.length}: ${s.slice(0, 4).map(x => `${x.ticker} (${shortReason(x.reason)})`).join(', ')}${s.length > 4 ? '…' : ''}`);
   return lines.join('\n');
@@ -119,7 +157,13 @@ const failureMessage = name => `⚠️ ${name || 'A workflow'} failed.${runUrl()
  *  read we stay quiet (rather than risk repeating the same alert every hour). */
 async function setupsAlert(setups, previous) {
   if (!setups || !previous || !previous.asOf || previous.asOf === setups.asOf) return false;
-  return send(setupsMessage(setups));
+  const msgs = setupsMessages(setups, CFG.maxLen - 30);       // leave room so send() never has to cut a message
+  let ok = true;
+  for (let i = 0; i < msgs.length; i++) {
+    if (i > 0) await new Promise(r => setTimeout(r, 1500));   // a short pause keeps the messages in order
+    ok = (await send(msgs[i])) && ok;
+  }
+  return ok;
 }
 async function entriesAlert(orders) { const m = entriesMessage(orders); return m ? send(m) : false; }
 async function closedAlert(trades) { const m = closedMessage(trades); return m ? send(m) : false; }
@@ -151,5 +195,5 @@ if (require.main === module) {
   })();
 }
 
-module.exports = { send, enabled, setupsMessage, entriesMessage, closedMessage, exitsMessage, failureMessage,
+module.exports = { send, enabled, setupsMessage, setupsMessages, entriesMessage, closedMessage, exitsMessage, failureMessage,
   setupsAlert, entriesAlert, closedAlert, exitsAlert, scanFailAlert };

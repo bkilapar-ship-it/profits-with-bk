@@ -17,11 +17,13 @@
  *
  * Order mechanics (see README section "Paper trading" for the reasoning):
  *   Entry — a plain LIMIT day order, capped at 2% past the signal close
- *           (above it for a long, below it for a short). It cancels itself
- *           if the market never reaches that price by the close, so a
- *           gapped-away open is skipped rather than chased. Tested against
- *           no cap across 2000-2026: helps Dip, costs Rip a little, kept on
- *           both for one simple rule.
+ *           (above it for a long, below it for a short). If the stock opens
+ *           past the cap the order rests unfilled; if the price comes back
+ *           to the cap later in the day it fills THEN (about 3 in 4 such Dip
+ *           opens do), otherwise it cancels itself at the close. Tested:
+ *           those late fills averaged about the same as ordinary fills.
+ *           The cap itself, tested against no cap across 2000-2026, helps
+ *           Dip and costs Rip a little; kept on both for one simple rule.
  *   Exit  — once an entry fills, a separate OCO order (time_in_force "gtc") is
  *           attached: a take-profit limit and a stop order. Using a GTC OCO,
  *           rather than folding the stop into the entry as a "bracket" order,
@@ -88,12 +90,18 @@ const CFG = {
   reservePct: num(env.PAPER_RESERVE_PCT, 0.10),     // held back, never spent
   sizePct: num(env.PAPER_SIZE_PCT, 0.15),           // per trade, as a share of the sleeve's current value
   chase: num(env.PAPER_CHASE, core.SETUP.CHASE),    // entry price cap: skip if the market has already moved further than this
-  targetAtr: num(env.PAPER_TARGET_ATR, 1.5),
+  targetPct: num(env.PAPER_TARGET_PCT, 4) / 100,    // fixed take-profit, as a share of the fill price (was 1.5 x ATR, about 7%)
   stopAtr: num(env.PAPER_STOP_ATR, 3),
   holdSessions: num(env.PAPER_HOLD_SESSIONS, core.SETUP.HOLD),
   tradeDip: bool(env.PAPER_TRADE_DIP, true),
   tradeRip: bool(env.PAPER_TRADE_RIP, true),
   sp500Only: bool(env.PAPER_SP500_ONLY, true),
+  // Uptrend Dips OUTSIDE the S&P 500: ranked after every S&P signal, so they only use room that is left over.
+  tradeNonSp: bool(env.PAPER_TRADE_NONSP, false),
+  nonSpMinLiquidity: num(env.PAPER_NONSP_MIN_LIQUIDITY, 100e6),   // research: only very liquid names ($100M+/day)
+  nonSpMarketGate: bool(env.PAPER_NONSP_MARKET_GATE, true),       // research: only when the S&P 500 is flat/down over 20 sessions
+  onOpen: bool(env.PAPER_ON_OPEN, true),          // queue entries the evening before as on-the-open orders (fill only in the opening auction)
+  nonSpMaxOpen: num(env.PAPER_NONSP_MAX_OPEN, 2),                 // keep cash free for the next days' S&P signals
   reviewAfter: num(env.PAPER_REVIEW_AFTER, 100),
   successAvgPct: num(env.PAPER_SUCCESS_AVG_PCT, 0.3),
   startCapital: num(env.PAPER_START_CAPITAL, 100000),
@@ -117,10 +125,12 @@ const CFG = {
 
 const RULES = () => ({
   reservePct: CFG.reservePct, sizePct: CFG.sizePct, chase: CFG.chase,
-  targetAtr: CFG.targetAtr, stopAtr: CFG.stopAtr, holdSessions: CFG.holdSessions,
+  targetPct: Math.round(CFG.targetPct * 10000) / 100, stopAtr: CFG.stopAtr, holdSessions: CFG.holdSessions,
   minLiquidity: core.SETUP.MIN_LIQUIDITY,
   strategies: { dip: CFG.tradeDip, rip: CFG.tradeRip, macd: false },
   sp500Only: CFG.sp500Only,
+  onOpen: CFG.onOpen,
+  nonSp: { enabled: CFG.tradeNonSp && CFG.sp500Only && CFG.tradeDip, minLiquidity: CFG.nonSpMinLiquidity, marketGate: CFG.nonSpMarketGate, maxOpen: CFG.nonSpMaxOpen },
   ranking: 'Bearish engulfing first for Dip / RSI(5) ≥ 90 first for Rip, then the usual strength measure',
   reviewAfter: CFG.reviewAfter, successAvgPct: CFG.successAvgPct,
 });
@@ -292,11 +302,22 @@ function saveState(state) {
 }
 
 /* --------------------------------------------------------------- calendar */
+let nowFn = () => new Date();
+const setNow = fn => { nowFn = fn || (() => new Date()); };     // tests only
 function todayEastern() {
   const p = {};
-  for (const part of new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(new Date())) p[part.type] = part.value;
+  for (const part of new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(nowFn())) p[part.type] = part.value;
   return `${p.year}-${p.month}-${p.day}`;
 }
+/** Minutes after midnight, US Eastern. */
+function etMinutes() {
+  const p = {};
+  for (const part of new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(nowFn())) p[part.type] = part.value;
+  return Number(p.hour) * 60 + Number(p.minute);
+}
+// Alpaca takes on-the-open (opg) orders from 7:00 pm to 9:28 am Eastern; between those it rejects them.
+const OPG_FROM = 19 * 60, OPG_TO = 9 * 60 + 28;
+const hhmm = m => `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
 
 /* ------------------------------------------------------------- reconcile */
 /**
@@ -337,7 +358,7 @@ async function reconcileClosedPositions(state, livePositions) {
     const usd = (long ? exit - pos.entry : pos.entry - exit) * shares;
     const pct = (long ? exit / pos.entry - 1 : 1 - exit / pos.entry) * 100;
     state.trades.push({
-      ticker, strategy: pos.strategy, side: pos.side, tag: pos.tag, signalDate: pos.signalDate, signalClose: pos.signalClose,
+      ticker, strategy: pos.strategy, side: pos.side, tag: pos.tag, pool: pos.pool, signalDate: pos.signalDate, signalClose: pos.signalClose,
       entryDate: pos.entryDate, exitDate: exitAt.slice(0, 10), entry: r2(pos.entry), exit: r2(exit), shares,
       how, usd: r2(usd), pct: r2(pct),
     });
@@ -357,7 +378,7 @@ async function reconcilePendingEntries(state) {
       const entry = Number(order.filled_avg_price);
       const shares = Number(order.filled_qty);
       const long = p.side === 'long';
-      const target = r2(long ? entry + CFG.targetAtr * p.atr : entry - CFG.targetAtr * p.atr);
+      const target = r2(long ? entry * (1 + CFG.targetPct) : entry * (1 - CFG.targetPct));
       const stop = r2(long ? entry - CFG.stopAtr * p.atr : entry + CFG.stopAtr * p.atr);
       let ocoId = null;
       try {
@@ -370,7 +391,7 @@ async function reconcilePendingEntries(state) {
         log(`  ${ticker}: FILLED at ${entry} but the protective OCO order failed (${e.message}). ` +
           `This position has NO automatic stop — check the Alpaca dashboard.`);
       }
-      state.positions[ticker] = { strategy: p.strategy, side: p.side, tag: p.tag, signalDate: p.signalDate, signalClose: p.signalClose,
+      state.positions[ticker] = { strategy: p.strategy, side: p.side, tag: p.tag, pool: p.pool, signalDate: p.signalDate, signalClose: p.signalClose,
         entryDate: order.filled_at ? order.filled_at.slice(0, 10) : todayEastern(), entry: r2(entry), shares, target, stop, ocoOrderId: ocoId };
       log(`  ${ticker}: entry filled at ${entry} (${shares} shares), OCO target ${target} / stop ${stop}${ocoId ? '' : ' — OCO FAILED'}`);
       delete state.pendingEntries[ticker];
@@ -416,29 +437,61 @@ function candidateTag(kind, c) {
  *  setups.json, so both places always agree on the order. */
 function rankCandidates(setups, state) {
   const held = new Set([...Object.keys(state.positions), ...Object.keys(state.pendingEntries)]);
+  const order = kind => (a, b) => (a.priority - b.priority) || (kind === 'dip' ? b.vs200 - a.vs200 : b.chg5d - a.chg5d);
   const pick = (kind, enabled) => {
     if (!enabled) return [];
     return (setups[kind] || [])
       .filter(x => x.sessionsAgo === 0 && !held.has(x.ticker) && (!CFG.sp500Only || x.sp500))
-      .sort((a, b) => (a.priority - b.priority) || (kind === 'dip' ? b.vs200 - a.vs200 : b.chg5d - a.chg5d));
+      .sort(order(kind)).map(x => ({ ...x, kind, pool: x.sp500 ? 'sp500' : 'nonsp' }));
   };
-  return [...pick('dip', CFG.tradeDip), ...pick('rip', CFG.tradeRip)];
+  const sp = [...pick('dip', CFG.tradeDip), ...pick('rip', CFG.tradeRip)];
+  // Uptrend Dips outside the S&P 500 (Rip was never validated there): only when switched on, and ranked
+  // after EVERY S&P signal, so they can only use room the S&P signals left over.
+  const nonsp = (CFG.tradeNonSp && CFG.sp500Only && CFG.tradeDip)
+    ? (setups.dip || []).filter(x => x.sessionsAgo === 0 && !held.has(x.ticker) && !x.sp500).sort(order('dip')).map(x => ({ ...x, kind: 'dip', pool: 'nonsp' }))
+    : [];
+  return [...sp, ...nonsp];
 }
 
 /** Current sleeve value: total account equity minus the untouched reserve. Trades are sized as
  *  a share of THIS, not of the whole account -- so the reserve genuinely never gets spent. */
 function sleeveEquity(totalEquity) { return totalEquity * (1 - CFG.reservePct); }
 
-async function runEntries(state, setups) {
+async function runEntries(state, setups, opts = {}) {
+  const queue = !!opts.queue;            // queue = on-the-open orders for the NEXT open; otherwise ordinary day orders at 9:32
   const today = todayEastern();
-  if (!CFG.force && state.lastEntryRunDate === today) { log('Entries already handled today; skipping.'); return; }
-  if (setups.nextSession !== today) {
-    log(`Skipping entries: the latest setups (as of ${setups.asOf}) are for ${setups.nextSession}'s open, not today (${today}). ` +
-      `The scheduled scan may not have finished yet, or today's a holiday.`);
-    return;
+  let forDate = today;                   // the session these orders are for
+  if (!queue) {
+    if (!CFG.force && state.lastEntryRunDate === today) { log('Entries already handled today; skipping.'); return; }
+    if (!CFG.force && state.lastQueueFor === today) { log("Today's entries were already queued as on-the-open orders; not placing day orders."); return; }
+    if (setups.nextSession !== today) {
+      log(`Skipping entries: the latest setups (as of ${setups.asOf}) are for ${setups.nextSession}'s open, not today (${today}). ` +
+        `The scheduled scan may not have finished yet, or today's a holiday.`);
+      return;
+    }
+    const clock = await getClock().catch(() => null);
+    if (clock && !clock.is_open && !CFG.force) { log('Market is not open right now; skipping entries.'); return; }
+  } else {
+    if (!CFG.onOpen) { log('On-the-open orders are switched off (PAPER_ON_OPEN); the 9:32 run places normal day orders instead.'); return; }
+    const clock = await getClock().catch(() => null);
+    if (!clock || !clock.next_open) { log('Could not read the next market open; not queueing.'); return; }
+    if (!CFG.force) {
+      const m = etMinutes();
+      if (clock.is_open || (m >= OPG_TO && m < OPG_FROM)) {
+        log(`Not queueing now: Alpaca takes on-the-open orders only from 7:00 pm to 9:28 am Eastern (it is ${hhmm(m)} ET${clock.is_open ? ', and the market is open' : ''}).`);
+        return;
+      }
+    }
+    forDate = String(clock.next_open).slice(0, 10);
+    // The orders must be for the very next open. If the after-close scan has not published yet, the file still describes an
+    // earlier open, and queueing it would trade yesterday's signals tomorrow.
+    if (setups.nextSession !== forDate) {
+      log(`Not queueing: the latest setups (as of ${setups.asOf}) are for ${setups.nextSession}'s open, but the next open is ${forDate}. ` +
+        `The after-close scan may not have finished; the morning run will try again.`);
+      return;
+    }
+    if (!CFG.force && state.lastQueueFor === forDate) { log(`Orders for the ${forDate} open are already queued; skipping.`); return; }
   }
-  const clock = await getClock().catch(() => null);
-  if (clock && !clock.is_open && !CFG.force) { log('Market is not open right now; skipping entries.'); return; }
 
   const account = await getAccount().catch(e => { log(`Could not read the account (${e.message}); skipping entries.`); return null; });
   if (!account) return;
@@ -450,11 +503,24 @@ async function runEntries(state, setups) {
 
   const candidates = rankCandidates(setups, state);
   const entries = [], skipped = [];
+  let failures = 0, firstError = null;
   const shortableCache = new Map();
+  // Non-S&P rules. Their skips are summarised (one line per reason), so they don't flood the Orders tab.
+  const mkt = setups.market;
+  const gateOpen = !CFG.nonSpMarketGate || (mkt && isNum(mkt.chg20d) && mkt.chg20d <= 0);
+  let nonSpOpen = [...Object.values(state.positions), ...Object.values(state.pendingEntries)].filter(p => p.pool === 'nonsp').length;
+  const nonSpSkips = new Map();
+  const skipNonSp = reason => nonSpSkips.set(reason, (nonSpSkips.get(reason) || 0) + 1);
 
   for (let rank = 0; rank < candidates.length; rank++) {
     const c = candidates[rank];
     const long = c.kind === 'dip';
+    if (c.pool === 'nonsp') {
+      if (!gateOpen) { skipNonSp(mkt && isNum(mkt.chg20d) ? `not traded while the S&P 500 is up over 20 sessions (+${mkt.chg20d.toFixed(1)}%); they only tested well after it fell` : 'not traded: no market-trend reading in the setups file'); continue; }
+      if (!(isNum(c.dollarVol) && c.dollarVol >= CFG.nonSpMinLiquidity)) { skipNonSp(`below the $${(CFG.nonSpMinLiquidity / 1e6).toFixed(0)}M/day floor for stocks outside the S&P 500`); continue; }
+      if (nonSpOpen >= CFG.nonSpMaxOpen) { skipNonSp(`limit of ${CFG.nonSpMaxOpen} open positions outside the S&P 500 reached (keeping room for S&P signals)`); continue; }
+      if (CFG.sizePct * sleeve > spendable) { skipNonSp('no spare cash left after the S&P signals'); continue; }
+    }
     if (isNum(c.dollarVol) && c.dollarVol < core.SETUP.MIN_LIQUIDITY) {
       skipped.push({ ticker: c.ticker, strategy: c.kind, reason: `Below the $${(core.SETUP.MIN_LIQUIDITY / 1e6).toFixed(0)}M/day liquidity floor` });
       continue;
@@ -476,22 +542,38 @@ async function runEntries(state, setups) {
     const shares = Math.max(1, Math.floor(size / limit));
     const tag = candidateTag(c.kind, c);
     try {
-      // A plain LIMIT day order: it fills only within 2% of the signal close, and cancels itself if
-      // the market never reaches that price by the close, so a gapped-away open is simply skipped
-      // rather than chased. Tested against no cap across 2000-2026: helps Dip, costs Rip a little,
-      // kept on both for one simple rule.
-      const order = await alpaca('POST', '/v2/orders', { symbol: c.ticker, qty: String(shares), side: long ? 'buy' : 'sell', type: 'limit', time_in_force: 'day', limit_price: String(limit) });
-      state.pendingEntries[c.ticker] = { orderId: order.id, strategy: c.kind, side: long ? 'long' : 'short', tag,
-        size, shares, limit, signalDate: c.signalDate, signalClose: c.close, atr: c.atr, placedAt: new Date().toISOString() };
-      entries.push({ rank: rank + 1, ticker: c.ticker, strategy: c.kind, tag, size: r2(size), shares, limit, vs200: r2(c.vs200), chg5d: r2(c.chg5d) });
+      // Queued mode: a LIMIT order with time_in_force "opg" (limit-on-open). It can fill only in the opening auction,
+      // at the opening price, and only if that price is inside the 2% cap; otherwise it is cancelled. That is exactly the
+      // rule that was tested (skip a stock that opens past the cap). Day mode (the 9:32 fallback): an ordinary LIMIT
+      // day order, which can also fill later in the day if the price comes back to the cap (that cost about 3.6 points
+      // a year since 2019 in the account simulation). The 2% cap itself helps Dip and costs Rip a little; kept on both.
+      const order = await alpaca('POST', '/v2/orders', { symbol: c.ticker, qty: String(shares), side: long ? 'buy' : 'sell', type: 'limit', time_in_force: queue ? 'opg' : 'day', limit_price: String(limit) });
+      state.pendingEntries[c.ticker] = { orderId: order.id, strategy: c.kind, side: long ? 'long' : 'short', tag, pool: c.pool,
+        size, shares, limit, opg: queue, forDate, signalDate: c.signalDate, signalClose: c.close, atr: c.atr, placedAt: new Date().toISOString() };
+      entries.push({ rank: rank + 1, ticker: c.ticker, strategy: c.kind, tag, pool: c.pool, opg: queue, size: r2(size), shares, limit, vs200: r2(c.vs200), chg5d: r2(c.chg5d) });
       spendable -= size;
-      log(`  placed entry: ${c.ticker} (${c.kind}, ${tag}) ${shares} shares, limit ${limit}`);
+      if (c.pool === 'nonsp') nonSpOpen++;
+      log(`  placed entry: ${c.ticker} (${c.kind}, ${tag}${c.pool === 'nonsp' ? ', outside the S&P 500' : ''}) ${shares} shares, limit ${limit}`);
     } catch (e) {
+      failures++; firstError = firstError || e.message.slice(0, 160);
       skipped.push({ ticker: c.ticker, strategy: c.kind, reason: `Order failed: ${e.message.slice(0, 120)}` });
       log(`  ${c.ticker}: order failed — ${e.message}`);
     }
   }
-  state.lastOrders = { forDate: today, entries, skipped };
+  for (const [reason, n] of nonSpSkips) skipped.push({ ticker: `${n} non-S&P`, strategy: 'dip', reason: `${n === 1 ? 'Signal' : 'Signals'} outside the S&P 500 ${reason}` });
+  state.lastOrders = { forDate, entries, skipped, queued: queue };
+  if (queue) {
+    if (!entries.length && failures > 0) {
+      // Alpaca refused everything we tried (for instance if the paper account does not accept on-the-open orders).
+      // Do not mark the day as queued, so the 9:32 run places ordinary day orders instead.
+      state.queueFallback = { at: new Date().toISOString(), forDate, message: firstError };
+      log(`  No on-the-open order was accepted (${firstError}); the 9:32 run will place normal day orders for ${forDate}.`);
+    } else {
+      state.lastQueueFor = forDate;
+      log(`  Queued ${entries.length} on-the-open order${entries.length === 1 ? '' : 's'} for the ${forDate} open.`);
+    }
+    return;                              // the market is closed: nothing to wait for
+  }
   state.lastEntryRunDate = today;
 
   // Give same-morning fills a chance to get their protective OCO attached right away,
@@ -572,7 +654,7 @@ function renderPublicJson(state, getCandles) {
   };
   const positions = Object.entries(state.positions).map(([ticker, p]) => {
     const now = closeOf(ticker) ?? p.now ?? p.entry;
-    return { ticker, strategy: p.strategy, side: p.side, tag: p.tag, shares: p.shares, entry: p.entry, entryDate: p.entryDate,
+    return { ticker, strategy: p.strategy, side: p.side, tag: p.tag, pool: p.pool, shares: p.shares, entry: p.entry, entryDate: p.entryDate,
       signalDate: p.signalDate, signalClose: p.signalClose, now: r2(now), target: p.target, stop: p.stop,
       day: Math.min(CFG.holdSessions, dayCount(p.entryDate)), exitDate: core.addSessions(p.entryDate, CFG.holdSessions - 1) };
   });
@@ -651,6 +733,19 @@ async function main() {
         await runEntries(state, setups);
         if (state.lastEntryRunDate !== entryRunBefore) await alertSafely(() => notify.entriesAlert(state.lastOrders));
       }
+    } else if (CFG.mode === 'queue') {
+      if (state.status !== 'running') { log('Paused: not queueing entries.'); }
+      else {
+        const setups = await fetchSetups();
+        log(`Setups as of ${setups.asOf} (next session ${setups.nextSession}); queueing on-the-open orders…`);
+        const queuedBefore = state.lastQueueFor, fallbackBefore = state.queueFallback && state.queueFallback.at;
+        await runEntries(state, setups, { queue: true });
+        if (state.lastQueueFor !== queuedBefore) await alertSafely(() => notify.entriesAlert(state.lastOrders));
+        const fb = state.queueFallback;
+        if (fb && fb.at !== fallbackBefore) {
+          await alertSafely(() => notify.send(`⚠️ Paper trading: Alpaca refused the on-the-open orders (${fb.message}). The 9:32 run will place normal day orders for ${fb.forDate} instead.`));
+        }
+      }
     } else if (CFG.mode === 'exit') {
       log('Checking for positions due their time exit…');
       await runExits(state);
@@ -658,7 +753,7 @@ async function main() {
     } else if (CFG.mode === 'reconcile') {
       log('Reconcile-only run; no new orders.');
     } else {
-      throw new Error(`Unknown MODE "${CFG.mode}" (expected entry, exit or reconcile).`);
+      throw new Error(`Unknown MODE "${CFG.mode}" (expected entry, exit, queue or reconcile).`);
     }
   } finally {
     saveState(state);
@@ -672,7 +767,7 @@ if (require.main === module) {
 }
 
 module.exports = {
-  CFG, RULES, defaultState, loadState, saveState, todayEastern, dayCount, main,
+  CFG, RULES, setNow, etMinutes, defaultState, loadState, saveState, todayEastern, dayCount, main,
   reconcile, reconcileClosedPositions, reconcilePendingEntries, runEntries, runExits, rankCandidates,
   updateEquitySnapshot, renderPublicJson, fetchSetups, assertPaperOnly,
   alpaca, getClock, getAccount, getPositions, getOpenOrders, getOrder, getAsset, getLatestDailyClose, cancelOrder, closePositionMarket,
