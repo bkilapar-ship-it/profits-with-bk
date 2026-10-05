@@ -6,40 +6,7 @@
  "lastExitRunDate": "2026-10-02",
  "spyBaseline": 764.95,
  "positions": {},
- "pendingEntries": {
-  "MARA": {
-   "orderId": "9710a909-5c24-440d-b3a1-cbfabdfdabfe",
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "nonsp",
-   "size": 13509.1206,
-   "shares": 1179,
-   "limit": 11.45,
-   "opg": true,
-   "forDate": "2026-10-05",
-   "signalDate": "2026-10-02",
-   "signalClose": 11.23,
-   "atr": 0.84,
-   "placedAt": "2026-10-05T05:22:50.066Z"
-  },
-  "CAI": {
-   "orderId": "21782acf-8df8-4234-ae74-8948066e57af",
-   "strategy": "dip",
-   "side": "long",
-   "tag": "green_or_sweep",
-   "pool": "nonsp",
-   "size": 13509.1206,
-   "shares": 467,
-   "limit": 28.87,
-   "opg": true,
-   "forDate": "2026-10-05",
-   "signalDate": "2026-10-02",
-   "signalClose": 28.3,
-   "atr": 1.65,
-   "placedAt": "2026-10-05T05:22:50.078Z"
-  }
- },
+ "pendingEntries": {},
  "pendingCloses": {},
  "trades": [
   {
@@ -100,7 +67,7 @@
    "d": "2026-10-05",
    "value": 100068,
    "pct": 0.07,
-   "spy": null
+   "spy": 0.98
   }
  ],
  "lastOrders": {
