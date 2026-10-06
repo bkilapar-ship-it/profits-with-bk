@@ -3,7 +3,7 @@
  "status": "running",
  "startedAt": "2026-09-26",
  "lastEntryRunDate": "2026-10-02",
- "lastExitRunDate": "2026-10-05",
+ "lastExitRunDate": "2026-10-06",
  "spyBaseline": 764.95,
  "positions": {},
  "pendingEntries": {},
@@ -73,7 +73,7 @@
    "d": "2026-10-06",
    "value": 100068,
    "pct": 0.07,
-   "spy": 1.9
+   "spy": 1.91
   }
  ],
  "lastOrders": {
@@ -89,7 +89,7 @@
   "queued": true
  },
  "lastExits": {
-  "forDate": "2026-10-05",
+  "forDate": "2026-10-06",
   "exits": []
  },
  "lastQueueFor": "2026-10-06"
