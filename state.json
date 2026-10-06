@@ -6,7 +6,24 @@
  "lastExitRunDate": "2026-10-06",
  "spyBaseline": 764.95,
  "positions": {},
- "pendingEntries": {},
+ "pendingEntries": {
+  "STX": {
+   "orderId": "22b016dd-1797-4dbd-af23-c5f8ba15c3f8",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "size": 13509.1206,
+   "shares": 16,
+   "limit": 821.74,
+   "opg": true,
+   "forDate": "2026-10-07",
+   "signalDate": "2026-10-06",
+   "signalClose": 805.63,
+   "atr": 57.63,
+   "placedAt": "2026-10-06T23:30:24.359Z"
+  }
+ },
  "pendingCloses": {},
  "trades": [
   {
@@ -77,13 +94,27 @@
   }
  ],
  "lastOrders": {
-  "forDate": "2026-10-06",
-  "entries": [],
+  "forDate": "2026-10-07",
+  "entries": [
+   {
+    "rank": 1,
+    "ticker": "STX",
+    "strategy": "dip",
+    "tag": "normal",
+    "pool": "sp500",
+    "opg": true,
+    "size": 13509.12,
+    "shares": 16,
+    "limit": 821.74,
+    "vs200": 22.75,
+    "chg5d": -11.8
+   }
+  ],
   "skipped": [
    {
-    "ticker": "5 non-S&P",
+    "ticker": "21 non-S&P",
     "strategy": "dip",
-    "reason": "Signals outside the S&P 500 not traded while the S&P 500 is up over 20 sessions (+0.6%); they only tested well after it fell"
+    "reason": "Signals outside the S&P 500 not traded while the S&P 500 is up over 20 sessions (+1.7%); they only tested well after it fell"
    }
   ],
   "queued": true
@@ -92,5 +123,5 @@
   "forDate": "2026-10-06",
   "exits": []
  },
- "lastQueueFor": "2026-10-06"
+ "lastQueueFor": "2026-10-07"
 }
