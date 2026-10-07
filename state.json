@@ -6,7 +6,24 @@
  "lastExitRunDate": "2026-10-07",
  "spyBaseline": 764.95,
  "positions": {},
- "pendingEntries": {},
+ "pendingEntries": {
+  "WDC": {
+   "orderId": "682560f4-be3b-4b15-b8eb-4835cb104961",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "green_or_sweep",
+   "pool": "sp500",
+   "size": 13511.55465,
+   "shares": 32,
+   "limit": 413.53,
+   "opg": true,
+   "forDate": "2026-10-08",
+   "signalDate": "2026-10-07",
+   "signalClose": 405.42,
+   "atr": 27.82,
+   "placedAt": "2026-10-07T23:30:23.082Z"
+  }
+ },
  "pendingCloses": {},
  "trades": [
   {
@@ -77,33 +94,33 @@
   },
   {
    "d": "2026-10-07",
-   "value": 100085,
+   "value": 100086,
    "pct": 0.09,
    "spy": 1.6
   }
  ],
  "lastOrders": {
-  "forDate": "2026-10-07",
+  "forDate": "2026-10-08",
   "entries": [
    {
     "rank": 1,
-    "ticker": "STX",
+    "ticker": "WDC",
     "strategy": "dip",
-    "tag": "normal",
+    "tag": "green_or_sweep",
     "pool": "sp500",
     "opg": true,
-    "size": 13509.12,
-    "shares": 16,
-    "limit": 821.74,
-    "vs200": 22.75,
-    "chg5d": -11.8
+    "size": 13511.55,
+    "shares": 32,
+    "limit": 413.53,
+    "vs200": 0.42,
+    "chg5d": -10.79
    }
   ],
   "skipped": [
    {
-    "ticker": "21 non-S&P",
+    "ticker": "16 non-S&P",
     "strategy": "dip",
-    "reason": "Signals outside the S&P 500 not traded while the S&P 500 is up over 20 sessions (+1.7%); they only tested well after it fell"
+    "reason": "Signals outside the S&P 500 not traded while the S&P 500 is up over 20 sessions (+1.9%); they only tested well after it fell"
    }
   ],
   "queued": true
@@ -112,5 +129,5 @@
   "forDate": "2026-10-07",
   "exits": []
  },
- "lastQueueFor": "2026-10-07"
+ "lastQueueFor": "2026-10-08"
 }
