@@ -6,24 +6,7 @@
  "lastExitRunDate": "2026-10-07",
  "spyBaseline": 764.95,
  "positions": {},
- "pendingEntries": {
-  "WDC": {
-   "orderId": "682560f4-be3b-4b15-b8eb-4835cb104961",
-   "strategy": "dip",
-   "side": "long",
-   "tag": "green_or_sweep",
-   "pool": "sp500",
-   "size": 13511.55465,
-   "shares": 32,
-   "limit": 413.53,
-   "opg": true,
-   "forDate": "2026-10-08",
-   "signalDate": "2026-10-07",
-   "signalClose": 405.42,
-   "atr": 27.82,
-   "placedAt": "2026-10-07T23:30:23.082Z"
-  }
- },
+ "pendingEntries": {},
  "pendingCloses": {},
  "trades": [
   {
@@ -102,7 +85,7 @@
    "d": "2026-10-08",
    "value": 100075,
    "pct": 0.08,
-   "spy": null
+   "spy": 1.43
   }
  ],
  "lastOrders": {
