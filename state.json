@@ -6,24 +6,7 @@
  "lastExitRunDate": "2026-10-08",
  "spyBaseline": 764.95,
  "positions": {},
- "pendingEntries": {
-  "STX": {
-   "orderId": "ecfa961e-5da0-41d8-96d8-c805aeaaa5c1",
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "size": 13507.50195,
-   "shares": 17,
-   "limit": 790.33,
-   "opg": true,
-   "forDate": "2026-10-09",
-   "signalDate": "2026-10-08",
-   "signalClose": 774.83,
-   "atr": 55.12,
-   "placedAt": "2026-10-08T23:30:20.911Z"
-  }
- },
+ "pendingEntries": {},
  "pendingCloses": {},
  "trades": [
   {
@@ -106,9 +89,9 @@
   },
   {
    "d": "2026-10-09",
-   "value": 100058,
+   "value": 100055,
    "pct": 0.06,
-   "spy": null
+   "spy": 1.5
   }
  ],
  "lastOrders": {
