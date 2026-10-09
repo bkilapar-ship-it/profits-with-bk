@@ -6,7 +6,56 @@
  "lastExitRunDate": "2026-10-09",
  "spyBaseline": 764.95,
  "positions": {},
- "pendingEntries": {},
+ "pendingEntries": {
+  "INTC": {
+   "orderId": "d85a7521-5929-40c0-bebe-f1f06a51e378",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "size": 13507.76925,
+   "shares": 126,
+   "limit": 106.79,
+   "opg": true,
+   "forDate": "2026-10-12",
+   "signalDate": "2026-10-09",
+   "signalClose": 104.7,
+   "atr": 5.53,
+   "placedAt": "2026-10-09T23:30:21.755Z"
+  },
+  "SWKS": {
+   "orderId": "6c057267-7a84-47c6-ba55-0954745d2eab",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "size": 13507.76925,
+   "shares": 173,
+   "limit": 77.88,
+   "opg": true,
+   "forDate": "2026-10-12",
+   "signalDate": "2026-10-09",
+   "signalClose": 76.35,
+   "atr": 4.46,
+   "placedAt": "2026-10-09T23:30:21.816Z"
+  },
+  "CCI": {
+   "orderId": "466cb627-ae81-4533-8060-273f2404dda6",
+   "strategy": "rip",
+   "side": "short",
+   "tag": "rsi5_90",
+   "pool": "sp500",
+   "size": 13507.76925,
+   "shares": 173,
+   "limit": 78.05,
+   "opg": true,
+   "forDate": "2026-10-12",
+   "signalDate": "2026-10-09",
+   "signalClose": 79.64,
+   "atr": 2.5,
+   "placedAt": "2026-10-09T23:30:21.935Z"
+  }
+ },
  "pendingCloses": {},
  "trades": [
   {
@@ -89,33 +138,59 @@
   },
   {
    "d": "2026-10-09",
-   "value": 100061,
+   "value": 100058,
    "pct": 0.06,
    "spy": 1.78
   }
  ],
  "lastOrders": {
-  "forDate": "2026-10-09",
+  "forDate": "2026-10-12",
   "entries": [
    {
     "rank": 1,
-    "ticker": "STX",
+    "ticker": "INTC",
     "strategy": "dip",
     "tag": "normal",
     "pool": "sp500",
     "opg": true,
-    "size": 13507.5,
-    "shares": 17,
-    "limit": 790.33,
-    "vs200": 17.16,
-    "chg5d": -18.06
+    "size": 13507.77,
+    "shares": 126,
+    "limit": 106.79,
+    "vs200": 26.09,
+    "chg5d": -12.26
+   },
+   {
+    "rank": 2,
+    "ticker": "SWKS",
+    "strategy": "dip",
+    "tag": "normal",
+    "pool": "sp500",
+    "opg": true,
+    "size": 13507.77,
+    "shares": 173,
+    "limit": 77.88,
+    "vs200": 15.34,
+    "chg5d": -10.21
+   },
+   {
+    "rank": 3,
+    "ticker": "CCI",
+    "strategy": "rip",
+    "tag": "rsi5_90",
+    "pool": "sp500",
+    "opg": true,
+    "size": 13507.77,
+    "shares": 173,
+    "limit": 78.05,
+    "vs200": -3.56,
+    "chg5d": 19.87
    }
   ],
   "skipped": [
    {
-    "ticker": "20 non-S&P",
+    "ticker": "15 non-S&P",
     "strategy": "dip",
-    "reason": "Signals outside the S&P 500 not traded while the S&P 500 is up over 20 sessions (+2.1%); they only tested well after it fell"
+    "reason": "Signals outside the S&P 500 not traded while the S&P 500 is up over 20 sessions (+1.9%); they only tested well after it fell"
    }
   ],
   "queued": true
@@ -124,5 +199,5 @@
   "forDate": "2026-10-09",
   "exits": []
  },
- "lastQueueFor": "2026-10-09"
+ "lastQueueFor": "2026-10-12"
 }
