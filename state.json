@@ -6,56 +6,7 @@
  "lastExitRunDate": "2026-10-09",
  "spyBaseline": 764.95,
  "positions": {},
- "pendingEntries": {
-  "INTC": {
-   "orderId": "d85a7521-5929-40c0-bebe-f1f06a51e378",
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "size": 13507.76925,
-   "shares": 126,
-   "limit": 106.79,
-   "opg": true,
-   "forDate": "2026-10-12",
-   "signalDate": "2026-10-09",
-   "signalClose": 104.7,
-   "atr": 5.53,
-   "placedAt": "2026-10-09T23:30:21.755Z"
-  },
-  "SWKS": {
-   "orderId": "6c057267-7a84-47c6-ba55-0954745d2eab",
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "size": 13507.76925,
-   "shares": 173,
-   "limit": 77.88,
-   "opg": true,
-   "forDate": "2026-10-12",
-   "signalDate": "2026-10-09",
-   "signalClose": 76.35,
-   "atr": 4.46,
-   "placedAt": "2026-10-09T23:30:21.816Z"
-  },
-  "CCI": {
-   "orderId": "466cb627-ae81-4533-8060-273f2404dda6",
-   "strategy": "rip",
-   "side": "short",
-   "tag": "rsi5_90",
-   "pool": "sp500",
-   "size": 13507.76925,
-   "shares": 173,
-   "limit": 78.05,
-   "opg": true,
-   "forDate": "2026-10-12",
-   "signalDate": "2026-10-09",
-   "signalClose": 79.64,
-   "atr": 2.5,
-   "placedAt": "2026-10-09T23:30:21.935Z"
-  }
- },
+ "pendingEntries": {},
  "pendingCloses": {},
  "trades": [
   {
@@ -150,9 +101,9 @@
   },
   {
    "d": "2026-10-12",
-   "value": 100050,
-   "pct": 0.05,
-   "spy": null
+   "value": 100043,
+   "pct": 0.04,
+   "spy": 1.73
   }
  ],
  "lastOrders": {
