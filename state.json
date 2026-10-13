@@ -6,7 +6,104 @@
  "lastExitRunDate": "2026-10-12",
  "spyBaseline": 764.95,
  "positions": {},
- "pendingEntries": {},
+ "pendingEntries": {
+  "SNDK": {
+   "orderId": "432dd9ba-0ec8-4b4e-91e9-bbe99d8d6299",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "size": 13501.83195,
+   "shares": 8,
+   "limit": 1517.08,
+   "opg": true,
+   "forDate": "2026-10-13",
+   "signalDate": "2026-10-12",
+   "signalClose": 1487.33,
+   "atr": 83.74,
+   "placedAt": "2026-10-13T03:44:04.134Z"
+  },
+  "INTC": {
+   "orderId": "8f28a8f8-90d5-492b-958b-caff643d39b0",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "size": 13501.83195,
+   "shares": 130,
+   "limit": 103.38,
+   "opg": true,
+   "forDate": "2026-10-13",
+   "signalDate": "2026-10-12",
+   "signalClose": 101.35,
+   "atr": 5.53,
+   "placedAt": "2026-10-13T03:44:04.145Z"
+  },
+  "STX": {
+   "orderId": "6c21dd1a-be34-4053-8eff-b6f369e5182b",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "size": 13501.83195,
+   "shares": 17,
+   "limit": 768.32,
+   "opg": true,
+   "forDate": "2026-10-13",
+   "signalDate": "2026-10-12",
+   "signalClose": 753.25,
+   "atr": 49.35,
+   "placedAt": "2026-10-13T03:44:04.154Z"
+  },
+  "SWKS": {
+   "orderId": "9c408208-2cb2-4405-ae12-b2f5d960405b",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "size": 13501.83195,
+   "shares": 177,
+   "limit": 76.19,
+   "opg": true,
+   "forDate": "2026-10-13",
+   "signalDate": "2026-10-12",
+   "signalClose": 74.7,
+   "atr": 4.5,
+   "placedAt": "2026-10-13T03:44:04.169Z"
+  },
+  "LRCX": {
+   "orderId": "6aac75e0-93cf-4dc6-8e67-55207fd20c4e",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "size": 13501.83195,
+   "shares": 42,
+   "limit": 315.75,
+   "opg": true,
+   "forDate": "2026-10-13",
+   "signalDate": "2026-10-12",
+   "signalClose": 309.56,
+   "atr": 11.76,
+   "placedAt": "2026-10-13T03:44:04.179Z"
+  },
+  "MPWR": {
+   "orderId": "abb7335e-157c-40a5-9074-77627d7903bb",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "size": 13501.83195,
+   "shares": 10,
+   "limit": 1345.61,
+   "opg": true,
+   "forDate": "2026-10-13",
+   "signalDate": "2026-10-12",
+   "signalClose": 1319.23,
+   "atr": 53.87,
+   "placedAt": "2026-10-13T03:44:04.191Z"
+  }
+ },
  "pendingCloses": {},
  "trades": [
   {
@@ -101,59 +198,108 @@
   },
   {
    "d": "2026-10-12",
-   "value": 100015,
-   "pct": 0.02,
+   "value": 100014,
+   "pct": 0.01,
    "spy": 1.72
   }
  ],
  "lastOrders": {
-  "forDate": "2026-10-12",
+  "forDate": "2026-10-13",
   "entries": [
    {
     "rank": 1,
+    "ticker": "SNDK",
+    "strategy": "dip",
+    "tag": "normal",
+    "pool": "sp500",
+    "opg": true,
+    "size": 13501.83,
+    "shares": 8,
+    "limit": 1517.08,
+    "vs200": 25.22,
+    "chg5d": -12.72
+   },
+   {
+    "rank": 2,
     "ticker": "INTC",
     "strategy": "dip",
     "tag": "normal",
     "pool": "sp500",
     "opg": true,
-    "size": 13507.77,
-    "shares": 126,
-    "limit": 106.79,
-    "vs200": 26.09,
-    "chg5d": -12.26
+    "size": 13501.83,
+    "shares": 130,
+    "limit": 103.38,
+    "vs200": 21.58,
+    "chg5d": -12.77
    },
    {
-    "rank": 2,
+    "rank": 3,
+    "ticker": "STX",
+    "strategy": "dip",
+    "tag": "normal",
+    "pool": "sp500",
+    "opg": true,
+    "size": 13501.83,
+    "shares": 17,
+    "limit": 768.32,
+    "vs200": 13.07,
+    "chg5d": -15.09
+   },
+   {
+    "rank": 4,
     "ticker": "SWKS",
     "strategy": "dip",
     "tag": "normal",
     "pool": "sp500",
     "opg": true,
-    "size": 13507.77,
-    "shares": 173,
-    "limit": 77.88,
-    "vs200": 15.34,
-    "chg5d": -10.21
+    "size": 13501.83,
+    "shares": 177,
+    "limit": 76.19,
+    "vs200": 12.76,
+    "chg5d": -10.98
    },
    {
-    "rank": 3,
-    "ticker": "CCI",
-    "strategy": "rip",
-    "tag": "rsi5_90",
+    "rank": 5,
+    "ticker": "LRCX",
+    "strategy": "dip",
+    "tag": "normal",
     "pool": "sp500",
     "opg": true,
-    "size": 13507.77,
-    "shares": 173,
-    "limit": 78.05,
-    "vs200": -3.56,
-    "chg5d": 19.87
+    "size": 13501.83,
+    "shares": 42,
+    "limit": 315.75,
+    "vs200": 10.62,
+    "chg5d": -10.48
+   },
+   {
+    "rank": 6,
+    "ticker": "MPWR",
+    "strategy": "dip",
+    "tag": "normal",
+    "pool": "sp500",
+    "opg": true,
+    "size": 13501.83,
+    "shares": 10,
+    "limit": 1345.61,
+    "vs200": 1.68,
+    "chg5d": -10.86
    }
   ],
   "skipped": [
    {
-    "ticker": "15 non-S&P",
+    "ticker": "TER",
     "strategy": "dip",
-    "reason": "Signals outside the S&P 500 not traded while the S&P 500 is up over 20 sessions (+1.9%); they only tested well after it fell"
+    "reason": "The sleeve has no spare cash left today"
+   },
+   {
+    "ticker": "CCI",
+    "strategy": "rip",
+    "reason": "The sleeve has no spare cash left today"
+   },
+   {
+    "ticker": "51 non-S&P",
+    "strategy": "dip",
+    "reason": "Signals outside the S&P 500 not traded while the S&P 500 is up over 20 sessions (+2.3%); they only tested well after it fell"
    }
   ],
   "queued": true
@@ -162,5 +308,5 @@
   "forDate": "2026-10-12",
   "exits": []
  },
- "lastQueueFor": "2026-10-12"
+ "lastQueueFor": "2026-10-13"
 }
