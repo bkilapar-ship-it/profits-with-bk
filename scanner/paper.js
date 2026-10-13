@@ -100,7 +100,9 @@ const CFG = {
   tradeNonSp: bool(env.PAPER_TRADE_NONSP, false),
   nonSpMinLiquidity: num(env.PAPER_NONSP_MIN_LIQUIDITY, 100e6),   // research: only very liquid names ($100M+/day)
   nonSpMarketGate: bool(env.PAPER_NONSP_MARKET_GATE, true),       // research: only when the S&P 500 is flat/down over 20 sessions
-  onOpen: bool(env.PAPER_ON_OPEN, true),          // queue entries the evening before as on-the-open orders (fill only in the opening auction)
+  onOpen: bool(env.PAPER_ON_OPEN, false),         // queue entries the evening before as on-the-open orders. Off by default: Alpaca's PAPER account does not run opening auctions, so such orders never execute there. For a live account.
+  openGuard: bool(env.PAPER_OPEN_GUARD, true),    // at 9:32, skip a stock that has already opened past the 2% cap (the tested rule), using its real-time opening price
+  openFeed: (env.PAPER_OPEN_FEED || 'iex').toLowerCase(),   // real-time prices on the free plan come from the IEX feed
   nonSpMaxOpen: num(env.PAPER_NONSP_MAX_OPEN, 2),                 // keep cash free for the next days' S&P signals
   reviewAfter: num(env.PAPER_REVIEW_AFTER, 100),
   successAvgPct: num(env.PAPER_SUCCESS_AVG_PCT, 0.3),
@@ -129,7 +131,7 @@ const RULES = () => ({
   minLiquidity: core.SETUP.MIN_LIQUIDITY,
   strategies: { dip: CFG.tradeDip, rip: CFG.tradeRip, macd: false },
   sp500Only: CFG.sp500Only,
-  onOpen: CFG.onOpen,
+  onOpen: CFG.onOpen, openGuard: CFG.openGuard,
   nonSp: { enabled: CFG.tradeNonSp && CFG.sp500Only && CFG.tradeDip, minLiquidity: CFG.nonSpMinLiquidity, marketGate: CFG.nonSpMarketGate, maxOpen: CFG.nonSpMaxOpen },
   ranking: 'Bearish engulfing first for Dip / RSI(5) ≥ 90 first for Rip, then the usual strength measure',
   reviewAfter: CFG.reviewAfter, successAvgPct: CFG.successAvgPct,
@@ -255,6 +257,29 @@ async function getLatestDailyClose(symbol) {
   const json = await alpaca('GET', `${CFG.dataBase}/v2/stocks/bars?${q.toString()}`);
   const bars = json && json.bars && json.bars[symbol];
   return bars && bars.length ? Number(bars[0].c) : null;
+}
+
+/** Today's opening price (the day's first regular-session trade) per symbol, from the real-time snapshot. Missing = unknown. */
+async function getOpenPrices(symbols) {
+  const out = {};
+  if (!symbols.length) return out;
+  try {
+    const q = new URLSearchParams({ symbols: symbols.join(','), feed: CFG.openFeed });
+    const json = await alpaca('GET', `${CFG.dataBase}/v2/stocks/snapshots?${q.toString()}`);
+    for (const sym of symbols) {
+      const snap = json && (json.snapshots ? json.snapshots[sym] : json[sym]);
+      const o = snap && snap.dailyBar && Number(snap.dailyBar.o);
+      if (isNum(o) && o > 0) out[sym] = o;
+    }
+  } catch (e) { log(`  Could not read opening prices (${String(e.message).slice(0, 100)}); carrying on without the opening-price check.`); }
+  return out;
+}
+/** true = the open was inside the cap, false = past it, null = unknown. */
+const openInsideCap = (long, limit, open) => (isNum(open) ? (long ? open <= limit : open >= limit) : null);
+function etMinutesOf(iso) {
+  const q = {};
+  for (const part of new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date(iso))) q[part.type] = part.value;
+  return Number(q.hour) * 60 + Number(q.minute);
 }
 
 async function getRecentClosedOrders(symbol, afterIso, limit = 10) {
@@ -457,6 +482,74 @@ function rankCandidates(setups, state) {
  *  a share of THIS, not of the whole account -- so the reserve genuinely never gets spent. */
 function sleeveEquity(totalEquity) { return totalEquity * (1 - CFG.reservePct); }
 
+/**
+ * After the open, deal with queued on-the-open orders that did not execute. Alpaca's PAPER account does not run opening
+ * auctions, so such an order can stay "accepted" all day, or be cancelled at the open, even when the stock opened inside the cap.
+ *   - filled (or part-filled)       -> nothing here; reconcile registers it and attaches the stop and target.
+ *   - still open after the open     -> cancel it, wait until the cancel is real, then decide as below.
+ *   - cancelled/expired at the open -> decide as below. (Cancelled at some other time: treated as deliberate, left alone.)
+ *   - decide: the stock opened inside the cap (or the open is unknown) -> an ordinary limit order at the same cap, which fills
+ *             at once at the current price when that is inside the cap; opened past the cap -> skipped, as the rule says.
+ * A cancel that has not completed gets no replacement (the old order could still fill: a double position). Returns what was replaced.
+ */
+async function resolveQueued(state) {
+  const today = todayEastern();
+  const queued = Object.entries(state.pendingEntries).filter(([, q]) => q.opg);
+  if (!queued.length) return [];
+  const clock = await getClock().catch(() => null);
+  if (!clock || !clock.is_open || (!CFG.force && etMinutes() < 9 * 60 + 31)) return [];      // wait until the auction is over
+  const decide = [], replaced = [];
+  for (const [ticker, q] of queued) {
+    if (q.forDate && q.forDate < today) {
+      log(`  ${ticker}: its on-the-open order was for the ${q.forDate} open; dropping it as stale.`);
+      await cancelOrder(q.orderId).catch(() => null); delete state.pendingEntries[ticker]; continue;
+    }
+    const o = await getOrder(q.orderId).catch(() => null);
+    if (!o) { log(`  ${ticker}: could not read its queued order; leaving it for the next run.`); continue; }
+    if (o.status === 'filled' || o.status === 'partially_filled') continue;
+    if (TERMINAL.has(o.status)) {
+      const when = o.canceled_at || o.expired_at || o.failed_at;
+      if (when) {
+        const m = etMinutesOf(when);
+        if (m < 9 * 60 + 20 || m > 9 * 60 + 50) {
+          log(`  ${ticker}: its queued order was cancelled outside the opening window (${hhmm(m)} ET); treating that as deliberate and not re-entering.`);
+          delete state.pendingEntries[ticker]; continue;
+        }
+      }
+      decide.push([ticker, q, `Alpaca ${o.status} the on-the-open order without filling it`]); continue;
+    }
+    log(`  ${ticker}: the on-the-open order is still "${o.status}" after the open; cancelling it.`);
+    await cancelAndWait(q.orderId, ticker);
+    const after = await getOrder(q.orderId).catch(() => null);
+    if (after && (after.status === 'filled' || after.status === 'partially_filled')) continue;   // it filled while we were cancelling
+    if (!after || !TERMINAL.has(after.status)) {
+      log(`  ${ticker}: the cancel has not completed; no replacement placed (the old order could still fill). Will check again next run.`);
+      continue;
+    }
+    decide.push([ticker, q, `Alpaca never executed the on-the-open order (it was "${o.status}" after the open)`]);
+  }
+  if (!decide.length) return replaced;
+  const opens = CFG.openGuard ? await getOpenPrices(decide.map(([t]) => t)) : {};
+  for (const [ticker, q, why] of decide) {
+    const long = q.side === 'long';
+    const inside = openInsideCap(long, q.limit, opens[ticker]);
+    if (inside === false) {
+      log(`  ${ticker}: ${why}; the stock opened at ${opens[ticker].toFixed(2)}, past the cap (${q.limit}), so it is skipped, as the rule says.`);
+      delete state.pendingEntries[ticker]; continue;
+    }
+    try {
+      const order = await alpaca('POST', '/v2/orders', { symbol: ticker, qty: String(q.shares), side: long ? 'buy' : 'sell', type: 'limit', time_in_force: 'day', limit_price: String(q.limit) });
+      state.pendingEntries[ticker] = { ...q, orderId: order.id, opg: false, replacedOpg: true, placedAt: new Date().toISOString() };
+      replaced.push({ ticker, side: q.side, limit: q.limit, open: opens[ticker] });
+      log(`  ${ticker}: ${why}; ${inside === true ? `it opened at ${opens[ticker].toFixed(2)}, inside the cap,` : 'its opening price is unknown,'} so a limit order at ${q.limit} was placed instead.`);
+    } catch (e) {
+      log(`  ${ticker}: could not place the replacement order (${String(e.message).slice(0, 100)}); no entry.`);
+      delete state.pendingEntries[ticker];
+    }
+  }
+  return replaced;
+}
+
 async function runEntries(state, setups, opts = {}) {
   const queue = !!opts.queue;            // queue = on-the-open orders for the NEXT open; otherwise ordinary day orders at 9:32
   const today = todayEastern();
@@ -505,6 +598,8 @@ async function runEntries(state, setups, opts = {}) {
   const entries = [], skipped = [];
   let failures = 0, firstError = null;
   const shortableCache = new Map();
+  // At 9:32 the stock may already have opened past the cap. The tested rule skips it; an all-day limit order would rest and could fill later.
+  const opens = (!queue && CFG.openGuard && candidates.length) ? await getOpenPrices([...new Set(candidates.map(x => x.ticker))]) : {};
   // Non-S&P rules. Their skips are summarised (one line per reason), so they don't flood the Orders tab.
   const mkt = setups.market;
   const gateOpen = !CFG.nonSpMarketGate || (mkt && isNum(mkt.chg20d) && mkt.chg20d <= 0);
@@ -529,6 +624,13 @@ async function runEntries(state, setups, opts = {}) {
     if (size > spendable) {
       skipped.push({ ticker: c.ticker, strategy: c.kind, reason: 'The sleeve has no spare cash left today' });
       continue;
+    }
+    if (!queue && isNum(opens[c.ticker])) {
+      const capPx = r2(long ? c.close * (1 + CFG.chase) : c.close * (1 - CFG.chase));
+      if (openInsideCap(long, capPx, opens[c.ticker]) === false) {
+        skipped.push({ ticker: c.ticker, strategy: c.kind, reason: `Opened at ${opens[c.ticker].toFixed(2)}, past the ${(CFG.chase * 100).toFixed(0)}% cap (${capPx.toFixed(2)})` });
+        continue;
+      }
     }
     if (!long) {
       if (!shortableCache.has(c.ticker)) shortableCache.set(c.ticker, await getAsset(c.ticker));
@@ -720,10 +822,21 @@ async function main() {
   // already detected earlier in this same run.
   const tradesBefore = state.trades.length, entryRunBefore = state.lastEntryRunDate;
   try {
+    let replaced = [];
+    if (CFG.mode === 'entry' || CFG.mode === 'reconcile') {
+      replaced = await resolveQueued(state).catch(e => { log(`Resolving queued orders failed: ${e.message}`); return []; });
+    }
     log('Reconciling fills and closures…');
     await reconcile(state);
+    for (let i = 0; replaced.length && i < CFG.pollTries && Object.values(state.pendingEntries).some(q => q.replacedOpg); i++) {
+      await sleep(CFG.pollDelayMs); await reconcile(state);                 // give the replacement orders a moment to fill so they get their stop and target
+    }
     await updateEquitySnapshot(state);
     await alertSafely(() => notify.closedAlert(state.trades.slice(tradesBefore)));
+    if (replaced.length) {
+      await alertSafely(() => notify.send(`⚠️ Alpaca's paper account did not execute the on-the-open order${replaced.length > 1 ? 's' : ''} for ${replaced.map(r => r.ticker).join(', ')}. ` +
+        `${replaced.length > 1 ? 'They were' : 'It was'} replaced by ${replaced.length > 1 ? 'limit orders' : 'a limit order'} at the 2% cap.`));
+    }
 
     if (CFG.mode === 'entry') {
       if (state.status !== 'running') { log('Paused: not placing new entries.'); }
@@ -767,7 +880,7 @@ if (require.main === module) {
 }
 
 module.exports = {
-  CFG, RULES, setNow, etMinutes, defaultState, loadState, saveState, todayEastern, dayCount, main,
+  CFG, RULES, setNow, etMinutes, resolveQueued, getOpenPrices, defaultState, loadState, saveState, todayEastern, dayCount, main,
   reconcile, reconcileClosedPositions, reconcilePendingEntries, runEntries, runExits, rankCandidates,
   updateEquitySnapshot, renderPublicJson, fetchSetups, assertPaperOnly,
   alpaca, getClock, getAccount, getPositions, getOpenOrders, getOrder, getAsset, getLatestDailyClose, cancelOrder, closePositionMarket,
