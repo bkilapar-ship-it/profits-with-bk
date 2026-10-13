@@ -3356,7 +3356,7 @@ function paperRules(P) {
     </section>
     <section class="panel pcard">
       <h2>Entries and exits</h2>
-      <div class="kv">${kv('Entry', R.onOpen ? 'On-the-open limit order, queued the evening before: it fills only in the opening auction, up to 2% past the signal close' : 'Limit order at the open, up to 2% past the signal close')}${kv('Target', targetLabel(R))}${kv('Stop', `${R.stopAtr} × ATR from entry`)}${kv('Time exit', `Close of session ${R.holdSessions}`)}${kv('Late entry', 'Only if day 1 moved against the setup')}</div>
+      <div class="kv">${kv('Entry', R.onOpen ? 'On-the-open limit order, queued the evening before: it fills only in the opening auction, up to 2% past the signal close' : (R.openGuard ? 'Limit order placed about 9:32 am, up to 2% past the signal close; skipped if the stock has already opened past that cap' : 'Limit order at the open, up to 2% past the signal close'))}${kv('Target', targetLabel(R))}${kv('Stop', `${R.stopAtr} × ATR from entry`)}${kv('Time exit', `Close of session ${R.holdSessions}`)}${kv('Late entry', 'Only if day 1 moved against the setup')}</div>
     </section>
     <section class="panel pcard">
       <h2>Review point</h2>
