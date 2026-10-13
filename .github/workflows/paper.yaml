@@ -125,7 +125,8 @@ jobs:
           PAPER_RESERVE_PCT: '0.10'
           PAPER_SIZE_PCT: '0.15'
           PAPER_CHASE: '0.02'
-          PAPER_ON_OPEN: 'true'                  # queue entries the evening before as on-the-open orders ('false' = place ordinary day orders at 9:32 as before)
+          PAPER_ON_OPEN: 'false'                 # 'true' queues on-the-open orders the evening before. Keep 'false' for the PAPER account: it does not run opening auctions, so those orders never execute. For a live account.
+          PAPER_OPEN_GUARD: 'true'               # at 9:32, skip a stock that has already opened past the 2% cap (the tested rule)
           PAPER_TARGET_PCT: '4'                  # fixed take-profit: 4% from the fill price (the stop stays 3 x ATR)
           PAPER_STOP_ATR: '3'
           PAPER_HOLD_SESSIONS: '3'
