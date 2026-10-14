@@ -2,10 +2,53 @@
  "version": 1,
  "status": "running",
  "startedAt": "2026-09-26",
- "lastEntryRunDate": "2026-10-02",
+ "lastEntryRunDate": "2026-10-14",
  "lastExitRunDate": "2026-10-13",
  "spyBaseline": 764.95,
- "positions": {},
+ "positions": {
+  "AMAT": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-13",
+   "signalClose": 464.24,
+   "entryDate": "2026-10-14",
+   "entry": 452.61,
+   "shares": 28,
+   "target": 470.71,
+   "stop": 396.3,
+   "ocoOrderId": "696568f6-ece5-4d65-8973-7b863fb82f64"
+  },
+  "SNDK": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "green_or_sweep",
+   "pool": "sp500",
+   "signalDate": "2026-10-13",
+   "signalClose": 1482.33,
+   "entryDate": "2026-10-14",
+   "entry": 1441.43,
+   "shares": 8,
+   "target": 1499.09,
+   "stop": 1192.82,
+   "ocoOrderId": "b6a962c8-aa75-460f-9f02-4f5e1f0aa266"
+  },
+  "SMCI": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "green_or_sweep",
+   "pool": "sp500",
+   "signalDate": "2026-10-13",
+   "signalClose": 39.07,
+   "entryDate": "2026-10-14",
+   "entry": 36.63,
+   "shares": 338,
+   "target": 38.1,
+   "stop": 29.79,
+   "ocoOrderId": "9f98e831-946c-4cb5-8610-cfe5c3393f56"
+  }
+ },
  "pendingEntries": {},
  "pendingCloses": {},
  "trades": [
@@ -113,111 +156,62 @@
   },
   {
    "d": "2026-10-14",
-   "value": 100039,
-   "pct": 0.04,
-   "spy": null
+   "value": 100026,
+   "pct": 0.03,
+   "spy": 1.12
   }
  ],
  "lastOrders": {
-  "forDate": "2026-10-13",
+  "forDate": "2026-10-14",
   "entries": [
    {
     "rank": 1,
-    "ticker": "SNDK",
+    "ticker": "AMAT",
     "strategy": "dip",
     "tag": "normal",
     "pool": "sp500",
-    "opg": true,
-    "size": 13501.83,
-    "shares": 8,
-    "limit": 1517.08,
-    "vs200": 25.22,
-    "chg5d": -12.72
+    "opg": false,
+    "size": 13503.53,
+    "shares": 28,
+    "limit": 473.52,
+    "vs200": 6.35,
+    "chg5d": -12.45
    },
    {
     "rank": 2,
-    "ticker": "INTC",
+    "ticker": "SNDK",
     "strategy": "dip",
-    "tag": "normal",
+    "tag": "green_or_sweep",
     "pool": "sp500",
-    "opg": true,
-    "size": 13501.83,
-    "shares": 130,
-    "limit": 103.38,
-    "vs200": 21.58,
-    "chg5d": -12.77
+    "opg": false,
+    "size": 13503.53,
+    "shares": 8,
+    "limit": 1511.98,
+    "vs200": 24.16,
+    "chg5d": -10.73
    },
    {
     "rank": 3,
-    "ticker": "STX",
+    "ticker": "SMCI",
     "strategy": "dip",
-    "tag": "normal",
+    "tag": "green_or_sweep",
     "pool": "sp500",
-    "opg": true,
-    "size": 13501.83,
-    "shares": 17,
-    "limit": 768.32,
-    "vs200": 13.07,
-    "chg5d": -15.09
-   },
-   {
-    "rank": 4,
-    "ticker": "SWKS",
-    "strategy": "dip",
-    "tag": "normal",
-    "pool": "sp500",
-    "opg": true,
-    "size": 13501.83,
-    "shares": 177,
-    "limit": 76.19,
-    "vs200": 12.76,
-    "chg5d": -10.98
-   },
-   {
-    "rank": 5,
-    "ticker": "LRCX",
-    "strategy": "dip",
-    "tag": "normal",
-    "pool": "sp500",
-    "opg": true,
-    "size": 13501.83,
-    "shares": 42,
-    "limit": 315.75,
-    "vs200": 10.62,
-    "chg5d": -10.48
-   },
-   {
-    "rank": 6,
-    "ticker": "MPWR",
-    "strategy": "dip",
-    "tag": "normal",
-    "pool": "sp500",
-    "opg": true,
-    "size": 13501.83,
-    "shares": 10,
-    "limit": 1345.61,
-    "vs200": 1.68,
-    "chg5d": -10.86
+    "opg": false,
+    "size": 13503.53,
+    "shares": 338,
+    "limit": 39.85,
+    "vs200": 20.56,
+    "chg5d": -10.1
    }
   ],
   "skipped": [
    {
-    "ticker": "TER",
+    "ticker": "34 non-S&P",
     "strategy": "dip",
-    "reason": "The sleeve has no spare cash left today"
-   },
-   {
-    "ticker": "CCI",
-    "strategy": "rip",
-    "reason": "The sleeve has no spare cash left today"
-   },
-   {
-    "ticker": "51 non-S&P",
-    "strategy": "dip",
-    "reason": "Signals outside the S&P 500 not traded while the S&P 500 is up over 20 sessions (+2.3%); they only tested well after it fell"
+    "reason": "Signals outside the S&P 500 not traded while the S&P 500 is up over 20 sessions (+2.7%); they only tested well after it fell"
    }
   ],
-  "queued": true
+  "queued": false
  },
  "lastExits": {
   "forDate": "2026-10-13",
