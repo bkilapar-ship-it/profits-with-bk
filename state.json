@@ -19,7 +19,7 @@
    "target": 470.71,
    "stop": 396.3,
    "ocoOrderId": "696568f6-ece5-4d65-8973-7b863fb82f64",
-   "now": 428.45
+   "now": 427.81
   },
   "SNDK": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 1499.09,
    "stop": 1192.82,
    "ocoOrderId": "b6a962c8-aa75-460f-9f02-4f5e1f0aa266",
-   "now": 1346.2
+   "now": 1348.46
   },
   "SMCI": {
    "strategy": "dip",
@@ -49,7 +49,7 @@
    "target": 38.1,
    "stop": 29.79,
    "ocoOrderId": "9f98e831-946c-4cb5-8610-cfe5c3393f56",
-   "now": 34.02
+   "now": 34.09
   },
   "DELL": {
    "strategy": "dip",
@@ -64,7 +64,7 @@
    "target": 482.28,
    "stop": 377.84,
    "ocoOrderId": "dba8c2ac-ac1b-4d84-80c6-4813d32c35c1",
-   "now": 459.01
+   "now": 458.45
   },
   "HPE": {
    "strategy": "dip",
@@ -79,7 +79,7 @@
    "target": 60.45,
    "stop": 46.88,
    "ocoOrderId": "3654e50e-1ac9-46b1-81f0-8ccbcf12f386",
-   "now": 58.66
+   "now": 58.61
   },
   "MRVL": {
    "strategy": "dip",
@@ -94,7 +94,7 @@
    "target": 243,
    "stop": 185.98,
    "ocoOrderId": "b7b2ee9a-78c7-484f-b384-705b2cbcd5ca",
-   "now": 236.04
+   "now": 236.11
   },
   "MU": {
    "strategy": "dip",
@@ -109,7 +109,7 @@
    "target": 924.38,
    "stop": 755.93,
    "ocoOrderId": "a253b15b-1269-41a1-867f-95f5c634f315",
-   "now": 905.03
+   "now": 905.24
   }
  },
  "pendingEntries": {},
@@ -225,9 +225,9 @@
   },
   {
    "d": "2026-10-15",
-   "value": 97944,
-   "pct": -2.06,
-   "spy": 0.63
+   "value": 97950,
+   "pct": -2.05,
+   "spy": 0.6
   }
  ],
  "lastOrders": {
