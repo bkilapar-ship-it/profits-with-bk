@@ -19,7 +19,7 @@
    "target": 470.71,
    "stop": 396.3,
    "ocoOrderId": "696568f6-ece5-4d65-8973-7b863fb82f64",
-   "now": 422.8
+   "now": 427.96
   },
   "SNDK": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 1499.09,
    "stop": 1192.82,
    "ocoOrderId": "b6a962c8-aa75-460f-9f02-4f5e1f0aa266",
-   "now": 1318.25
+   "now": 1362.29
   },
   "SMCI": {
    "strategy": "dip",
@@ -49,7 +49,7 @@
    "target": 38.1,
    "stop": 29.79,
    "ocoOrderId": "9f98e831-946c-4cb5-8610-cfe5c3393f56",
-   "now": 33.52
+   "now": 34.24
   },
   "DELL": {
    "strategy": "dip",
@@ -63,7 +63,8 @@
    "shares": 25,
    "target": 482.28,
    "stop": 377.84,
-   "ocoOrderId": "dba8c2ac-ac1b-4d84-80c6-4813d32c35c1"
+   "ocoOrderId": "dba8c2ac-ac1b-4d84-80c6-4813d32c35c1",
+   "now": 468.51
   },
   "HPE": {
    "strategy": "dip",
@@ -77,7 +78,8 @@
    "shares": 203,
    "target": 60.45,
    "stop": 46.88,
-   "ocoOrderId": "3654e50e-1ac9-46b1-81f0-8ccbcf12f386"
+   "ocoOrderId": "3654e50e-1ac9-46b1-81f0-8ccbcf12f386",
+   "now": 58.39
   },
   "MRVL": {
    "strategy": "dip",
@@ -91,7 +93,8 @@
    "shares": 52,
    "target": 243,
    "stop": 185.98,
-   "ocoOrderId": "b7b2ee9a-78c7-484f-b384-705b2cbcd5ca"
+   "ocoOrderId": "b7b2ee9a-78c7-484f-b384-705b2cbcd5ca",
+   "now": 238.48
   },
   "MU": {
    "strategy": "dip",
@@ -105,7 +108,8 @@
    "shares": 14,
    "target": 924.38,
    "stop": 755.93,
-   "ocoOrderId": "a253b15b-1269-41a1-867f-95f5c634f315"
+   "ocoOrderId": "a253b15b-1269-41a1-867f-95f5c634f315",
+   "now": 912.75
   }
  },
  "pendingEntries": {},
@@ -221,9 +225,9 @@
   },
   {
    "d": "2026-10-15",
-   "value": 97041,
-   "pct": -2.96,
-   "spy": 0.34
+   "value": 98561,
+   "pct": -1.44,
+   "spy": 0.77
   }
  ],
  "lastOrders": {
