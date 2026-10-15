@@ -2,7 +2,7 @@
  "version": 1,
  "status": "running",
  "startedAt": "2026-09-26",
- "lastEntryRunDate": "2026-10-14",
+ "lastEntryRunDate": "2026-10-15",
  "lastExitRunDate": "2026-10-14",
  "spyBaseline": 764.95,
  "positions": {
@@ -19,7 +19,7 @@
    "target": 470.71,
    "stop": 396.3,
    "ocoOrderId": "696568f6-ece5-4d65-8973-7b863fb82f64",
-   "now": 444.24
+   "now": 422.8
   },
   "SNDK": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 1499.09,
    "stop": 1192.82,
    "ocoOrderId": "b6a962c8-aa75-460f-9f02-4f5e1f0aa266",
-   "now": 1358
+   "now": 1318.25
   },
   "SMCI": {
    "strategy": "dip",
@@ -49,7 +49,63 @@
    "target": 38.1,
    "stop": 29.79,
    "ocoOrderId": "9f98e831-946c-4cb5-8610-cfe5c3393f56",
-   "now": 35.28
+   "now": 33.52
+  },
+  "DELL": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-14",
+   "signalClose": 507.93,
+   "entryDate": "2026-10-15",
+   "entry": 463.73,
+   "shares": 25,
+   "target": 482.28,
+   "stop": 377.84,
+   "ocoOrderId": "dba8c2ac-ac1b-4d84-80c6-4813d32c35c1"
+  },
+  "HPE": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-14",
+   "signalClose": 63.11,
+   "entryDate": "2026-10-15",
+   "entry": 58.13,
+   "shares": 203,
+   "target": 60.45,
+   "stop": 46.88,
+   "ocoOrderId": "3654e50e-1ac9-46b1-81f0-8ccbcf12f386"
+  },
+  "MRVL": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-14",
+   "signalClose": 245.28,
+   "entryDate": "2026-10-15",
+   "entry": 233.65,
+   "shares": 52,
+   "target": 243,
+   "stop": 185.98,
+   "ocoOrderId": "b7b2ee9a-78c7-484f-b384-705b2cbcd5ca"
+  },
+  "MU": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-14",
+   "signalClose": 914.13,
+   "entryDate": "2026-10-15",
+   "entry": 888.83,
+   "shares": 14,
+   "target": 924.38,
+   "stop": 755.93,
+   "ocoOrderId": "a253b15b-1269-41a1-867f-95f5c634f315"
   }
  },
  "pendingEntries": {},
@@ -165,59 +221,107 @@
   },
   {
    "d": "2026-10-15",
-   "value": 98605,
-   "pct": -1.4,
-   "spy": null
+   "value": 97041,
+   "pct": -2.96,
+   "spy": 0.34
   }
  ],
  "lastOrders": {
-  "forDate": "2026-10-14",
+  "forDate": "2026-10-15",
   "entries": [
    {
     "rank": 1,
-    "ticker": "AMAT",
+    "ticker": "DELL",
     "strategy": "dip",
     "tag": "normal",
     "pool": "sp500",
     "opg": false,
-    "size": 13503.53,
-    "shares": 28,
-    "limit": 473.52,
-    "vs200": 6.35,
-    "chg5d": -12.45
+    "size": 13100.8,
+    "shares": 25,
+    "limit": 518.09,
+    "vs200": 63.51,
+    "chg5d": -12.27
    },
    {
     "rank": 2,
-    "ticker": "SNDK",
+    "ticker": "HPE",
     "strategy": "dip",
-    "tag": "green_or_sweep",
+    "tag": "normal",
     "pool": "sp500",
     "opg": false,
-    "size": 13503.53,
-    "shares": 8,
-    "limit": 1511.98,
-    "vs200": 24.16,
-    "chg5d": -10.73
+    "size": 13100.8,
+    "shares": 203,
+    "limit": 64.37,
+    "vs200": 63,
+    "chg5d": -12.46
    },
    {
     "rank": 3,
-    "ticker": "SMCI",
+    "ticker": "MRVL",
     "strategy": "dip",
-    "tag": "green_or_sweep",
+    "tag": "normal",
     "pool": "sp500",
     "opg": false,
-    "size": 13503.53,
-    "shares": 338,
-    "limit": 39.85,
-    "vs200": 20.56,
-    "chg5d": -10.1
+    "size": 13100.8,
+    "shares": 52,
+    "limit": 250.19,
+    "vs200": 40.66,
+    "chg5d": -13.84
+   },
+   {
+    "rank": 4,
+    "ticker": "MU",
+    "strategy": "dip",
+    "tag": "normal",
+    "pool": "sp500",
+    "opg": false,
+    "size": 13100.8,
+    "shares": 14,
+    "limit": 932.41,
+    "vs200": 28.44,
+    "chg5d": -15.98
    }
   ],
   "skipped": [
    {
-    "ticker": "34 non-S&P",
+    "ticker": "INTC",
     "strategy": "dip",
-    "reason": "Signals outside the S&P 500 not traded while the S&P 500 is up over 20 sessions (+2.7%); they only tested well after it fell"
+    "reason": "The sleeve has no spare cash left today"
+   },
+   {
+    "ticker": "LITE",
+    "strategy": "dip",
+    "reason": "The sleeve has no spare cash left today"
+   },
+   {
+    "ticker": "BE",
+    "strategy": "dip",
+    "reason": "The sleeve has no spare cash left today"
+   },
+   {
+    "ticker": "STX",
+    "strategy": "dip",
+    "reason": "The sleeve has no spare cash left today"
+   },
+   {
+    "ticker": "TER",
+    "strategy": "dip",
+    "reason": "The sleeve has no spare cash left today"
+   },
+   {
+    "ticker": "LRCX",
+    "strategy": "dip",
+    "reason": "The sleeve has no spare cash left today"
+   },
+   {
+    "ticker": "AMD",
+    "strategy": "dip",
+    "reason": "The sleeve has no spare cash left today"
+   },
+   {
+    "ticker": "51 non-S&P",
+    "strategy": "dip",
+    "reason": "Signals outside the S&P 500 not traded while the S&P 500 is up over 20 sessions (+2.1%); they only tested well after it fell"
    }
   ],
   "queued": false
