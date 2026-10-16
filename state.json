@@ -3,54 +3,9 @@
  "status": "running",
  "startedAt": "2026-09-26",
  "lastEntryRunDate": "2026-10-16",
- "lastExitRunDate": "2026-10-15",
+ "lastExitRunDate": "2026-10-16",
  "spyBaseline": 764.95,
  "positions": {
-  "AMAT": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-10-13",
-   "signalClose": 464.24,
-   "entryDate": "2026-10-14",
-   "entry": 452.61,
-   "shares": 28,
-   "target": 470.71,
-   "stop": 396.3,
-   "ocoOrderId": "696568f6-ece5-4d65-8973-7b863fb82f64",
-   "now": 413.09
-  },
-  "SNDK": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "green_or_sweep",
-   "pool": "sp500",
-   "signalDate": "2026-10-13",
-   "signalClose": 1482.33,
-   "entryDate": "2026-10-14",
-   "entry": 1441.43,
-   "shares": 8,
-   "target": 1499.09,
-   "stop": 1192.82,
-   "ocoOrderId": "b6a962c8-aa75-460f-9f02-4f5e1f0aa266",
-   "now": 1314.34
-  },
-  "SMCI": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "green_or_sweep",
-   "pool": "sp500",
-   "signalDate": "2026-10-13",
-   "signalClose": 39.07,
-   "entryDate": "2026-10-14",
-   "entry": 36.63,
-   "shares": 338,
-   "target": 38.1,
-   "stop": 29.79,
-   "ocoOrderId": "9f98e831-946c-4cb5-8610-cfe5c3393f56",
-   "now": 31.76
-  },
   "DELL": {
    "strategy": "dip",
    "side": "long",
@@ -64,7 +19,7 @@
    "target": 482.28,
    "stop": 377.84,
    "ocoOrderId": "dba8c2ac-ac1b-4d84-80c6-4813d32c35c1",
-   "now": 460.2
+   "now": 454.89
   },
   "HPE": {
    "strategy": "dip",
@@ -79,7 +34,7 @@
    "target": 60.45,
    "stop": 46.88,
    "ocoOrderId": "3654e50e-1ac9-46b1-81f0-8ccbcf12f386",
-   "now": 55.23
+   "now": 55.26
   },
   "MRVL": {
    "strategy": "dip",
@@ -94,7 +49,7 @@
    "target": 243,
    "stop": 185.98,
    "ocoOrderId": "b7b2ee9a-78c7-484f-b384-705b2cbcd5ca",
-   "now": 229.76
+   "now": 228.44
   },
   "ANET": {
    "strategy": "dip",
@@ -109,7 +64,7 @@
    "target": 190.15,
    "stop": 159.41,
    "ocoOrderId": "60fb6f8f-dd54-4788-9618-24ba26c68139",
-   "now": 178.2
+   "now": 177.36
   }
  },
  "pendingEntries": {},
@@ -147,6 +102,57 @@
    "how": "target",
    "usd": 499.11,
    "pct": 4.01
+  },
+  {
+   "ticker": "AMAT",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-13",
+   "signalClose": 464.24,
+   "entryDate": "2026-10-14",
+   "exitDate": "2026-10-16",
+   "entry": 452.61,
+   "exit": 409.08,
+   "shares": 28,
+   "how": "time",
+   "usd": -1218.72,
+   "pct": -9.62
+  },
+  {
+   "ticker": "SNDK",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "green_or_sweep",
+   "pool": "sp500",
+   "signalDate": "2026-10-13",
+   "signalClose": 1482.33,
+   "entryDate": "2026-10-14",
+   "exitDate": "2026-10-16",
+   "entry": 1441.43,
+   "exit": 1300.67,
+   "shares": 8,
+   "how": "time",
+   "usd": -1126.06,
+   "pct": -9.77
+  },
+  {
+   "ticker": "SMCI",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "green_or_sweep",
+   "pool": "sp500",
+   "signalDate": "2026-10-13",
+   "signalClose": 39.07,
+   "entryDate": "2026-10-14",
+   "exitDate": "2026-10-16",
+   "entry": 36.63,
+   "exit": 31.62,
+   "shares": 338,
+   "how": "time",
+   "usd": -1693.38,
+   "pct": -13.68
   }
  ],
  "equity": [
@@ -248,9 +254,9 @@
   },
   {
    "d": "2026-10-16",
-   "value": 95406,
-   "pct": -4.59,
-   "spy": -0.34
+   "value": 94933,
+   "pct": -5.07,
+   "spy": -0.3
   }
  ],
  "lastOrders": {
@@ -300,8 +306,21 @@
   "queued": false
  },
  "lastExits": {
-  "forDate": "2026-10-15",
-  "exits": []
+  "forDate": "2026-10-16",
+  "exits": [
+   {
+    "ticker": "AMAT",
+    "note": "Sold at the market (3rd session)"
+   },
+   {
+    "ticker": "SNDK",
+    "note": "Sold at the market (3rd session)"
+   },
+   {
+    "ticker": "SMCI",
+    "note": "Sold at the market (3rd session)"
+   }
+  ]
  },
  "lastQueueFor": "2026-10-13"
 }
