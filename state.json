@@ -2,7 +2,7 @@
  "version": 1,
  "status": "running",
  "startedAt": "2026-09-26",
- "lastEntryRunDate": "2026-10-15",
+ "lastEntryRunDate": "2026-10-16",
  "lastExitRunDate": "2026-10-15",
  "spyBaseline": 764.95,
  "positions": {
@@ -19,7 +19,7 @@
    "target": 470.71,
    "stop": 396.3,
    "ocoOrderId": "696568f6-ece5-4d65-8973-7b863fb82f64",
-   "now": 431.94
+   "now": 423.29
   },
   "SNDK": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 1499.09,
    "stop": 1192.82,
    "ocoOrderId": "b6a962c8-aa75-460f-9f02-4f5e1f0aa266",
-   "now": 1390
+   "now": 1336.77
   },
   "SMCI": {
    "strategy": "dip",
@@ -49,7 +49,7 @@
    "target": 38.1,
    "stop": 29.79,
    "ocoOrderId": "9f98e831-946c-4cb5-8610-cfe5c3393f56",
-   "now": 35.43
+   "now": 33.52
   },
   "DELL": {
    "strategy": "dip",
@@ -64,7 +64,7 @@
    "target": 482.28,
    "stop": 377.84,
    "ocoOrderId": "dba8c2ac-ac1b-4d84-80c6-4813d32c35c1",
-   "now": 483.2
+   "now": 463.84
   },
   "HPE": {
    "strategy": "dip",
@@ -79,7 +79,7 @@
    "target": 60.45,
    "stop": 46.88,
    "ocoOrderId": "3654e50e-1ac9-46b1-81f0-8ccbcf12f386",
-   "now": 59.37
+   "now": 56.39
   },
   "MRVL": {
    "strategy": "dip",
@@ -94,7 +94,21 @@
    "target": 243,
    "stop": 185.98,
    "ocoOrderId": "b7b2ee9a-78c7-484f-b384-705b2cbcd5ca",
-   "now": 243
+   "now": 234.5
+  },
+  "ANET": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-15",
+   "signalClose": 185.58,
+   "entryDate": "2026-10-16",
+   "entry": 182.84,
+   "shares": 69,
+   "target": 190.15,
+   "stop": 159.41,
+   "ocoOrderId": "60fb6f8f-dd54-4788-9618-24ba26c68139"
   }
  },
  "pendingEntries": {},
@@ -233,65 +247,26 @@
   },
   {
    "d": "2026-10-16",
-   "value": 100288,
-   "pct": 0.29,
-   "spy": null
+   "value": 97380,
+   "pct": -2.62,
+   "spy": 0.79
   }
  ],
  "lastOrders": {
-  "forDate": "2026-10-15",
+  "forDate": "2026-10-16",
   "entries": [
    {
     "rank": 1,
-    "ticker": "DELL",
+    "ticker": "ANET",
     "strategy": "dip",
     "tag": "normal",
     "pool": "sp500",
     "opg": false,
-    "size": 13100.8,
-    "shares": 25,
-    "limit": 518.09,
-    "vs200": 63.51,
-    "chg5d": -12.27
-   },
-   {
-    "rank": 2,
-    "ticker": "HPE",
-    "strategy": "dip",
-    "tag": "normal",
-    "pool": "sp500",
-    "opg": false,
-    "size": 13100.8,
-    "shares": 203,
-    "limit": 64.37,
-    "vs200": 63,
-    "chg5d": -12.46
-   },
-   {
-    "rank": 3,
-    "ticker": "MRVL",
-    "strategy": "dip",
-    "tag": "normal",
-    "pool": "sp500",
-    "opg": false,
-    "size": 13100.8,
-    "shares": 52,
-    "limit": 250.19,
-    "vs200": 40.66,
-    "chg5d": -13.84
-   },
-   {
-    "rank": 4,
-    "ticker": "MU",
-    "strategy": "dip",
-    "tag": "normal",
-    "pool": "sp500",
-    "opg": false,
-    "size": 13100.8,
-    "shares": 14,
-    "limit": 932.41,
-    "vs200": 28.44,
-    "chg5d": -15.98
+    "size": 13146.76,
+    "shares": 69,
+    "limit": 189.29,
+    "vs200": 14.26,
+    "chg5d": -12.03
    }
   ],
   "skipped": [
@@ -316,24 +291,9 @@
     "reason": "The sleeve has no spare cash left today"
    },
    {
-    "ticker": "TER",
+    "ticker": "20 non-S&P",
     "strategy": "dip",
-    "reason": "The sleeve has no spare cash left today"
-   },
-   {
-    "ticker": "LRCX",
-    "strategy": "dip",
-    "reason": "The sleeve has no spare cash left today"
-   },
-   {
-    "ticker": "AMD",
-    "strategy": "dip",
-    "reason": "The sleeve has no spare cash left today"
-   },
-   {
-    "ticker": "51 non-S&P",
-    "strategy": "dip",
-    "reason": "Signals outside the S&P 500 not traded while the S&P 500 is up over 20 sessions (+2.1%); they only tested well after it fell"
+    "reason": "Signals outside the S&P 500 not traded while the S&P 500 is up over 20 sessions (+1.2%); they only tested well after it fell"
    }
   ],
   "queued": false
