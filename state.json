@@ -19,7 +19,7 @@
    "target": 482.28,
    "stop": 377.84,
    "ocoOrderId": "dba8c2ac-ac1b-4d84-80c6-4813d32c35c1",
-   "now": 467.66
+   "now": 465.23
   },
   "HPE": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 60.45,
    "stop": 46.88,
    "ocoOrderId": "3654e50e-1ac9-46b1-81f0-8ccbcf12f386",
-   "now": 57.02
+   "now": 57.07
   },
   "MRVL": {
    "strategy": "dip",
@@ -49,7 +49,7 @@
    "target": 243,
    "stop": 185.98,
    "ocoOrderId": "b7b2ee9a-78c7-484f-b384-705b2cbcd5ca",
-   "now": 238.99
+   "now": 239.84
   },
   "ANET": {
    "strategy": "dip",
@@ -64,43 +64,40 @@
    "target": 190.15,
    "stop": 159.41,
    "ocoOrderId": "60fb6f8f-dd54-4788-9618-24ba26c68139",
-   "now": 182.19
-  }
- },
- "pendingEntries": {
+   "now": 181.14
+  },
   "FTNT": {
-   "orderId": "c51f6782-7ccb-4e0e-847a-aa6627f60f0e",
    "strategy": "dip",
    "side": "long",
    "tag": "bearEngulf",
    "pool": "sp500",
-   "size": 13025.240099999999,
-   "shares": 75,
-   "limit": 172.51,
-   "opg": false,
-   "forDate": "2026-10-19",
    "signalDate": "2026-10-16",
    "signalClose": 169.13,
-   "atr": 6.28,
-   "placedAt": "2026-10-19T13:32:14.656Z"
+   "entryDate": "2026-10-19",
+   "entry": 171.73,
+   "shares": 75,
+   "target": 178.6,
+   "stop": 152.89,
+   "ocoOrderId": "5d07db7f-8e1b-44ea-96c1-8f0312fa0417",
+   "now": 170.5
   },
   "PLTR": {
-   "orderId": "420fea29-8653-41cb-8bab-b905729bf5f1",
    "strategy": "dip",
    "side": "long",
    "tag": "bearEngulf",
    "pool": "sp500",
-   "size": 13025.240099999999,
-   "shares": 68,
-   "limit": 189.75,
-   "opg": false,
-   "forDate": "2026-10-19",
    "signalDate": "2026-10-16",
    "signalClose": 186.03,
-   "atr": 7.48,
-   "placedAt": "2026-10-19T13:32:14.690Z"
+   "entryDate": "2026-10-19",
+   "entry": 189.73,
+   "shares": 68,
+   "target": 197.32,
+   "stop": 167.29,
+   "ocoOrderId": "34645d13-3193-4748-91ce-87f7b4d5388e",
+   "now": 192.83
   }
  },
+ "pendingEntries": {},
  "pendingCloses": {},
  "trades": [
   {
@@ -299,9 +296,9 @@
   },
   {
    "d": "2026-10-19",
-   "value": 96483,
-   "pct": -3.52,
-   "spy": 0.37
+   "value": 96524,
+   "pct": -3.48,
+   "spy": 0.48
   }
  ],
  "lastOrders": {
