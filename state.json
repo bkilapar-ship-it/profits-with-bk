@@ -3,39 +3,9 @@
  "status": "running",
  "startedAt": "2026-09-26",
  "lastEntryRunDate": "2026-10-19",
- "lastExitRunDate": "2026-10-16",
+ "lastExitRunDate": "2026-10-19",
  "spyBaseline": 764.95,
  "positions": {
-  "DELL": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-10-14",
-   "signalClose": 507.93,
-   "entryDate": "2026-10-15",
-   "entry": 463.73,
-   "shares": 25,
-   "target": 482.28,
-   "stop": 377.84,
-   "ocoOrderId": "dba8c2ac-ac1b-4d84-80c6-4813d32c35c1",
-   "now": 453.37
-  },
-  "HPE": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-10-14",
-   "signalClose": 63.11,
-   "entryDate": "2026-10-15",
-   "entry": 58.13,
-   "shares": 203,
-   "target": 60.45,
-   "stop": 46.88,
-   "ocoOrderId": "3654e50e-1ac9-46b1-81f0-8ccbcf12f386",
-   "now": 55.86
-  },
   "ANET": {
    "strategy": "dip",
    "side": "long",
@@ -49,7 +19,7 @@
    "target": 190.15,
    "stop": 159.41,
    "ocoOrderId": "60fb6f8f-dd54-4788-9618-24ba26c68139",
-   "now": 183.72
+   "now": 182.57
   },
   "FTNT": {
    "strategy": "dip",
@@ -64,7 +34,7 @@
    "target": 178.6,
    "stop": 152.89,
    "ocoOrderId": "5d07db7f-8e1b-44ea-96c1-8f0312fa0417",
-   "now": 172.12
+   "now": 171.31
   },
   "PLTR": {
    "strategy": "dip",
@@ -79,7 +49,7 @@
    "target": 197.32,
    "stop": 167.29,
    "ocoOrderId": "34645d13-3193-4748-91ce-87f7b4d5388e",
-   "now": 194.38
+   "now": 194.21
   }
  },
  "pendingEntries": {},
@@ -185,6 +155,40 @@
    "how": "target",
    "usd": 488.8,
    "pct": 4.02
+  },
+  {
+   "ticker": "DELL",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-14",
+   "signalClose": 507.93,
+   "entryDate": "2026-10-15",
+   "exitDate": "2026-10-19",
+   "entry": 463.73,
+   "exit": 452.67,
+   "shares": 25,
+   "how": "time",
+   "usd": -276.5,
+   "pct": -2.39
+  },
+  {
+   "ticker": "HPE",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-14",
+   "signalClose": 63.11,
+   "entryDate": "2026-10-15",
+   "exitDate": "2026-10-19",
+   "entry": 58.13,
+   "exit": 55.66,
+   "shares": 203,
+   "how": "time",
+   "usd": -500.77,
+   "pct": -4.24
   }
  ],
  "equity": [
@@ -298,9 +302,9 @@
   },
   {
    "d": "2026-10-19",
-   "value": 96544,
-   "pct": -3.46,
-   "spy": 0.42
+   "value": 96346,
+   "pct": -3.65,
+   "spy": 0.38
   }
  ],
  "lastOrders": {
@@ -418,18 +422,14 @@
   "queued": false
  },
  "lastExits": {
-  "forDate": "2026-10-16",
+  "forDate": "2026-10-19",
   "exits": [
    {
-    "ticker": "AMAT",
+    "ticker": "DELL",
     "note": "Sold at the market (3rd session)"
    },
    {
-    "ticker": "SNDK",
-    "note": "Sold at the market (3rd session)"
-   },
-   {
-    "ticker": "SMCI",
+    "ticker": "HPE",
     "note": "Sold at the market (3rd session)"
    }
   ]
