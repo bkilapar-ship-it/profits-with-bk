@@ -19,7 +19,7 @@
    "target": 190.15,
    "stop": 159.41,
    "ocoOrderId": "60fb6f8f-dd54-4788-9618-24ba26c68139",
-   "now": 181.01
+   "now": 181.1
   },
   "FTNT": {
    "strategy": "dip",
@@ -49,7 +49,7 @@
    "target": 197.32,
    "stop": 167.29,
    "ocoOrderId": "34645d13-3193-4748-91ce-87f7b4d5388e",
-   "now": 195.84
+   "now": 195.73
   },
   "HPE": {
    "strategy": "dip",
@@ -64,7 +64,7 @@
    "target": 57.03,
    "stop": 42.57,
    "ocoOrderId": "3cbf42af-1a11-4f0b-8391-72b9e3df9c52",
-   "now": 56.49
+   "now": 56.47
   },
   "P": {
    "strategy": "dip",
@@ -79,7 +79,7 @@
    "target": 131.2,
    "stop": 103.2,
    "ocoOrderId": "1554830f-deb3-46d2-a70a-c49086be7143",
-   "now": 126.66
+   "now": 126.75
   }
  },
  "pendingEntries": {},
@@ -355,9 +355,9 @@
   },
   {
    "d": "2026-10-20",
-   "value": 97218,
+   "value": 97224,
    "pct": -2.78,
-   "spy": 0.57
+   "spy": 0.58
   }
  ],
  "lastOrders": {
