@@ -19,7 +19,7 @@
    "target": 190.15,
    "stop": 159.41,
    "ocoOrderId": "60fb6f8f-dd54-4788-9618-24ba26c68139",
-   "now": 182.21
+   "now": 181.37
   },
   "FTNT": {
    "strategy": "dip",
@@ -49,7 +49,7 @@
    "target": 197.32,
    "stop": 167.29,
    "ocoOrderId": "34645d13-3193-4748-91ce-87f7b4d5388e",
-   "now": 194.17
+   "now": 193.9
   }
  },
  "pendingEntries": {},
@@ -305,6 +305,12 @@
    "value": 96360,
    "pct": -3.64,
    "spy": 0.2
+  },
+  {
+   "d": "2026-10-20",
+   "value": 96292,
+   "pct": -3.71,
+   "spy": null
   }
  ],
  "lastOrders": {
