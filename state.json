@@ -19,7 +19,7 @@
    "target": 190.15,
    "stop": 159.41,
    "ocoOrderId": "60fb6f8f-dd54-4788-9618-24ba26c68139",
-   "now": 181.38
+   "now": 181.5
   },
   "FTNT": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 178.6,
    "stop": 152.89,
    "ocoOrderId": "5d07db7f-8e1b-44ea-96c1-8f0312fa0417",
-   "now": 171.73
+   "now": 172.34
   },
   "PLTR": {
    "strategy": "dip",
@@ -49,7 +49,7 @@
    "target": 197.32,
    "stop": 167.29,
    "ocoOrderId": "34645d13-3193-4748-91ce-87f7b4d5388e",
-   "now": 192.79
+   "now": 194.76
   },
   "MRVL": {
    "strategy": "dip",
@@ -63,7 +63,8 @@
    "shares": 53,
    "target": 241.55,
    "stop": 181.35,
-   "ocoOrderId": "ac5ec7d4-3004-4ab6-9139-6f8370c2c01d"
+   "ocoOrderId": "ac5ec7d4-3004-4ab6-9139-6f8370c2c01d",
+   "now": 237.64
   },
   "HPE": {
    "strategy": "dip",
@@ -77,7 +78,8 @@
    "shares": 227,
    "target": 57.03,
    "stop": 42.57,
-   "ocoOrderId": "3cbf42af-1a11-4f0b-8391-72b9e3df9c52"
+   "ocoOrderId": "3cbf42af-1a11-4f0b-8391-72b9e3df9c52",
+   "now": 55.88
   },
   "P": {
    "strategy": "dip",
@@ -91,7 +93,8 @@
    "shares": 100,
    "target": 131.2,
    "stop": 103.2,
-   "ocoOrderId": "1554830f-deb3-46d2-a70a-c49086be7143"
+   "ocoOrderId": "1554830f-deb3-46d2-a70a-c49086be7143",
+   "now": 125.98
   }
  },
  "pendingEntries": {},
@@ -350,9 +353,9 @@
   },
   {
    "d": "2026-10-20",
-   "value": 96159,
-   "pct": -3.84,
-   "spy": 0.05
+   "value": 96883,
+   "pct": -3.12,
+   "spy": 0.63
   }
  ],
  "lastOrders": {
