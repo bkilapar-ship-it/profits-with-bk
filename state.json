@@ -2,7 +2,7 @@
  "version": 1,
  "status": "running",
  "startedAt": "2026-09-26",
- "lastEntryRunDate": "2026-10-19",
+ "lastEntryRunDate": "2026-10-20",
  "lastExitRunDate": "2026-10-19",
  "spyBaseline": 764.95,
  "positions": {
@@ -19,7 +19,7 @@
    "target": 190.15,
    "stop": 159.41,
    "ocoOrderId": "60fb6f8f-dd54-4788-9618-24ba26c68139",
-   "now": 181.37
+   "now": 181.38
   },
   "FTNT": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 178.6,
    "stop": 152.89,
    "ocoOrderId": "5d07db7f-8e1b-44ea-96c1-8f0312fa0417",
-   "now": 172.3
+   "now": 171.73
   },
   "PLTR": {
    "strategy": "dip",
@@ -49,7 +49,49 @@
    "target": 197.32,
    "stop": 167.29,
    "ocoOrderId": "34645d13-3193-4748-91ce-87f7b4d5388e",
-   "now": 193.9
+   "now": 192.79
+  },
+  "MRVL": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-19",
+   "signalClose": 237.09,
+   "entryDate": "2026-10-20",
+   "entry": 232.26,
+   "shares": 53,
+   "target": 241.55,
+   "stop": 181.35,
+   "ocoOrderId": "ac5ec7d4-3004-4ab6-9139-6f8370c2c01d"
+  },
+  "HPE": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-19",
+   "signalClose": 55.87,
+   "entryDate": "2026-10-20",
+   "entry": 54.84,
+   "shares": 227,
+   "target": 57.03,
+   "stop": 42.57,
+   "ocoOrderId": "3cbf42af-1a11-4f0b-8391-72b9e3df9c52"
+  },
+  "P": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-19",
+   "signalClose": 127.09,
+   "entryDate": "2026-10-20",
+   "entry": 126.15,
+   "shares": 100,
+   "target": 131.2,
+   "stop": 103.2,
+   "ocoOrderId": "1554830f-deb3-46d2-a70a-c49086be7143"
   }
  },
  "pendingEntries": {},
@@ -308,84 +350,57 @@
   },
   {
    "d": "2026-10-20",
-   "value": 96292,
-   "pct": -3.71,
-   "spy": null
+   "value": 96159,
+   "pct": -3.84,
+   "spy": 0.05
   }
  ],
  "lastOrders": {
-  "forDate": "2026-10-19",
+  "forDate": "2026-10-20",
   "entries": [
    {
-    "rank": 2,
-    "ticker": "FTNT",
+    "rank": 1,
+    "ticker": "P",
     "strategy": "dip",
-    "tag": "bearEngulf",
+    "tag": "normal",
     "pool": "sp500",
     "opg": false,
-    "size": 13025.24,
-    "shares": 75,
-    "limit": 172.51,
-    "vs200": 36.54,
-    "chg5d": -13.16
+    "size": 12981.45,
+    "shares": 100,
+    "limit": 129.63,
+    "vs200": 53.46,
+    "chg5d": -18.17
    },
    {
-    "rank": 5,
-    "ticker": "PLTR",
+    "rank": 2,
+    "ticker": "HPE",
     "strategy": "dip",
-    "tag": "bearEngulf",
+    "tag": "normal",
     "pool": "sp500",
     "opg": false,
-    "size": 13025.24,
-    "shares": 68,
-    "limit": 189.75,
-    "vs200": 21.87,
-    "chg5d": -11.01
+    "size": 12981.45,
+    "shares": 227,
+    "limit": 56.99,
+    "vs200": 42.52,
+    "chg5d": -20.56
+   },
+   {
+    "rank": 3,
+    "ticker": "MRVL",
+    "strategy": "dip",
+    "tag": "normal",
+    "pool": "sp500",
+    "opg": false,
+    "size": 12981.45,
+    "shares": 53,
+    "limit": 241.83,
+    "vs200": 34.24,
+    "chg5d": -10.82
    }
   ],
   "skipped": [
    {
-    "ticker": "CRWD",
-    "strategy": "dip",
-    "reason": "Opened at 233.13, past the 2% cap (231.94)"
-   },
-   {
-    "ticker": "TWLO",
-    "strategy": "dip",
-    "reason": "Opened at 250.26, past the 2% cap (249.26)"
-   },
-   {
     "ticker": "PANW",
-    "strategy": "dip",
-    "reason": "Opened at 353.17, past the 2% cap (348.84)"
-   },
-   {
-    "ticker": "P",
-    "strategy": "dip",
-    "reason": "The sleeve has no spare cash left today"
-   },
-   {
-    "ticker": "NTAP",
-    "strategy": "dip",
-    "reason": "The sleeve has no spare cash left today"
-   },
-   {
-    "ticker": "AMD",
-    "strategy": "dip",
-    "reason": "The sleeve has no spare cash left today"
-   },
-   {
-    "ticker": "DDOG",
-    "strategy": "dip",
-    "reason": "The sleeve has no spare cash left today"
-   },
-   {
-    "ticker": "MU",
-    "strategy": "dip",
-    "reason": "The sleeve has no spare cash left today"
-   },
-   {
-    "ticker": "SNDK",
     "strategy": "dip",
     "reason": "The sleeve has no spare cash left today"
    },
@@ -395,34 +410,24 @@
     "reason": "The sleeve has no spare cash left today"
    },
    {
-    "ticker": "INTC",
-    "strategy": "dip",
-    "reason": "The sleeve has no spare cash left today"
-   },
-   {
     "ticker": "LITE",
     "strategy": "dip",
     "reason": "The sleeve has no spare cash left today"
    },
    {
-    "ticker": "BE",
+    "ticker": "HOOD",
     "strategy": "dip",
     "reason": "The sleeve has no spare cash left today"
    },
    {
-    "ticker": "PWR",
+    "ticker": "15 non-S&P",
     "strategy": "dip",
-    "reason": "The sleeve has no spare cash left today"
+    "reason": "Signals outside the S&P 500 no spare cash left after the S&P signals"
    },
    {
-    "ticker": "SNPS",
+    "ticker": "18 non-S&P",
     "strategy": "dip",
-    "reason": "The sleeve has no spare cash left today"
-   },
-   {
-    "ticker": "86 non-S&P",
-    "strategy": "dip",
-    "reason": "Signals outside the S&P 500 not traded while the S&P 500 is up over 20 sessions (+0.2%); they only tested well after it fell"
+    "reason": "Signals outside the S&P 500 below the $100M/day floor for stocks outside the S&P 500"
    }
   ],
   "queued": false
