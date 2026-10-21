@@ -19,7 +19,7 @@
    "target": 178.6,
    "stop": 152.89,
    "ocoOrderId": "5d07db7f-8e1b-44ea-96c1-8f0312fa0417",
-   "now": 174.72
+   "now": 174.75
   },
   "PANW": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 355.18,
    "stop": 288.09,
    "ocoOrderId": "921fb54c-bd47-4413-a008-487f62ce3c21",
-   "now": 351.18
+   "now": 351.52
   }
  },
  "pendingEntries": {},
@@ -401,9 +401,9 @@
   },
   {
    "d": "2026-10-21",
-   "value": 99589,
-   "pct": -0.41,
-   "spy": 1.18
+   "value": 99605,
+   "pct": -0.4,
+   "spy": 1.19
   }
  ],
  "lastOrders": {
