@@ -19,22 +19,7 @@
    "target": 178.6,
    "stop": 152.89,
    "ocoOrderId": "5d07db7f-8e1b-44ea-96c1-8f0312fa0417",
-   "now": 173.62
-  },
-  "CRWD": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "green_or_sweep",
-   "pool": "sp500",
-   "signalDate": "2026-10-20",
-   "signalClose": 227.37,
-   "entryDate": "2026-10-21",
-   "entry": 231.08,
-   "shares": 57,
-   "target": 240.33,
-   "stop": 195.98,
-   "ocoOrderId": "5e97e429-173c-40a3-8ff6-b7e2b3d74998",
-   "now": 237.48
+   "now": 175.15
   },
   "PANW": {
    "strategy": "dip",
@@ -49,7 +34,7 @@
    "target": 355.18,
    "stop": 288.09,
    "ocoOrderId": "921fb54c-bd47-4413-a008-487f62ce3c21",
-   "now": 351.21
+   "now": 353.57
   }
  },
  "pendingEntries": {},
@@ -274,6 +259,23 @@
    "how": "target",
    "usd": 519.82,
    "pct": 4.12
+  },
+  {
+   "ticker": "CRWD",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "green_or_sweep",
+   "pool": "sp500",
+   "signalDate": "2026-10-20",
+   "signalClose": 227.37,
+   "entryDate": "2026-10-21",
+   "exitDate": "2026-10-21",
+   "entry": 231.08,
+   "exit": 240.33,
+   "shares": 57,
+   "how": "target",
+   "usd": 527.25,
+   "pct": 4
   }
  ],
  "equity": [
@@ -399,9 +401,9 @@
   },
   {
    "d": "2026-10-21",
-   "value": 99348,
-   "pct": -0.65,
-   "spy": 1
+   "value": 99720,
+   "pct": -0.28,
+   "spy": 1.2
   }
  ],
  "lastOrders": {
