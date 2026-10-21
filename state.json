@@ -19,52 +19,7 @@
    "target": 178.6,
    "stop": 152.89,
    "ocoOrderId": "5d07db7f-8e1b-44ea-96c1-8f0312fa0417",
-   "now": 169.96
-  },
-  "PLTR": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "bearEngulf",
-   "pool": "sp500",
-   "signalDate": "2026-10-16",
-   "signalClose": 186.03,
-   "entryDate": "2026-10-19",
-   "entry": 189.73,
-   "shares": 68,
-   "target": 197.32,
-   "stop": 167.29,
-   "ocoOrderId": "34645d13-3193-4748-91ce-87f7b4d5388e",
-   "now": 192.24
-  },
-  "HPE": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-10-19",
-   "signalClose": 55.87,
-   "entryDate": "2026-10-20",
-   "entry": 54.84,
-   "shares": 227,
-   "target": 57.03,
-   "stop": 42.57,
-   "ocoOrderId": "3cbf42af-1a11-4f0b-8391-72b9e3df9c52",
-   "now": 58.89
-  },
-  "P": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-10-19",
-   "signalClose": 127.09,
-   "entryDate": "2026-10-20",
-   "entry": 126.15,
-   "shares": 100,
-   "target": 131.2,
-   "stop": 103.2,
-   "ocoOrderId": "1554830f-deb3-46d2-a70a-c49086be7143",
-   "now": 131.48
+   "now": 172.74
   },
   "CRWD": {
    "strategy": "dip",
@@ -78,7 +33,8 @@
    "shares": 57,
    "target": 240.33,
    "stop": 195.98,
-   "ocoOrderId": "5e97e429-173c-40a3-8ff6-b7e2b3d74998"
+   "ocoOrderId": "5e97e429-173c-40a3-8ff6-b7e2b3d74998",
+   "now": 236.43
   },
   "PANW": {
    "strategy": "dip",
@@ -92,7 +48,8 @@
    "shares": 38,
    "target": 355.18,
    "stop": 288.09,
-   "ocoOrderId": "921fb54c-bd47-4413-a008-487f62ce3c21"
+   "ocoOrderId": "921fb54c-bd47-4413-a008-487f62ce3c21",
+   "now": 351.32
   }
  },
  "pendingEntries": {},
@@ -266,6 +223,57 @@
    "how": "time",
    "usd": -56.19,
    "pct": -0.45
+  },
+  {
+   "ticker": "PLTR",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "bearEngulf",
+   "pool": "sp500",
+   "signalDate": "2026-10-16",
+   "signalClose": 186.03,
+   "entryDate": "2026-10-19",
+   "exitDate": "2026-10-21",
+   "entry": 189.73,
+   "exit": 197.5,
+   "shares": 68,
+   "how": "target",
+   "usd": 528.36,
+   "pct": 4.1
+  },
+  {
+   "ticker": "HPE",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-19",
+   "signalClose": 55.87,
+   "entryDate": "2026-10-20",
+   "exitDate": "2026-10-21",
+   "entry": 54.84,
+   "exit": 58.65,
+   "shares": 227,
+   "how": "target",
+   "usd": 864.46,
+   "pct": 6.94
+  },
+  {
+   "ticker": "P",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-19",
+   "signalClose": 127.09,
+   "entryDate": "2026-10-20",
+   "exitDate": "2026-10-21",
+   "entry": 126.15,
+   "exit": 131.35,
+   "shares": 100,
+   "how": "target",
+   "usd": 519.82,
+   "pct": 4.12
   }
  ],
  "equity": [
@@ -391,9 +399,9 @@
   },
   {
    "d": "2026-10-21",
-   "value": 98071,
-   "pct": -1.93,
-   "spy": 0.66
+   "value": 99209,
+   "pct": -0.79,
+   "spy": 0.51
   }
  ],
  "lastOrders": {
