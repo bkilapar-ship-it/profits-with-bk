@@ -3,24 +3,9 @@
  "status": "running",
  "startedAt": "2026-09-26",
  "lastEntryRunDate": "2026-10-21",
- "lastExitRunDate": "2026-10-20",
+ "lastExitRunDate": "2026-10-21",
  "spyBaseline": 764.95,
  "positions": {
-  "FTNT": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "bearEngulf",
-   "pool": "sp500",
-   "signalDate": "2026-10-16",
-   "signalClose": 169.13,
-   "entryDate": "2026-10-19",
-   "entry": 171.73,
-   "shares": 75,
-   "target": 178.6,
-   "stop": 152.89,
-   "ocoOrderId": "5d07db7f-8e1b-44ea-96c1-8f0312fa0417",
-   "now": 173.96
-  },
   "PANW": {
    "strategy": "dip",
    "side": "long",
@@ -34,7 +19,7 @@
    "target": 355.18,
    "stop": 288.09,
    "ocoOrderId": "921fb54c-bd47-4413-a008-487f62ce3c21",
-   "now": 348.01
+   "now": 347.83
   }
  },
  "pendingEntries": {},
@@ -276,6 +261,23 @@
    "how": "target",
    "usd": 527.25,
    "pct": 4
+  },
+  {
+   "ticker": "FTNT",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "bearEngulf",
+   "pool": "sp500",
+   "signalDate": "2026-10-16",
+   "signalClose": 169.13,
+   "entryDate": "2026-10-19",
+   "exitDate": "2026-10-21",
+   "entry": 171.73,
+   "exit": 174.09,
+   "shares": 75,
+   "how": "time",
+   "usd": 177,
+   "pct": 1.37
   }
  ],
  "equity": [
@@ -401,9 +403,9 @@
   },
   {
    "d": "2026-10-21",
-   "value": 99413,
-   "pct": -0.59,
-   "spy": 0.95
+   "value": 99422,
+   "pct": -0.58,
+   "spy": 1.13
   }
  ],
  "lastOrders": {
@@ -461,10 +463,10 @@
   "queued": false
  },
  "lastExits": {
-  "forDate": "2026-10-20",
+  "forDate": "2026-10-21",
   "exits": [
    {
-    "ticker": "ANET",
+    "ticker": "FTNT",
     "note": "Sold at the market (3rd session)"
    }
   ]
