@@ -3,7 +3,7 @@
  "status": "running",
  "startedAt": "2026-09-26",
  "lastEntryRunDate": "2026-10-22",
- "lastExitRunDate": "2026-10-21",
+ "lastExitRunDate": "2026-10-22",
  "spyBaseline": 764.95,
  "positions": {},
  "pendingEntries": {},
@@ -410,9 +410,9 @@
   },
   {
    "d": "2026-10-22",
-   "value": 99693,
+   "value": 99687,
    "pct": -0.31,
-   "spy": -0.32
+   "spy": -0.36
   }
  ],
  "lastOrders": {
@@ -428,13 +428,8 @@
   "queued": false
  },
  "lastExits": {
-  "forDate": "2026-10-21",
-  "exits": [
-   {
-    "ticker": "FTNT",
-    "note": "Sold at the market (3rd session)"
-   }
-  ]
+  "forDate": "2026-10-22",
+  "exits": []
  },
  "lastQueueFor": "2026-10-13"
 }
