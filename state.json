@@ -2,26 +2,10 @@
  "version": 1,
  "status": "running",
  "startedAt": "2026-09-26",
- "lastEntryRunDate": "2026-10-21",
+ "lastEntryRunDate": "2026-10-22",
  "lastExitRunDate": "2026-10-21",
  "spyBaseline": 764.95,
- "positions": {
-  "PANW": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "green_or_sweep",
-   "pool": "sp500",
-   "signalDate": "2026-10-20",
-   "signalClose": 340.28,
-   "entryDate": "2026-10-21",
-   "entry": 341.52,
-   "shares": 38,
-   "target": 355.18,
-   "stop": 288.09,
-   "ocoOrderId": "921fb54c-bd47-4413-a008-487f62ce3c21",
-   "now": 345.2
-  }
- },
+ "positions": {},
  "pendingEntries": {},
  "pendingCloses": {},
  "trades": [
@@ -278,6 +262,23 @@
    "how": "time",
    "usd": 177,
    "pct": 1.37
+  },
+  {
+   "ticker": "PANW",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "green_or_sweep",
+   "pool": "sp500",
+   "signalDate": "2026-10-20",
+   "signalClose": 340.28,
+   "entryDate": "2026-10-21",
+   "exitDate": "2026-10-22",
+   "entry": 341.52,
+   "exit": 357.61,
+   "shares": 38,
+   "how": "target",
+   "usd": 611.42,
+   "pct": 4.71
   }
  ],
  "equity": [
@@ -409,61 +410,19 @@
   },
   {
    "d": "2026-10-22",
-   "value": 99277,
-   "pct": -0.72,
-   "spy": null
+   "value": 99728,
+   "pct": -0.27,
+   "spy": 0.24
   }
  ],
  "lastOrders": {
-  "forDate": "2026-10-21",
-  "entries": [
-   {
-    "rank": 1,
-    "ticker": "CRWD",
-    "strategy": "dip",
-    "tag": "green_or_sweep",
-    "pool": "sp500",
-    "opg": false,
-    "size": 13239.01,
-    "shares": 57,
-    "limit": 231.92,
-    "vs200": 40.63,
-    "chg5d": -12.96
-   },
-   {
-    "rank": 2,
-    "ticker": "PANW",
-    "strategy": "dip",
-    "tag": "green_or_sweep",
-    "pool": "sp500",
-    "opg": false,
-    "size": 13239.01,
-    "shares": 38,
-    "limit": 347.09,
-    "vs200": 29.73,
-    "chg5d": -14.29
-   }
-  ],
+  "forDate": "2026-10-22",
+  "entries": [],
   "skipped": [
-   {
-    "ticker": "LITE",
-    "strategy": "dip",
-    "reason": "The sleeve has no spare cash left today"
-   },
-   {
-    "ticker": "EFX",
-    "strategy": "rip",
-    "reason": "The sleeve has no spare cash left today"
-   },
    {
     "ticker": "7 non-S&P",
     "strategy": "dip",
-    "reason": "Signals outside the S&P 500 below the $100M/day floor for stocks outside the S&P 500"
-   },
-   {
-    "ticker": "8 non-S&P",
-    "strategy": "dip",
-    "reason": "Signals outside the S&P 500 no spare cash left after the S&P signals"
+    "reason": "Signals outside the S&P 500 not traded while the S&P 500 is up over 20 sessions (+0.7%); they only tested well after it fell"
    }
   ],
   "queued": false
