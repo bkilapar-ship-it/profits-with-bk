@@ -2,10 +2,81 @@
  "version": 1,
  "status": "running",
  "startedAt": "2026-09-26",
- "lastEntryRunDate": "2026-10-22",
+ "lastEntryRunDate": "2026-10-23",
  "lastExitRunDate": "2026-10-22",
  "spyBaseline": 764.95,
- "positions": {},
+ "positions": {
+  "PENG": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "nonsp",
+   "signalDate": "2026-10-22",
+   "signalClose": 51.91,
+   "entryDate": "2026-10-23",
+   "entry": 50.92,
+   "shares": 254,
+   "target": 52.96,
+   "stop": 30.67,
+   "ocoOrderId": "a77166b9-dd12-41c9-9639-7e89f95091d4"
+  },
+  "DXCM": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-22",
+   "signalClose": 78.32,
+   "entryDate": "2026-10-23",
+   "entry": 78.78,
+   "shares": 168,
+   "target": 81.93,
+   "stop": 70.23,
+   "ocoOrderId": "fb38c2c5-21ba-47b0-9509-e6e30d307a5b"
+  },
+  "META": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-22",
+   "signalClose": 648.85,
+   "entryDate": "2026-10-23",
+   "entry": 636.84,
+   "shares": 20,
+   "target": 662.31,
+   "stop": 560.13,
+   "ocoOrderId": "6686cba4-d608-4bbd-a831-176a6e860782"
+  },
+  "AMDL": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "nonsp",
+   "signalDate": "2026-10-22",
+   "signalClose": 52.89,
+   "entryDate": "2026-10-23",
+   "entry": 53.67,
+   "shares": 249,
+   "target": 55.82,
+   "stop": 32.28,
+   "ocoOrderId": "a050febf-5b68-4424-ac38-9f77e1c20b57"
+  },
+  "CSGP": {
+   "strategy": "rip",
+   "side": "short",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-22",
+   "signalClose": 35.45,
+   "entryDate": "2026-10-23",
+   "entry": 35.27,
+   "shares": 387,
+   "target": 33.86,
+   "stop": 38.84,
+   "ocoOrderId": "d26d8ed9-1c5d-4d3b-90dd-c255352eff5b"
+  }
+ },
  "pendingEntries": {},
  "pendingCloses": {},
  "trades": [
@@ -416,19 +487,90 @@
   },
   {
    "d": "2026-10-23",
-   "value": 99689,
-   "pct": -0.31,
-   "spy": null
+   "value": 99680,
+   "pct": -0.32,
+   "spy": -0.6
   }
  ],
  "lastOrders": {
-  "forDate": "2026-10-22",
-  "entries": [],
+  "forDate": "2026-10-23",
+  "entries": [
+   {
+    "rank": 1,
+    "ticker": "DXCM",
+    "strategy": "dip",
+    "tag": "normal",
+    "pool": "sp500",
+    "opg": false,
+    "size": 13456.79,
+    "shares": 168,
+    "limit": 79.89,
+    "vs200": 5.46,
+    "chg5d": -10.71
+   },
+   {
+    "rank": 2,
+    "ticker": "META",
+    "strategy": "dip",
+    "tag": "normal",
+    "pool": "sp500",
+    "opg": false,
+    "size": 13456.79,
+    "shares": 20,
+    "limit": 661.83,
+    "vs200": 2.58,
+    "chg5d": -11.93
+   },
+   {
+    "rank": 3,
+    "ticker": "CSGP",
+    "strategy": "rip",
+    "tag": "normal",
+    "pool": "sp500",
+    "opg": false,
+    "size": 13456.79,
+    "shares": 387,
+    "limit": 34.74,
+    "vs200": -5.66,
+    "chg5d": 10.78
+   },
+   {
+    "rank": 7,
+    "ticker": "PENG",
+    "strategy": "dip",
+    "tag": "normal",
+    "pool": "nonsp",
+    "opg": false,
+    "size": 13456.79,
+    "shares": 254,
+    "limit": 52.95,
+    "vs200": 21.05,
+    "chg5d": -16.08
+   },
+   {
+    "rank": 8,
+    "ticker": "AMDL",
+    "strategy": "dip",
+    "tag": "normal",
+    "pool": "nonsp",
+    "opg": false,
+    "size": 13456.79,
+    "shares": 249,
+    "limit": 53.95,
+    "vs200": 20.53,
+    "chg5d": -19.75
+   }
+  ],
   "skipped": [
    {
-    "ticker": "7 non-S&P",
+    "ticker": "13 non-S&P",
     "strategy": "dip",
-    "reason": "Signals outside the S&P 500 not traded while the S&P 500 is up over 20 sessions (+0.7%); they only tested well after it fell"
+    "reason": "Signals outside the S&P 500 below the $100M/day floor for stocks outside the S&P 500"
+   },
+   {
+    "ticker": "10 non-S&P",
+    "strategy": "dip",
+    "reason": "Signals outside the S&P 500 limit of 2 open positions outside the S&P 500 reached (keeping room for S&P signals)"
    }
   ],
   "queued": false
