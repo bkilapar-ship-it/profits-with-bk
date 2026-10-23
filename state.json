@@ -19,7 +19,7 @@
    "target": 81.93,
    "stop": 70.23,
    "ocoOrderId": "fb38c2c5-21ba-47b0-9509-e6e30d307a5b",
-   "now": 78.33
+   "now": 78.43
   },
   "META": {
    "strategy": "dip",
@@ -34,22 +34,7 @@
    "target": 662.31,
    "stop": 560.13,
    "ocoOrderId": "6686cba4-d608-4bbd-a831-176a6e860782",
-   "now": 641.66
-  },
-  "CSGP": {
-   "strategy": "rip",
-   "side": "short",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-10-22",
-   "signalClose": 35.45,
-   "entryDate": "2026-10-23",
-   "entry": 35.27,
-   "shares": 387,
-   "target": 33.86,
-   "stop": 38.84,
-   "ocoOrderId": "d26d8ed9-1c5d-4d3b-90dd-c255352eff5b",
-   "now": 34.04
+   "now": 641.96
   }
  },
  "pendingEntries": {},
@@ -359,6 +344,23 @@
    "how": "target",
    "usd": 537.01,
    "pct": 4.02
+  },
+  {
+   "ticker": "CSGP",
+   "strategy": "rip",
+   "side": "short",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-22",
+   "signalClose": 35.45,
+   "entryDate": "2026-10-23",
+   "exitDate": "2026-10-23",
+   "entry": 35.27,
+   "exit": 33.86,
+   "shares": 387,
+   "how": "target",
+   "usd": 545.67,
+   "pct": 4
   }
  ],
  "equity": [
@@ -496,9 +498,9 @@
   },
   {
    "d": "2026-10-23",
-   "value": 101257,
-   "pct": 1.26,
-   "spy": -0.61
+   "value": 101346,
+   "pct": 1.35,
+   "spy": -0.65
   }
  ],
  "lastOrders": {
