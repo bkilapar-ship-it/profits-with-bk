@@ -6,21 +6,6 @@
  "lastExitRunDate": "2026-10-22",
  "spyBaseline": 764.95,
  "positions": {
-  "PENG": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "nonsp",
-   "signalDate": "2026-10-22",
-   "signalClose": 51.91,
-   "entryDate": "2026-10-23",
-   "entry": 50.92,
-   "shares": 254,
-   "target": 52.96,
-   "stop": 30.67,
-   "ocoOrderId": "a77166b9-dd12-41c9-9639-7e89f95091d4",
-   "now": 52.22
-  },
   "DXCM": {
    "strategy": "dip",
    "side": "long",
@@ -34,7 +19,7 @@
    "target": 81.93,
    "stop": 70.23,
    "ocoOrderId": "fb38c2c5-21ba-47b0-9509-e6e30d307a5b",
-   "now": 79.03
+   "now": 78.91
   },
   "META": {
    "strategy": "dip",
@@ -49,22 +34,7 @@
    "target": 662.31,
    "stop": 560.13,
    "ocoOrderId": "6686cba4-d608-4bbd-a831-176a6e860782",
-   "now": 644.38
-  },
-  "AMDL": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "nonsp",
-   "signalDate": "2026-10-22",
-   "signalClose": 52.89,
-   "entryDate": "2026-10-23",
-   "entry": 53.67,
-   "shares": 249,
-   "target": 55.82,
-   "stop": 32.28,
-   "ocoOrderId": "a050febf-5b68-4424-ac38-9f77e1c20b57",
-   "now": 54.36
+   "now": 646.54
   },
   "CSGP": {
    "strategy": "rip",
@@ -79,7 +49,7 @@
    "target": 33.86,
    "stop": 38.84,
    "ocoOrderId": "d26d8ed9-1c5d-4d3b-90dd-c255352eff5b",
-   "now": 34.72
+   "now": 34.69
   }
  },
  "pendingEntries": {},
@@ -355,6 +325,40 @@
    "how": "target",
    "usd": 611.42,
    "pct": 4.71
+  },
+  {
+   "ticker": "PENG",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "nonsp",
+   "signalDate": "2026-10-22",
+   "signalClose": 51.91,
+   "entryDate": "2026-10-23",
+   "exitDate": "2026-10-23",
+   "entry": 50.92,
+   "exit": 53.01,
+   "shares": 254,
+   "how": "target",
+   "usd": 530.86,
+   "pct": 4.1
+  },
+  {
+   "ticker": "AMDL",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "nonsp",
+   "signalDate": "2026-10-22",
+   "signalClose": 52.89,
+   "entryDate": "2026-10-23",
+   "exitDate": "2026-10-23",
+   "entry": 53.67,
+   "exit": 55.83,
+   "shares": 249,
+   "how": "target",
+   "usd": 537.01,
+   "pct": 4.02
   }
  ],
  "equity": [
@@ -492,9 +496,9 @@
   },
   {
    "d": "2026-10-23",
-   "value": 100601,
-   "pct": 0.6,
-   "spy": -0.75
+   "value": 101216,
+   "pct": 1.22,
+   "spy": -0.29
   }
  ],
  "lastOrders": {
