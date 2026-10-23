@@ -19,7 +19,7 @@
    "target": 81.93,
    "stop": 70.23,
    "ocoOrderId": "fb38c2c5-21ba-47b0-9509-e6e30d307a5b",
-   "now": 78.46
+   "now": 78.63
   },
   "META": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 662.31,
    "stop": 560.13,
    "ocoOrderId": "6686cba4-d608-4bbd-a831-176a6e860782",
-   "now": 646.51
+   "now": 644.04
   },
   "CSGP": {
    "strategy": "rip",
@@ -49,7 +49,7 @@
    "target": 33.86,
    "stop": 38.84,
    "ocoOrderId": "d26d8ed9-1c5d-4d3b-90dd-c255352eff5b",
-   "now": 34.66
+   "now": 34.49
   }
  },
  "pendingEntries": {},
@@ -496,9 +496,9 @@
   },
   {
    "d": "2026-10-23",
-   "value": 101145,
-   "pct": 1.14,
-   "spy": -0.55
+   "value": 101186,
+   "pct": 1.19,
+   "spy": -0.52
   }
  ],
  "lastOrders": {
