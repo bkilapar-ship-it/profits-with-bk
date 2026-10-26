@@ -19,7 +19,7 @@
    "target": 81.93,
    "stop": 70.23,
    "ocoOrderId": "fb38c2c5-21ba-47b0-9509-e6e30d307a5b",
-   "now": 78.23
+   "now": 78.57
   },
   "META": {
    "strategy": "dip",
@@ -34,27 +34,10 @@
    "target": 662.31,
    "stop": 560.13,
    "ocoOrderId": "6686cba4-d608-4bbd-a831-176a6e860782",
-   "now": 631.88
+   "now": 630.45
   }
  },
- "pendingEntries": {
-  "EAT": {
-   "orderId": "749e561b-44c9-4dc3-9bfa-c2ee59a0998d",
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "nonsp",
-   "size": 13626.85545,
-   "shares": 73,
-   "limit": 186.35,
-   "opg": false,
-   "forDate": "2026-10-26",
-   "signalDate": "2026-10-23",
-   "signalClose": 182.7,
-   "atr": 8.22,
-   "placedAt": "2026-10-26T13:32:13.697Z"
-  }
- },
+ "pendingEntries": {},
  "pendingCloses": {},
  "trades": [
   {
@@ -544,9 +527,9 @@
   },
   {
    "d": "2026-10-26",
-   "value": 101678,
-   "pct": 1.68,
-   "spy": 0.06
+   "value": 101701,
+   "pct": 1.7,
+   "spy": 0.05
   }
  ],
  "lastOrders": {
