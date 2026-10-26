@@ -3,7 +3,7 @@
  "status": "running",
  "startedAt": "2026-09-26",
  "lastEntryRunDate": "2026-10-26",
- "lastExitRunDate": "2026-10-23",
+ "lastExitRunDate": "2026-10-26",
  "spyBaseline": 764.95,
  "positions": {
   "DXCM": {
@@ -19,7 +19,7 @@
    "target": 81.93,
    "stop": 70.23,
    "ocoOrderId": "fb38c2c5-21ba-47b0-9509-e6e30d307a5b",
-   "now": 78.04
+   "now": 78.23
   },
   "META": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 662.31,
    "stop": 560.13,
    "ocoOrderId": "6686cba4-d608-4bbd-a831-176a6e860782",
-   "now": 632.06
+   "now": 631.88
   }
  },
  "pendingEntries": {
@@ -544,9 +544,9 @@
   },
   {
    "d": "2026-10-26",
-   "value": 101659,
-   "pct": 1.66,
-   "spy": 0.09
+   "value": 101678,
+   "pct": 1.68,
+   "spy": 0.06
   }
  ],
  "lastOrders": {
@@ -594,7 +594,7 @@
   "queued": false
  },
  "lastExits": {
-  "forDate": "2026-10-23",
+  "forDate": "2026-10-26",
   "exits": []
  },
  "lastQueueFor": "2026-10-13"
