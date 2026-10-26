@@ -19,7 +19,7 @@
    "target": 81.93,
    "stop": 70.23,
    "ocoOrderId": "fb38c2c5-21ba-47b0-9509-e6e30d307a5b",
-   "now": 77.72
+   "now": 78.1
   },
   "META": {
    "strategy": "dip",
@@ -34,22 +34,7 @@
    "target": 662.31,
    "stop": 560.13,
    "ocoOrderId": "6686cba4-d608-4bbd-a831-176a6e860782",
-   "now": 637.41
-  },
-  "MXL": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "nonsp",
-   "signalDate": "2026-10-23",
-   "signalClose": 63.46,
-   "entryDate": "2026-10-26",
-   "entry": 63.31,
-   "shares": 210,
-   "target": 65.84,
-   "stop": 37.69,
-   "ocoOrderId": "c617b90e-2aa0-417a-a6f4-c7d59abf7d11",
-   "now": 63.14
+   "now": 642.5
   }
  },
  "pendingEntries": {
@@ -393,6 +378,23 @@
    "how": "target",
    "usd": 545.67,
    "pct": 4
+  },
+  {
+   "ticker": "MXL",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "nonsp",
+   "signalDate": "2026-10-23",
+   "signalClose": 63.46,
+   "entryDate": "2026-10-26",
+   "exitDate": "2026-10-26",
+   "entry": 63.31,
+   "exit": 65.84,
+   "shares": 210,
+   "how": "target",
+   "usd": 531.3,
+   "pct": 4
   }
  ],
  "equity": [
@@ -542,9 +544,9 @@
   },
   {
    "d": "2026-10-26",
-   "value": 101098,
-   "pct": 1.1,
-   "spy": 0.09
+   "value": 101868,
+   "pct": 1.87,
+   "spy": 0.29
   }
  ],
  "lastOrders": {
