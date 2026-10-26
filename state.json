@@ -19,7 +19,7 @@
    "target": 81.93,
    "stop": 70.23,
    "ocoOrderId": "fb38c2c5-21ba-47b0-9509-e6e30d307a5b",
-   "now": 78.1
+   "now": 78.03
   },
   "META": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 662.31,
    "stop": 560.13,
    "ocoOrderId": "6686cba4-d608-4bbd-a831-176a6e860782",
-   "now": 642.5
+   "now": 642.36
   }
  },
  "pendingEntries": {
@@ -544,9 +544,9 @@
   },
   {
    "d": "2026-10-26",
-   "value": 101868,
-   "pct": 1.87,
-   "spy": 0.29
+   "value": 101860,
+   "pct": 1.86,
+   "spy": 0.08
   }
  ],
  "lastOrders": {
