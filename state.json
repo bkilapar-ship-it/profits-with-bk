@@ -19,7 +19,7 @@
    "target": 539.23,
    "stop": 605.89,
    "ocoOrderId": "2c6302c7-74ef-4788-a4aa-9665ba7dd4f9",
-   "now": 552.16
+   "now": 551.23
   },
   "LDOS": {
    "strategy": "rip",
@@ -34,7 +34,7 @@
    "target": 131.88,
    "stop": 148.89,
    "ocoOrderId": "c20d531e-791f-454f-bf29-13fb190a162e",
-   "now": 139.38
+   "now": 139.64
   }
  },
  "pendingEntries": {},
@@ -584,9 +584,9 @@
   },
   {
    "d": "2026-10-27",
-   "value": 102104,
-   "pct": 2.1,
-   "spy": 0.77
+   "value": 102030,
+   "pct": 2.03,
+   "spy": 0.62
   }
  ],
  "lastOrders": {
