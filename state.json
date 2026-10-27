@@ -19,7 +19,7 @@
    "target": 81.93,
    "stop": 70.23,
    "ocoOrderId": "fb38c2c5-21ba-47b0-9509-e6e30d307a5b",
-   "now": 78.62
+   "now": 78.51
   },
   "META": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 662.31,
    "stop": 560.13,
    "ocoOrderId": "6686cba4-d608-4bbd-a831-176a6e860782",
-   "now": 625.21
+   "now": 622.63
   },
   "NOC": {
    "strategy": "rip",
@@ -48,7 +48,8 @@
    "shares": 24,
    "target": 539.23,
    "stop": 605.89,
-   "ocoOrderId": "2c6302c7-74ef-4788-a4aa-9665ba7dd4f9"
+   "ocoOrderId": "2c6302c7-74ef-4788-a4aa-9665ba7dd4f9",
+   "now": 562.54
   },
   "MRNA": {
    "strategy": "dip",
@@ -62,7 +63,8 @@
    "shares": 67,
    "target": 195.8,
    "stop": 118.61,
-   "ocoOrderId": "5808cd14-b040-4306-9788-0b9e0f786034"
+   "ocoOrderId": "5808cd14-b040-4306-9788-0b9e0f786034",
+   "now": 188.73
   },
   "LDOS": {
    "strategy": "rip",
@@ -76,7 +78,8 @@
    "shares": 100,
    "target": 131.88,
    "stop": 148.89,
-   "ocoOrderId": "c20d531e-791f-454f-bf29-13fb190a162e"
+   "ocoOrderId": "c20d531e-791f-454f-bf29-13fb190a162e",
+   "now": 138.53
   }
  },
  "pendingEntries": {},
@@ -575,9 +578,9 @@
   },
   {
    "d": "2026-10-27",
-   "value": 101623,
-   "pct": 1.62,
-   "spy": 0.34
+   "value": 101465,
+   "pct": 1.47,
+   "spy": 0.06
   }
  ],
  "lastOrders": {
