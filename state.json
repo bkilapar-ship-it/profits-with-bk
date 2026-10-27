@@ -3,39 +3,9 @@
  "status": "running",
  "startedAt": "2026-09-26",
  "lastEntryRunDate": "2026-10-27",
- "lastExitRunDate": "2026-10-26",
+ "lastExitRunDate": "2026-10-27",
  "spyBaseline": 764.95,
  "positions": {
-  "DXCM": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-10-22",
-   "signalClose": 78.32,
-   "entryDate": "2026-10-23",
-   "entry": 78.78,
-   "shares": 168,
-   "target": 81.93,
-   "stop": 70.23,
-   "ocoOrderId": "fb38c2c5-21ba-47b0-9509-e6e30d307a5b",
-   "now": 78.72
-  },
-  "META": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-10-22",
-   "signalClose": 648.85,
-   "entryDate": "2026-10-23",
-   "entry": 636.84,
-   "shares": 20,
-   "target": 662.31,
-   "stop": 560.13,
-   "ocoOrderId": "6686cba4-d608-4bbd-a831-176a6e860782",
-   "now": 622.14
-  },
   "NOC": {
    "strategy": "rip",
    "side": "short",
@@ -49,7 +19,7 @@
    "target": 539.23,
    "stop": 605.89,
    "ocoOrderId": "2c6302c7-74ef-4788-a4aa-9665ba7dd4f9",
-   "now": 553.47
+   "now": 552.16
   },
   "LDOS": {
    "strategy": "rip",
@@ -64,7 +34,7 @@
    "target": 131.88,
    "stop": 148.89,
    "ocoOrderId": "c20d531e-791f-454f-bf29-13fb190a162e",
-   "now": 139.5
+   "now": 139.38
   }
  },
  "pendingEntries": {},
@@ -425,6 +395,40 @@
    "how": "target",
    "usd": 508.26,
    "pct": 4.03
+  },
+  {
+   "ticker": "DXCM",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-22",
+   "signalClose": 78.32,
+   "entryDate": "2026-10-23",
+   "exitDate": "2026-10-27",
+   "entry": 78.78,
+   "exit": 78.67,
+   "shares": 168,
+   "how": "time",
+   "usd": -18.48,
+   "pct": -0.14
+  },
+  {
+   "ticker": "META",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-22",
+   "signalClose": 648.85,
+   "entryDate": "2026-10-23",
+   "exitDate": "2026-10-27",
+   "entry": 636.84,
+   "exit": 620.03,
+   "shares": 20,
+   "how": "time",
+   "usd": -336.27,
+   "pct": -2.64
   }
  ],
  "equity": [
@@ -580,9 +584,9 @@
   },
   {
    "d": "2026-10-27",
-   "value": 102096,
+   "value": 102104,
    "pct": 2.1,
-   "spy": 0.72
+   "spy": 0.77
   }
  ],
  "lastOrders": {
@@ -638,8 +642,17 @@
   "queued": false
  },
  "lastExits": {
-  "forDate": "2026-10-26",
-  "exits": []
+  "forDate": "2026-10-27",
+  "exits": [
+   {
+    "ticker": "DXCM",
+    "note": "Sold at the market (3rd session)"
+   },
+   {
+    "ticker": "META",
+    "note": "Sold at the market (3rd session)"
+   }
+  ]
  },
  "lastQueueFor": "2026-10-13"
 }
