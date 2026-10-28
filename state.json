@@ -2,7 +2,7 @@
  "version": 1,
  "status": "running",
  "startedAt": "2026-09-26",
- "lastEntryRunDate": "2026-10-27",
+ "lastEntryRunDate": "2026-10-28",
  "lastExitRunDate": "2026-10-27",
  "spyBaseline": 764.95,
  "positions": {
@@ -19,7 +19,7 @@
    "target": 539.23,
    "stop": 605.89,
    "ocoOrderId": "2c6302c7-74ef-4788-a4aa-9665ba7dd4f9",
-   "now": 551.23
+   "now": 550.18
   },
   "LDOS": {
    "strategy": "rip",
@@ -34,7 +34,35 @@
    "target": 131.88,
    "stop": 148.89,
    "ocoOrderId": "c20d531e-791f-454f-bf29-13fb190a162e",
-   "now": 139.64
+   "now": 139.01
+  },
+  "PNR": {
+   "strategy": "rip",
+   "side": "short",
+   "tag": "rsi5_90",
+   "pool": "sp500",
+   "signalDate": "2026-10-27",
+   "signalClose": 62.29,
+   "entryDate": "2026-10-28",
+   "entry": 62.89,
+   "shares": 225,
+   "target": 60.37,
+   "stop": 68.29,
+   "ocoOrderId": "cb82e1d2-6fc3-488f-966f-01c15b029ea6"
+  },
+  "VLO": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-27",
+   "signalClose": 387.34,
+   "entryDate": "2026-10-28",
+   "entry": 393.4,
+   "shares": 34,
+   "target": 409.14,
+   "stop": 333.64,
+   "ocoOrderId": "6cad391a-d884-4300-9fc1-220336955455"
   }
  },
  "pendingEntries": {},
@@ -590,59 +618,46 @@
   },
   {
    "d": "2026-10-28",
-   "value": 102052,
-   "pct": 2.05,
-   "spy": null
+   "value": 102136,
+   "pct": 2.14,
+   "spy": 0.86
   }
  ],
  "lastOrders": {
-  "forDate": "2026-10-27",
+  "forDate": "2026-10-28",
   "entries": [
    {
     "rank": 1,
-    "ticker": "MRNA",
+    "ticker": "VLO",
     "strategy": "dip",
-    "tag": "green_or_sweep",
+    "tag": "normal",
     "pool": "sp500",
     "opg": false,
-    "size": 13718.69,
-    "shares": 67,
-    "limit": 202.83,
-    "vs200": 139.61,
-    "chg5d": -12.36
+    "size": 13788.86,
+    "shares": 34,
+    "limit": 395.09,
+    "vs200": 37.07,
+    "chg5d": -10.63
    },
    {
     "rank": 2,
-    "ticker": "LDOS",
+    "ticker": "PNR",
     "strategy": "rip",
     "tag": "rsi5_90",
     "pool": "sp500",
     "opg": false,
-    "size": 13718.69,
-    "shares": 100,
-    "limit": 137.06,
-    "vs200": -1.68,
-    "chg5d": 10.96
-   },
-   {
-    "rank": 3,
-    "ticker": "NOC",
-    "strategy": "rip",
-    "tag": "normal",
-    "pool": "sp500",
-    "opg": false,
-    "size": 13718.69,
-    "shares": 24,
-    "limit": 554.1,
-    "vs200": -4.58,
-    "chg5d": 10.72
+    "size": 13788.86,
+    "shares": 225,
+    "limit": 61.04,
+    "vs200": -18.83,
+    "chg5d": 17.8
    }
   ],
   "skipped": [
    {
-    "ticker": "5 non-S&P",
+    "ticker": "7 non-S&P",
     "strategy": "dip",
-    "reason": "Signals outside the S&P 500 below the $100M/day floor for stocks outside the S&P 500"
+    "reason": "Signals outside the S&P 500 not traded while the S&P 500 is up over 20 sessions (+0.7%); they only tested well after it fell"
    }
   ],
   "queued": false
