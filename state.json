@@ -19,7 +19,7 @@
    "target": 539.23,
    "stop": 605.89,
    "ocoOrderId": "2c6302c7-74ef-4788-a4aa-9665ba7dd4f9",
-   "now": 550.18
+   "now": 549.72
   },
   "LDOS": {
    "strategy": "rip",
@@ -34,7 +34,7 @@
    "target": 131.88,
    "stop": 148.89,
    "ocoOrderId": "c20d531e-791f-454f-bf29-13fb190a162e",
-   "now": 139.01
+   "now": 139.98
   },
   "PNR": {
    "strategy": "rip",
@@ -48,7 +48,8 @@
    "shares": 225,
    "target": 60.37,
    "stop": 68.29,
-   "ocoOrderId": "cb82e1d2-6fc3-488f-966f-01c15b029ea6"
+   "ocoOrderId": "cb82e1d2-6fc3-488f-966f-01c15b029ea6",
+   "now": 64.62
   },
   "VLO": {
    "strategy": "dip",
@@ -62,7 +63,8 @@
    "shares": 34,
    "target": 409.14,
    "stop": 333.64,
-   "ocoOrderId": "6cad391a-d884-4300-9fc1-220336955455"
+   "ocoOrderId": "6cad391a-d884-4300-9fc1-220336955455",
+   "now": 383.32
   }
  },
  "pendingEntries": {},
@@ -618,9 +620,9 @@
   },
   {
    "d": "2026-10-28",
-   "value": 102136,
-   "pct": 2.14,
-   "spy": 0.86
+   "value": 101326,
+   "pct": 1.33,
+   "spy": 0.8
   }
  ],
  "lastOrders": {
