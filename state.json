@@ -3,39 +3,9 @@
  "status": "running",
  "startedAt": "2026-09-26",
  "lastEntryRunDate": "2026-10-29",
- "lastExitRunDate": "2026-10-28",
+ "lastExitRunDate": "2026-10-29",
  "spyBaseline": 764.95,
  "positions": {
-  "NOC": {
-   "strategy": "rip",
-   "side": "short",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-10-26",
-   "signalClose": 565.41,
-   "entryDate": "2026-10-27",
-   "entry": 561.7,
-   "shares": 24,
-   "target": 539.23,
-   "stop": 605.89,
-   "ocoOrderId": "2c6302c7-74ef-4788-a4aa-9665ba7dd4f9",
-   "now": 561.48
-  },
-  "LDOS": {
-   "strategy": "rip",
-   "side": "short",
-   "tag": "rsi5_90",
-   "pool": "sp500",
-   "signalDate": "2026-10-26",
-   "signalClose": 139.86,
-   "entryDate": "2026-10-27",
-   "entry": 137.37,
-   "shares": 100,
-   "target": 131.88,
-   "stop": 148.89,
-   "ocoOrderId": "c20d531e-791f-454f-bf29-13fb190a162e",
-   "now": 140.71
-  },
   "PNR": {
    "strategy": "rip",
    "side": "short",
@@ -49,7 +19,7 @@
    "target": 60.37,
    "stop": 68.29,
    "ocoOrderId": "cb82e1d2-6fc3-488f-966f-01c15b029ea6",
-   "now": 65.83
+   "now": 65.76
   },
   "VLO": {
    "strategy": "dip",
@@ -64,7 +34,7 @@
    "target": 409.14,
    "stop": 333.64,
    "ocoOrderId": "6cad391a-d884-4300-9fc1-220336955455",
-   "now": 379.81
+   "now": 381.11
   }
  },
  "pendingEntries": {},
@@ -476,6 +446,40 @@
    "how": "target",
    "usd": 530.64,
    "pct": 4.16
+  },
+  {
+   "ticker": "NOC",
+   "strategy": "rip",
+   "side": "short",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-26",
+   "signalClose": 565.41,
+   "entryDate": "2026-10-27",
+   "exitDate": "2026-10-29",
+   "entry": 561.7,
+   "exit": 562.53,
+   "shares": 24,
+   "how": "time",
+   "usd": -19.92,
+   "pct": -0.15
+  },
+  {
+   "ticker": "LDOS",
+   "strategy": "rip",
+   "side": "short",
+   "tag": "rsi5_90",
+   "pool": "sp500",
+   "signalDate": "2026-10-26",
+   "signalClose": 139.86,
+   "entryDate": "2026-10-27",
+   "exitDate": "2026-10-29",
+   "entry": 137.37,
+   "exit": 141.01,
+   "shares": 100,
+   "how": "time",
+   "usd": -364,
+   "pct": -2.65
   }
  ],
  "equity": [
@@ -643,9 +647,9 @@
   },
   {
    "d": "2026-10-29",
-   "value": 101145,
-   "pct": 1.14,
-   "spy": 0.4
+   "value": 101189,
+   "pct": 1.19,
+   "spy": 0.46
   }
  ],
  "lastOrders": {
@@ -675,8 +679,17 @@
   "queued": false
  },
  "lastExits": {
-  "forDate": "2026-10-28",
-  "exits": []
+  "forDate": "2026-10-29",
+  "exits": [
+   {
+    "ticker": "NOC",
+    "note": "Bought back at the market (3rd session)"
+   },
+   {
+    "ticker": "LDOS",
+    "note": "Bought back at the market (3rd session)"
+   }
+  ]
  },
  "lastQueueFor": "2026-10-13"
 }
