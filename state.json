@@ -2,7 +2,7 @@
  "version": 1,
  "status": "running",
  "startedAt": "2026-09-26",
- "lastEntryRunDate": "2026-10-28",
+ "lastEntryRunDate": "2026-10-29",
  "lastExitRunDate": "2026-10-28",
  "spyBaseline": 764.95,
  "positions": {
@@ -19,7 +19,7 @@
    "target": 539.23,
    "stop": 605.89,
    "ocoOrderId": "2c6302c7-74ef-4788-a4aa-9665ba7dd4f9",
-   "now": 553.51
+   "now": 567.66
   },
   "LDOS": {
    "strategy": "rip",
@@ -34,7 +34,7 @@
    "target": 131.88,
    "stop": 148.89,
    "ocoOrderId": "c20d531e-791f-454f-bf29-13fb190a162e",
-   "now": 139.6
+   "now": 141.39
   },
   "PNR": {
    "strategy": "rip",
@@ -49,7 +49,7 @@
    "target": 60.37,
    "stop": 68.29,
    "ocoOrderId": "cb82e1d2-6fc3-488f-966f-01c15b029ea6",
-   "now": 64.62
+   "now": 64.73
   },
   "VLO": {
    "strategy": "dip",
@@ -64,7 +64,21 @@
    "target": 409.14,
    "stop": 333.64,
    "ocoOrderId": "6cad391a-d884-4300-9fc1-220336955455",
-   "now": 389.4
+   "now": 386.64
+  },
+  "FFIV": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-28",
+   "signalClose": 365.53,
+   "entryDate": "2026-10-29",
+   "entry": 353.97,
+   "shares": 36,
+   "target": 368.12,
+   "stop": 288.75,
+   "ocoOrderId": "70b73f94-3087-48f3-be81-4cf349399fa4"
   }
  },
  "pendingEntries": {},
@@ -626,46 +640,33 @@
   },
   {
    "d": "2026-10-29",
-   "value": 101508,
-   "pct": 1.51,
-   "spy": null
+   "value": 100873,
+   "pct": 0.87,
+   "spy": 0.45
   }
  ],
  "lastOrders": {
-  "forDate": "2026-10-28",
+  "forDate": "2026-10-29",
   "entries": [
    {
     "rank": 1,
-    "ticker": "VLO",
+    "ticker": "FFIV",
     "strategy": "dip",
     "tag": "normal",
     "pool": "sp500",
     "opg": false,
-    "size": 13788.86,
-    "shares": 34,
-    "limit": 395.09,
-    "vs200": 37.07,
-    "chg5d": -10.63
-   },
-   {
-    "rank": 2,
-    "ticker": "PNR",
-    "strategy": "rip",
-    "tag": "rsi5_90",
-    "pool": "sp500",
-    "opg": false,
-    "size": 13788.86,
-    "shares": 225,
-    "limit": 61.04,
-    "vs200": -18.83,
-    "chg5d": 17.8
+    "size": 13617.8,
+    "shares": 36,
+    "limit": 372.84,
+    "vs200": 0.85,
+    "chg5d": -20.29
    }
   ],
   "skipped": [
    {
-    "ticker": "7 non-S&P",
+    "ticker": "10 non-S&P",
     "strategy": "dip",
-    "reason": "Signals outside the S&P 500 not traded while the S&P 500 is up over 20 sessions (+0.7%); they only tested well after it fell"
+    "reason": "Signals outside the S&P 500 not traded while the S&P 500 is up over 20 sessions (+1.3%); they only tested well after it fell"
    }
   ],
   "queued": false
