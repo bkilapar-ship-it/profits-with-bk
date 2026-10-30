@@ -19,7 +19,7 @@
    "target": 305.31,
    "stop": 347.04,
    "ocoOrderId": "1ec97312-cfd5-4850-b95a-6728614759ae",
-   "now": 317.41
+   "now": 316.88
   },
   "TXT": {
    "strategy": "rip",
@@ -34,7 +34,7 @@
    "target": 83.66,
    "stop": 94.02,
    "ocoOrderId": "8d4be4eb-a3f9-4739-adae-d21eac56472c",
-   "now": 85.41
+   "now": 85.7
   },
   "FTNT": {
    "strategy": "dip",
@@ -49,7 +49,7 @@
    "target": 142.56,
    "stop": 105.64,
    "ocoOrderId": "46eaa64f-e2df-4a92-a7eb-18d55df21e58",
-   "now": 135.66
+   "now": 136.4
   },
   "FFIV": {
    "strategy": "dip",
@@ -64,27 +64,10 @@
    "target": 364.57,
    "stop": 285.15,
    "ocoOrderId": "2965880c-d793-459a-bba9-eef188e49b31",
-   "now": 339.19
+   "now": 338.34
   }
  },
- "pendingEntries": {
-  "NCLH": {
-   "orderId": "bb958ed1-9992-443a-abcc-678d70809842",
-   "strategy": "rip",
-   "side": "short",
-   "tag": "rsi5_90",
-   "pool": "sp500",
-   "size": 13664.3301,
-   "shares": 765,
-   "limit": 17.86,
-   "opg": false,
-   "forDate": "2026-10-30",
-   "signalDate": "2026-10-29",
-   "signalClose": 18.22,
-   "atr": 0.78,
-   "placedAt": "2026-10-30T13:32:14.229Z"
-  }
- },
+ "pendingEntries": {},
  "pendingCloses": {},
  "trades": [
   {
@@ -734,9 +717,9 @@
   },
   {
    "d": "2026-10-30",
-   "value": 101193,
-   "pct": 1.19,
-   "spy": -1.39
+   "value": 101222,
+   "pct": 1.22,
+   "spy": -1.21
   }
  ],
  "lastOrders": {
