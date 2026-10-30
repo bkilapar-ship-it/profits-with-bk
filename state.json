@@ -19,7 +19,7 @@
    "target": 60.37,
    "stop": 68.29,
    "ocoOrderId": "cb82e1d2-6fc3-488f-966f-01c15b029ea6",
-   "now": 66.72
+   "now": 66.24
   },
   "VLO": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 409.14,
    "stop": 333.64,
    "ocoOrderId": "6cad391a-d884-4300-9fc1-220336955455",
-   "now": 394.11
+   "now": 393.66
   },
   "HII": {
    "strategy": "rip",
@@ -48,7 +48,8 @@
    "shares": 44,
    "target": 305.31,
    "stop": 347.04,
-   "ocoOrderId": "1ec97312-cfd5-4850-b95a-6728614759ae"
+   "ocoOrderId": "1ec97312-cfd5-4850-b95a-6728614759ae",
+   "now": 316.51
   },
   "TXT": {
    "strategy": "rip",
@@ -62,7 +63,8 @@
    "shares": 159,
    "target": 83.66,
    "stop": 94.02,
-   "ocoOrderId": "8d4be4eb-a3f9-4739-adae-d21eac56472c"
+   "ocoOrderId": "8d4be4eb-a3f9-4739-adae-d21eac56472c",
+   "now": 87.27
   },
   "FTNT": {
    "strategy": "dip",
@@ -76,26 +78,26 @@
    "shares": 96,
    "target": 142.56,
    "stop": 105.64,
-   "ocoOrderId": "46eaa64f-e2df-4a92-a7eb-18d55df21e58"
-  }
- },
- "pendingEntries": {
+   "ocoOrderId": "46eaa64f-e2df-4a92-a7eb-18d55df21e58",
+   "now": 134.79
+  },
   "FFIV": {
-   "orderId": "2729de24-524a-48ef-ba0e-18211b71678e",
    "strategy": "dip",
    "side": "long",
    "tag": "green_or_sweep",
    "pool": "sp500",
-   "size": 13664.3301,
-   "shares": 36,
-   "limit": 370.73,
-   "opg": false,
-   "forDate": "2026-10-30",
    "signalDate": "2026-10-29",
    "signalClose": 363.46,
-   "atr": 21.8,
-   "placedAt": "2026-10-30T13:32:14.107Z"
-  },
+   "entryDate": "2026-10-30",
+   "entry": 350.55,
+   "shares": 36,
+   "target": 364.57,
+   "stop": 285.15,
+   "ocoOrderId": "2965880c-d793-459a-bba9-eef188e49b31",
+   "now": 345.34
+  }
+ },
+ "pendingEntries": {
   "NCLH": {
    "orderId": "bb958ed1-9992-443a-abcc-678d70809842",
    "strategy": "rip",
@@ -728,9 +730,9 @@
   },
   {
    "d": "2026-10-30",
-   "value": 101217,
-   "pct": 1.22,
-   "spy": -0.53
+   "value": 100950,
+   "pct": 0.95,
+   "spy": -0.88
   }
  ],
  "lastOrders": {
