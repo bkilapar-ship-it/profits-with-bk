@@ -2,7 +2,7 @@
  "version": 1,
  "status": "running",
  "startedAt": "2026-09-26",
- "lastEntryRunDate": "2026-10-29",
+ "lastEntryRunDate": "2026-10-30",
  "lastExitRunDate": "2026-10-29",
  "spyBaseline": 764.95,
  "positions": {
@@ -19,7 +19,7 @@
    "target": 60.37,
    "stop": 68.29,
    "ocoOrderId": "cb82e1d2-6fc3-488f-966f-01c15b029ea6",
-   "now": 65.84
+   "now": 66.72
   },
   "VLO": {
    "strategy": "dip",
@@ -34,10 +34,85 @@
    "target": 409.14,
    "stop": 333.64,
    "ocoOrderId": "6cad391a-d884-4300-9fc1-220336955455",
-   "now": 386.16
+   "now": 394.11
+  },
+  "HII": {
+   "strategy": "rip",
+   "side": "short",
+   "tag": "rsi5_90",
+   "pool": "sp500",
+   "signalDate": "2026-10-29",
+   "signalClose": 316.21,
+   "entryDate": "2026-10-30",
+   "entry": 318.03,
+   "shares": 44,
+   "target": 305.31,
+   "stop": 347.04,
+   "ocoOrderId": "1ec97312-cfd5-4850-b95a-6728614759ae"
+  },
+  "TXT": {
+   "strategy": "rip",
+   "side": "short",
+   "tag": "rsi5_90",
+   "pool": "sp500",
+   "signalDate": "2026-10-29",
+   "signalClose": 87.46,
+   "entryDate": "2026-10-30",
+   "entry": 87.15,
+   "shares": 159,
+   "target": 83.66,
+   "stop": 94.02,
+   "ocoOrderId": "8d4be4eb-a3f9-4739-adae-d21eac56472c"
+  },
+  "FTNT": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "green_or_sweep",
+   "pool": "sp500",
+   "signalDate": "2026-10-29",
+   "signalClose": 139.1,
+   "entryDate": "2026-10-30",
+   "entry": 137.08,
+   "shares": 96,
+   "target": 142.56,
+   "stop": 105.64,
+   "ocoOrderId": "46eaa64f-e2df-4a92-a7eb-18d55df21e58"
   }
  },
- "pendingEntries": {},
+ "pendingEntries": {
+  "FFIV": {
+   "orderId": "2729de24-524a-48ef-ba0e-18211b71678e",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "green_or_sweep",
+   "pool": "sp500",
+   "size": 13664.3301,
+   "shares": 36,
+   "limit": 370.73,
+   "opg": false,
+   "forDate": "2026-10-30",
+   "signalDate": "2026-10-29",
+   "signalClose": 363.46,
+   "atr": 21.8,
+   "placedAt": "2026-10-30T13:32:14.107Z"
+  },
+  "NCLH": {
+   "orderId": "bb958ed1-9992-443a-abcc-678d70809842",
+   "strategy": "rip",
+   "side": "short",
+   "tag": "rsi5_90",
+   "pool": "sp500",
+   "size": 13664.3301,
+   "shares": 765,
+   "limit": 17.86,
+   "opg": false,
+   "forDate": "2026-10-30",
+   "signalDate": "2026-10-29",
+   "signalClose": 18.22,
+   "atr": 0.78,
+   "placedAt": "2026-10-30T13:32:14.229Z"
+  }
+ },
  "pendingCloses": {},
  "trades": [
   {
@@ -653,33 +728,85 @@
   },
   {
    "d": "2026-10-30",
-   "value": 101173,
-   "pct": 1.17,
-   "spy": null
+   "value": 101217,
+   "pct": 1.22,
+   "spy": -0.53
   }
  ],
  "lastOrders": {
-  "forDate": "2026-10-29",
+  "forDate": "2026-10-30",
   "entries": [
    {
     "rank": 1,
-    "ticker": "FFIV",
+    "ticker": "FTNT",
     "strategy": "dip",
-    "tag": "normal",
+    "tag": "green_or_sweep",
     "pool": "sp500",
     "opg": false,
-    "size": 13617.8,
+    "size": 13664.33,
+    "shares": 96,
+    "limit": 141.88,
+    "vs200": 8.6,
+    "chg5d": -19.59
+   },
+   {
+    "rank": 2,
+    "ticker": "FFIV",
+    "strategy": "dip",
+    "tag": "green_or_sweep",
+    "pool": "sp500",
+    "opg": false,
+    "size": 13664.33,
     "shares": 36,
-    "limit": 372.84,
-    "vs200": 0.85,
-    "chg5d": -20.29
+    "limit": 370.73,
+    "vs200": 0.15,
+    "chg5d": -19.25
+   },
+   {
+    "rank": 3,
+    "ticker": "NCLH",
+    "strategy": "rip",
+    "tag": "rsi5_90",
+    "pool": "sp500",
+    "opg": false,
+    "size": 13664.33,
+    "shares": 765,
+    "limit": 17.86,
+    "vs200": -2.67,
+    "chg5d": 17.25
+   },
+   {
+    "rank": 4,
+    "ticker": "HII",
+    "strategy": "rip",
+    "tag": "rsi5_90",
+    "pool": "sp500",
+    "opg": false,
+    "size": 13664.33,
+    "shares": 44,
+    "limit": 309.89,
+    "vs200": -5.93,
+    "chg5d": 13.39
+   },
+   {
+    "rank": 5,
+    "ticker": "TXT",
+    "strategy": "rip",
+    "tag": "rsi5_90",
+    "pool": "sp500",
+    "opg": false,
+    "size": 13664.33,
+    "shares": 159,
+    "limit": 85.71,
+    "vs200": -1.01,
+    "chg5d": 12.07
    }
   ],
   "skipped": [
    {
-    "ticker": "10 non-S&P",
+    "ticker": "13 non-S&P",
     "strategy": "dip",
-    "reason": "Signals outside the S&P 500 not traded while the S&P 500 is up over 20 sessions (+1.3%); they only tested well after it fell"
+    "reason": "Signals outside the S&P 500 not traded while the S&P 500 is up over 20 sessions (+0.7%); they only tested well after it fell"
    }
   ],
   "queued": false
