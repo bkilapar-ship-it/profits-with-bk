@@ -3,39 +3,9 @@
  "status": "running",
  "startedAt": "2026-09-26",
  "lastEntryRunDate": "2026-10-30",
- "lastExitRunDate": "2026-10-29",
+ "lastExitRunDate": "2026-10-30",
  "spyBaseline": 764.95,
  "positions": {
-  "PNR": {
-   "strategy": "rip",
-   "side": "short",
-   "tag": "rsi5_90",
-   "pool": "sp500",
-   "signalDate": "2026-10-27",
-   "signalClose": 62.29,
-   "entryDate": "2026-10-28",
-   "entry": 62.89,
-   "shares": 225,
-   "target": 60.37,
-   "stop": 68.29,
-   "ocoOrderId": "cb82e1d2-6fc3-488f-966f-01c15b029ea6",
-   "now": 66.11
-  },
-  "VLO": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-10-27",
-   "signalClose": 387.34,
-   "entryDate": "2026-10-28",
-   "entry": 393.4,
-   "shares": 34,
-   "target": 409.14,
-   "stop": 333.64,
-   "ocoOrderId": "6cad391a-d884-4300-9fc1-220336955455",
-   "now": 397.75
-  },
   "HII": {
    "strategy": "rip",
    "side": "short",
@@ -49,7 +19,7 @@
    "target": 305.31,
    "stop": 347.04,
    "ocoOrderId": "1ec97312-cfd5-4850-b95a-6728614759ae",
-   "now": 317
+   "now": 317.41
   },
   "TXT": {
    "strategy": "rip",
@@ -64,7 +34,7 @@
    "target": 83.66,
    "stop": 94.02,
    "ocoOrderId": "8d4be4eb-a3f9-4739-adae-d21eac56472c",
-   "now": 85.44
+   "now": 85.41
   },
   "FTNT": {
    "strategy": "dip",
@@ -79,7 +49,7 @@
    "target": 142.56,
    "stop": 105.64,
    "ocoOrderId": "46eaa64f-e2df-4a92-a7eb-18d55df21e58",
-   "now": 135.96
+   "now": 135.66
   },
   "FFIV": {
    "strategy": "dip",
@@ -94,7 +64,7 @@
    "target": 364.57,
    "stop": 285.15,
    "ocoOrderId": "2965880c-d793-459a-bba9-eef188e49b31",
-   "now": 338.54
+   "now": 339.19
   }
  },
  "pendingEntries": {
@@ -557,6 +527,40 @@
    "how": "time",
    "usd": -364,
    "pct": -2.65
+  },
+  {
+   "ticker": "PNR",
+   "strategy": "rip",
+   "side": "short",
+   "tag": "rsi5_90",
+   "pool": "sp500",
+   "signalDate": "2026-10-27",
+   "signalClose": 62.29,
+   "entryDate": "2026-10-28",
+   "exitDate": "2026-10-30",
+   "entry": 62.89,
+   "exit": 66.25,
+   "shares": 225,
+   "how": "time",
+   "usd": -755.21,
+   "pct": -5.34
+  },
+  {
+   "ticker": "VLO",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-27",
+   "signalClose": 387.34,
+   "entryDate": "2026-10-28",
+   "exitDate": "2026-10-30",
+   "entry": 393.4,
+   "exit": 398.25,
+   "shares": 34,
+   "how": "time",
+   "usd": 164.9,
+   "pct": 1.23
   }
  ],
  "equity": [
@@ -730,9 +734,9 @@
   },
   {
    "d": "2026-10-30",
-   "value": 101213,
-   "pct": 1.21,
-   "spy": -1.54
+   "value": 101193,
+   "pct": 1.19,
+   "spy": -1.39
   }
  ],
  "lastOrders": {
@@ -814,15 +818,15 @@
   "queued": false
  },
  "lastExits": {
-  "forDate": "2026-10-29",
+  "forDate": "2026-10-30",
   "exits": [
    {
-    "ticker": "NOC",
+    "ticker": "PNR",
     "note": "Bought back at the market (3rd session)"
    },
    {
-    "ticker": "LDOS",
-    "note": "Bought back at the market (3rd session)"
+    "ticker": "VLO",
+    "note": "Sold at the market (3rd session)"
    }
   ]
  },
