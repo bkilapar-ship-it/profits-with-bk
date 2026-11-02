@@ -19,7 +19,7 @@
    "target": 305.31,
    "stop": 347.04,
    "ocoOrderId": "1ec97312-cfd5-4850-b95a-6728614759ae",
-   "now": 313.78
+   "now": 311.31
   },
   "TXT": {
    "strategy": "rip",
@@ -34,7 +34,7 @@
    "target": 83.66,
    "stop": 94.02,
    "ocoOrderId": "8d4be4eb-a3f9-4739-adae-d21eac56472c",
-   "now": 88.22
+   "now": 87.93
   },
   "FTNT": {
    "strategy": "dip",
@@ -49,7 +49,7 @@
    "target": 142.56,
    "stop": 105.64,
    "ocoOrderId": "46eaa64f-e2df-4a92-a7eb-18d55df21e58",
-   "now": 130.6
+   "now": 129.03
   },
   "FFIV": {
    "strategy": "dip",
@@ -64,7 +64,7 @@
    "target": 364.57,
    "stop": 285.15,
    "ocoOrderId": "2965880c-d793-459a-bba9-eef188e49b31",
-   "now": 329.07
+   "now": 325.62
   },
   "MRVL": {
    "strategy": "dip",
@@ -79,7 +79,7 @@
    "target": 193.85,
    "stop": 130.11,
    "ocoOrderId": "ab97e0b9-9beb-4cec-971e-e2430a91897a",
-   "now": 177.98
+   "now": 173.13
   },
   "DDOG": {
    "strategy": "dip",
@@ -94,7 +94,7 @@
    "target": 239.87,
    "stop": 178.59,
    "ocoOrderId": "84161732-442c-4d75-803a-0bb28d709c3e",
-   "now": 222.56
+   "now": 220.74
   },
   "ILMN": {
    "strategy": "dip",
@@ -109,7 +109,7 @@
    "target": 242.35,
    "stop": 182.18,
    "ocoOrderId": "f6349430-3f98-4434-a268-9fa4d0ef8477",
-   "now": 227.51
+   "now": 229.26
   },
   "HPQ": {
    "strategy": "dip",
@@ -124,7 +124,7 @@
    "target": 30.24,
    "stop": 24.6,
    "ocoOrderId": "dacff66b-1601-4c8a-9cfc-418cf7bff29a",
-   "now": 28.75
+   "now": 28.53
   },
   "PNR": {
    "strategy": "rip",
@@ -139,7 +139,7 @@
    "target": 64.98,
    "stop": 73.84,
    "ocoOrderId": "ff850759-4b0e-49cf-90d5-0ab8d3eae000",
-   "now": 70.47
+   "now": 70.69
   }
  },
  "pendingEntries": {},
@@ -821,9 +821,9 @@
   },
   {
    "d": "2026-11-02",
-   "value": 98505,
-   "pct": -1.5,
-   "spy": -0.79
+   "value": 97888,
+   "pct": -2.11,
+   "spy": -1.21
   }
  ],
  "lastOrders": {
