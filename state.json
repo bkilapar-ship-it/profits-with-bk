@@ -49,7 +49,7 @@
    "target": 142.56,
    "stop": 105.64,
    "ocoOrderId": "46eaa64f-e2df-4a92-a7eb-18d55df21e58",
-   "now": 126.37
+   "now": 126.31
   },
   "FFIV": {
    "strategy": "dip",
@@ -79,7 +79,7 @@
    "target": 193.85,
    "stop": 130.11,
    "ocoOrderId": "ab97e0b9-9beb-4cec-971e-e2430a91897a",
-   "now": 174.51
+   "now": 173.27
   },
   "DDOG": {
    "strategy": "dip",
@@ -821,8 +821,8 @@
   },
   {
    "d": "2026-11-02",
-   "value": 97449,
-   "pct": -2.55,
+   "value": 97356,
+   "pct": -2.64,
    "spy": -1.68
   }
  ],
