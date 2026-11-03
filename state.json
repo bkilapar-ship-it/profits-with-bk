@@ -19,7 +19,7 @@
    "target": 193.85,
    "stop": 130.11,
    "ocoOrderId": "ab97e0b9-9beb-4cec-971e-e2430a91897a",
-   "now": 171.19
+   "now": 173.63
   },
   "DDOG": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 239.87,
    "stop": 178.59,
    "ocoOrderId": "84161732-442c-4d75-803a-0bb28d709c3e",
-   "now": 219.8
+   "now": 222
   },
   "ILMN": {
    "strategy": "dip",
@@ -49,7 +49,7 @@
    "target": 242.35,
    "stop": 182.18,
    "ocoOrderId": "f6349430-3f98-4434-a268-9fa4d0ef8477",
-   "now": 237.32
+   "now": 238.21
   },
   "HPQ": {
    "strategy": "dip",
@@ -64,7 +64,7 @@
    "target": 30.24,
    "stop": 24.6,
    "ocoOrderId": "dacff66b-1601-4c8a-9cfc-418cf7bff29a",
-   "now": 28.12
+   "now": 28.27
   },
   "PNR": {
    "strategy": "rip",
@@ -79,7 +79,7 @@
    "target": 64.98,
    "stop": 73.84,
    "ocoOrderId": "ff850759-4b0e-49cf-90d5-0ab8d3eae000",
-   "now": 69.65
+   "now": 69.73
   },
   "VLO": {
    "strategy": "dip",
@@ -94,7 +94,7 @@
    "target": 399.83,
    "stop": 328.38,
    "ocoOrderId": "f037d3d3-2cfc-426c-908c-16294e6b62f2",
-   "now": 388.75
+   "now": 386.1
   },
   "NTAP": {
    "strategy": "dip",
@@ -109,43 +109,10 @@
    "target": 195.65,
    "stop": 154.05,
    "ocoOrderId": "c04c0bf8-3b5d-4fcc-a2f0-a676d4f763ae",
-   "now": 190.28
+   "now": 190.78
   }
  },
- "pendingEntries": {
-  "HPE": {
-   "orderId": "84cdde6a-b603-42a8-8fa5-2d0ce1695f75",
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "size": 13147.3503,
-   "shares": 251,
-   "limit": 52.21,
-   "opg": false,
-   "forDate": "2026-11-03",
-   "signalDate": "2026-11-02",
-   "signalClose": 51.19,
-   "atr": 3.78,
-   "placedAt": "2026-11-03T14:32:14.048Z"
-  },
-  "DELL": {
-   "orderId": "e1341a0c-bd92-433e-b683-42a191e38e77",
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "size": 13147.3503,
-   "shares": 32,
-   "limit": 400.64,
-   "opg": false,
-   "forDate": "2026-11-03",
-   "signalDate": "2026-11-02",
-   "signalClose": 392.78,
-   "atr": 35.47,
-   "placedAt": "2026-11-03T14:32:14.201Z"
-  }
- },
+ "pendingEntries": {},
  "pendingCloses": {},
  "trades": [
   {
@@ -898,9 +865,9 @@
   },
   {
    "d": "2026-11-03",
-   "value": 98257,
-   "pct": -1.74,
-   "spy": -1.35
+   "value": 98644,
+   "pct": -1.36,
+   "spy": -1.39
   }
  ],
  "lastOrders": {
