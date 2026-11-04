@@ -3,69 +3,9 @@
  "status": "running",
  "startedAt": "2026-09-26",
  "lastEntryRunDate": "2026-11-04",
- "lastExitRunDate": "2026-11-03",
+ "lastExitRunDate": "2026-11-04",
  "spyBaseline": 764.95,
  "positions": {
-  "MRVL": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-10-30",
-   "signalClose": 196.4,
-   "entryDate": "2026-11-02",
-   "entry": 186.39,
-   "shares": 67,
-   "target": 193.85,
-   "stop": 130.11,
-   "ocoOrderId": "ab97e0b9-9beb-4cec-971e-e2430a91897a",
-   "now": 159.05
-  },
-  "DDOG": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-10-30",
-   "signalClose": 235.27,
-   "entryDate": "2026-11-02",
-   "entry": 230.64,
-   "shares": 56,
-   "target": 239.87,
-   "stop": 178.59,
-   "ocoOrderId": "84161732-442c-4d75-803a-0bb28d709c3e",
-   "now": 190.38
-  },
-  "ILMN": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-10-30",
-   "signalClose": 235.99,
-   "entryDate": "2026-11-02",
-   "entry": 233.03,
-   "shares": 56,
-   "target": 242.35,
-   "stop": 182.18,
-   "ocoOrderId": "f6349430-3f98-4434-a268-9fa4d0ef8477",
-   "now": 227.77
-  },
-  "PNR": {
-   "strategy": "rip",
-   "side": "short",
-   "tag": "rsi5_90",
-   "pool": "sp500",
-   "signalDate": "2026-10-30",
-   "signalClose": 66.26,
-   "entryDate": "2026-11-02",
-   "entry": 67.69,
-   "shares": 209,
-   "target": 64.98,
-   "stop": 73.84,
-   "ocoOrderId": "ff850759-4b0e-49cf-90d5-0ab8d3eae000",
-   "now": 72.49
-  },
   "VLO": {
    "strategy": "dip",
    "side": "long",
@@ -79,7 +19,7 @@
    "target": 399.83,
    "stop": 328.38,
    "ocoOrderId": "f037d3d3-2cfc-426c-908c-16294e6b62f2",
-   "now": 361.29
+   "now": 362.46
   },
   "NTAP": {
    "strategy": "dip",
@@ -94,7 +34,7 @@
    "target": 195.65,
    "stop": 154.05,
    "ocoOrderId": "c04c0bf8-3b5d-4fcc-a2f0-a676d4f763ae",
-   "now": 189.12
+   "now": 188.7
   },
   "ZBRA": {
    "strategy": "dip",
@@ -109,7 +49,7 @@
    "target": 348.4,
    "stop": 286.07,
    "ocoOrderId": "93dc60b1-7858-4034-b17c-55c6c8cfbeef",
-   "now": 330.38
+   "now": 331.7
   }
  },
  "pendingEntries": {},
@@ -708,6 +648,74 @@
    "how": "target",
    "usd": 540.54,
    "pct": 4.02
+  },
+  {
+   "ticker": "MRVL",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-30",
+   "signalClose": 196.4,
+   "entryDate": "2026-11-02",
+   "exitDate": "2026-11-04",
+   "entry": 186.39,
+   "exit": 158.85,
+   "shares": 67,
+   "how": "time",
+   "usd": -1844.91,
+   "pct": -14.77
+  },
+  {
+   "ticker": "DDOG",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-30",
+   "signalClose": 235.27,
+   "entryDate": "2026-11-02",
+   "exitDate": "2026-11-04",
+   "entry": 230.64,
+   "exit": 188.52,
+   "shares": 56,
+   "how": "time",
+   "usd": -2358.72,
+   "pct": -18.26
+  },
+  {
+   "ticker": "ILMN",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-10-30",
+   "signalClose": 235.99,
+   "entryDate": "2026-11-02",
+   "exitDate": "2026-11-04",
+   "entry": 233.03,
+   "exit": 225.72,
+   "shares": 56,
+   "how": "time",
+   "usd": -409.38,
+   "pct": -3.14
+  },
+  {
+   "ticker": "PNR",
+   "strategy": "rip",
+   "side": "short",
+   "tag": "rsi5_90",
+   "pool": "sp500",
+   "signalDate": "2026-10-30",
+   "signalClose": 66.26,
+   "entryDate": "2026-11-02",
+   "exitDate": "2026-11-04",
+   "entry": 67.69,
+   "exit": 72.42,
+   "shares": 209,
+   "how": "time",
+   "usd": -988.57,
+   "pct": -6.99
   }
  ],
  "equity": [
@@ -905,9 +913,9 @@
   },
   {
    "d": "2026-11-04",
-   "value": 94940,
-   "pct": -5.06,
-   "spy": 0.45
+   "value": 94792,
+   "pct": -5.21,
+   "spy": 0.32
   }
  ],
  "lastOrders": {
@@ -970,23 +978,23 @@
   "queued": false
  },
  "lastExits": {
-  "forDate": "2026-11-03",
+  "forDate": "2026-11-04",
   "exits": [
    {
-    "ticker": "HII",
-    "note": "Bought back at the market (3rd session)"
-   },
-   {
-    "ticker": "TXT",
-    "note": "Bought back at the market (3rd session)"
-   },
-   {
-    "ticker": "FTNT",
+    "ticker": "MRVL",
     "note": "Sold at the market (3rd session)"
    },
    {
-    "ticker": "FFIV",
+    "ticker": "DDOG",
     "note": "Sold at the market (3rd session)"
+   },
+   {
+    "ticker": "ILMN",
+    "note": "Sold at the market (3rd session)"
+   },
+   {
+    "ticker": "PNR",
+    "note": "Bought back at the market (3rd session)"
    }
   ]
  },
