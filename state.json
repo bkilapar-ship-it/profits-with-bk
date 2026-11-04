@@ -19,7 +19,7 @@
    "target": 193.85,
    "stop": 130.11,
    "ocoOrderId": "ab97e0b9-9beb-4cec-971e-e2430a91897a",
-   "now": 162.99
+   "now": 172.73
   },
   "DDOG": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 239.87,
    "stop": 178.59,
    "ocoOrderId": "84161732-442c-4d75-803a-0bb28d709c3e",
-   "now": 225
+   "now": 220.99
   },
   "ILMN": {
    "strategy": "dip",
@@ -49,7 +49,7 @@
    "target": 242.35,
    "stop": 182.18,
    "ocoOrderId": "f6349430-3f98-4434-a268-9fa4d0ef8477",
-   "now": 238.21
+   "now": 237.01
   },
   "HPQ": {
    "strategy": "dip",
@@ -64,7 +64,7 @@
    "target": 30.24,
    "stop": 24.6,
    "ocoOrderId": "dacff66b-1601-4c8a-9cfc-418cf7bff29a",
-   "now": 27.9
+   "now": 28.09
   },
   "PNR": {
    "strategy": "rip",
@@ -868,6 +868,12 @@
    "value": 97905,
    "pct": -2.1,
    "spy": -1.39
+  },
+  {
+   "d": "2026-11-04",
+   "value": 98393,
+   "pct": -1.61,
+   "spy": null
   }
  ],
  "lastOrders": {
