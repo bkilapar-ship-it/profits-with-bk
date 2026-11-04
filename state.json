@@ -19,7 +19,7 @@
    "target": 399.83,
    "stop": 328.38,
    "ocoOrderId": "f037d3d3-2cfc-426c-908c-16294e6b62f2",
-   "now": 362.7
+   "now": 358.68
   },
   "NTAP": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 195.65,
    "stop": 154.05,
    "ocoOrderId": "c04c0bf8-3b5d-4fcc-a2f0-a676d4f763ae",
-   "now": 187.91
+   "now": 187.67
   },
   "ZBRA": {
    "strategy": "dip",
@@ -49,7 +49,7 @@
    "target": 348.4,
    "stop": 286.07,
    "ocoOrderId": "93dc60b1-7858-4034-b17c-55c6c8cfbeef",
-   "now": 331.4
+   "now": 332.44
   }
  },
  "pendingEntries": {},
@@ -913,9 +913,9 @@
   },
   {
    "d": "2026-11-04",
-   "value": 94718,
-   "pct": -5.28,
-   "spy": 0.2
+   "value": 94613,
+   "pct": -5.39,
+   "spy": 0.24
   }
  ],
  "lastOrders": {
