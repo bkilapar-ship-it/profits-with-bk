@@ -2,7 +2,7 @@
  "version": 1,
  "status": "running",
  "startedAt": "2026-09-26",
- "lastEntryRunDate": "2026-11-04",
+ "lastEntryRunDate": "2026-11-05",
  "lastExitRunDate": "2026-11-04",
  "spyBaseline": 764.95,
  "positions": {
@@ -19,7 +19,7 @@
    "target": 399.83,
    "stop": 328.38,
    "ocoOrderId": "f037d3d3-2cfc-426c-908c-16294e6b62f2",
-   "now": 362
+   "now": 364.65
   },
   "NTAP": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 195.65,
    "stop": 154.05,
    "ocoOrderId": "c04c0bf8-3b5d-4fcc-a2f0-a676d4f763ae",
-   "now": 185.1
+   "now": 180.37
   },
   "ZBRA": {
    "strategy": "dip",
@@ -49,10 +49,57 @@
    "target": 348.4,
    "stop": 286.07,
    "ocoOrderId": "93dc60b1-7858-4034-b17c-55c6c8cfbeef",
-   "now": 332.44
+   "now": 330
+  },
+  "CRL": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-11-04",
+   "signalClose": 326.29,
+   "entryDate": "2026-11-05",
+   "entry": 329.97,
+   "shares": 38,
+   "target": 343.17,
+   "stop": 274.98,
+   "ocoOrderId": "a321919d-132a-4604-bf4d-212fc855a76e"
   }
  },
- "pendingEntries": {},
+ "pendingEntries": {
+  "ILMN": {
+   "orderId": "5dea1877-c782-4820-b03c-4d7f5c320bce",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "bearEngulf",
+   "pool": "sp500",
+   "size": 12710.364750000002,
+   "shares": 55,
+   "limit": 231.07,
+   "opg": false,
+   "forDate": "2026-11-05",
+   "signalDate": "2026-11-04",
+   "signalClose": 226.54,
+   "atr": 17.71,
+   "placedAt": "2026-11-05T14:32:13.225Z"
+  },
+  "MPC": {
+   "orderId": "df8a06e7-fe09-44f3-a113-8cfb0151d60d",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "size": 12710.364750000002,
+   "shares": 31,
+   "limit": 400.53,
+   "opg": false,
+   "forDate": "2026-11-05",
+   "signalDate": "2026-11-04",
+   "signalClose": 392.68,
+   "atr": 21.56,
+   "placedAt": "2026-11-05T14:32:13.391Z"
+  }
+ },
  "pendingCloses": {},
  "trades": [
   {
@@ -919,66 +966,144 @@
   },
   {
    "d": "2026-11-05",
-   "value": 94518,
-   "pct": -5.48,
-   "spy": null
+   "value": 94151,
+   "pct": -5.85,
+   "spy": -0.14
   }
  ],
  "lastOrders": {
-  "forDate": "2026-11-04",
+  "forDate": "2026-11-05",
   "entries": [
    {
     "rank": 1,
-    "ticker": "PANW",
+    "ticker": "ILMN",
+    "strategy": "dip",
+    "tag": "bearEngulf",
+    "pool": "sp500",
+    "opg": false,
+    "size": 12710.36,
+    "shares": 55,
+    "limit": 231.07,
+    "vs200": 27.71,
+    "chg5d": -21.56
+   },
+   {
+    "rank": 2,
+    "ticker": "CRL",
     "strategy": "dip",
     "tag": "normal",
     "pool": "sp500",
     "opg": false,
-    "size": 13006.45,
-    "shares": 36,
-    "limit": 357.2,
-    "vs200": 29.01,
-    "chg5d": -12.82
+    "size": 12710.36,
+    "shares": 38,
+    "limit": 332.82,
+    "vs200": 45.95,
+    "chg5d": -12.75
    },
    {
-    "rank": 2,
-    "ticker": "ZBRA",
+    "rank": 3,
+    "ticker": "MPC",
     "strategy": "dip",
-    "tag": "green_or_sweep",
+    "tag": "normal",
     "pool": "sp500",
     "opg": false,
-    "size": 13006.45,
-    "shares": 38,
-    "limit": 336.09,
-    "vs200": 17.28,
-    "chg5d": -13.67
+    "size": 12710.36,
+    "shares": 31,
+    "limit": 400.53,
+    "vs200": 33.52,
+    "chg5d": -10.91
    }
   ],
   "skipped": [
+   {
+    "ticker": "P",
+    "strategy": "dip",
+    "reason": "The sleeve has no spare cash left today"
+   },
+   {
+    "ticker": "HPE",
+    "strategy": "dip",
+    "reason": "The sleeve has no spare cash left today"
+   },
+   {
+    "ticker": "APA",
+    "strategy": "dip",
+    "reason": "The sleeve has no spare cash left today"
+   },
+   {
+    "ticker": "DELL",
+    "strategy": "dip",
+    "reason": "The sleeve has no spare cash left today"
+   },
+   {
+    "ticker": "MU",
+    "strategy": "dip",
+    "reason": "The sleeve has no spare cash left today"
+   },
+   {
+    "ticker": "PANW",
+    "strategy": "dip",
+    "reason": "The sleeve has no spare cash left today"
+   },
    {
     "ticker": "PLTR",
     "strategy": "dip",
     "reason": "The sleeve has no spare cash left today"
    },
    {
-    "ticker": "HII",
+    "ticker": "PNR",
     "strategy": "rip",
     "reason": "The sleeve has no spare cash left today"
    },
    {
-    "ticker": "TXT",
+    "ticker": "ZTS",
     "strategy": "rip",
     "reason": "The sleeve has no spare cash left today"
    },
    {
-    "ticker": "6 non-S&P",
-    "strategy": "dip",
-    "reason": "Signals outside the S&P 500 no spare cash left after the S&P signals"
+    "ticker": "ROL",
+    "strategy": "rip",
+    "reason": "The sleeve has no spare cash left today"
    },
    {
-    "ticker": "21 non-S&P",
+    "ticker": "CLX",
+    "strategy": "rip",
+    "reason": "The sleeve has no spare cash left today"
+   },
+   {
+    "ticker": "CRH",
+    "strategy": "rip",
+    "reason": "The sleeve has no spare cash left today"
+   },
+   {
+    "ticker": "MCD",
+    "strategy": "rip",
+    "reason": "The sleeve has no spare cash left today"
+   },
+   {
+    "ticker": "PODD",
+    "strategy": "rip",
+    "reason": "The sleeve has no spare cash left today"
+   },
+   {
+    "ticker": "HRL",
+    "strategy": "rip",
+    "reason": "The sleeve has no spare cash left today"
+   },
+   {
+    "ticker": "DPZ",
+    "strategy": "rip",
+    "reason": "The sleeve has no spare cash left today"
+   },
+   {
+    "ticker": "23 non-S&P",
     "strategy": "dip",
     "reason": "Signals outside the S&P 500 below the $100M/day floor for stocks outside the S&P 500"
+   },
+   {
+    "ticker": "17 non-S&P",
+    "strategy": "dip",
+    "reason": "Signals outside the S&P 500 no spare cash left after the S&P signals"
    }
   ],
   "queued": false
