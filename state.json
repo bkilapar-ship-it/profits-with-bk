@@ -49,7 +49,7 @@
    "target": 224.45,
    "stop": 162.68,
    "ocoOrderId": "79e529d7-ca00-46a7-a191-746e45e9e948",
-   "now": 208
+   "now": 207.03
   },
   "MPC": {
    "strategy": "dip",
@@ -64,7 +64,7 @@
    "target": 407.45,
    "stop": 327.1,
    "ocoOrderId": "cbdbda73-6e78-4dad-b330-8b36ec9c7ef3",
-   "now": 374.5
+   "now": 377.33
   }
  },
  "pendingEntries": {},
@@ -968,8 +968,8 @@
   },
   {
    "d": "2026-11-05",
-   "value": 91100,
-   "pct": -8.9,
+   "value": 91131,
+   "pct": -8.87,
    "spy": -4.18
   }
  ],
