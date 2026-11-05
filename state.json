@@ -3,39 +3,9 @@
  "status": "running",
  "startedAt": "2026-09-26",
  "lastEntryRunDate": "2026-11-05",
- "lastExitRunDate": "2026-11-04",
+ "lastExitRunDate": "2026-11-05",
  "spyBaseline": 764.95,
  "positions": {
-  "VLO": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-11-02",
-   "signalClose": 381.46,
-   "entryDate": "2026-11-03",
-   "entry": 384.45,
-   "shares": 33,
-   "target": 399.83,
-   "stop": 328.38,
-   "ocoOrderId": "f037d3d3-2cfc-426c-908c-16294e6b62f2",
-   "now": 353.34
-  },
-  "NTAP": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-11-02",
-   "signalClose": 185.26,
-   "entryDate": "2026-11-03",
-   "entry": 188.13,
-   "shares": 69,
-   "target": 195.65,
-   "stop": 154.05,
-   "ocoOrderId": "c04c0bf8-3b5d-4fcc-a2f0-a676d4f763ae",
-   "now": 171.02
-  },
   "ZBRA": {
    "strategy": "dip",
    "side": "long",
@@ -49,7 +19,7 @@
    "target": 348.4,
    "stop": 286.07,
    "ocoOrderId": "93dc60b1-7858-4034-b17c-55c6c8cfbeef",
-   "now": 322.95
+   "now": 323.27
   },
   "CRL": {
    "strategy": "dip",
@@ -64,7 +34,7 @@
    "target": 343.17,
    "stop": 274.98,
    "ocoOrderId": "a321919d-132a-4604-bf4d-212fc855a76e",
-   "now": 314.47
+   "now": 314.39
   },
   "ILMN": {
    "strategy": "dip",
@@ -94,7 +64,7 @@
    "target": 407.45,
    "stop": 327.1,
    "ocoOrderId": "cbdbda73-6e78-4dad-b330-8b36ec9c7ef3",
-   "now": 380.35
+   "now": 379.35
   }
  },
  "pendingEntries": {},
@@ -761,6 +731,40 @@
    "how": "time",
    "usd": -988.57,
    "pct": -6.99
+  },
+  {
+   "ticker": "VLO",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-11-02",
+   "signalClose": 381.46,
+   "entryDate": "2026-11-03",
+   "exitDate": "2026-11-05",
+   "entry": 384.45,
+   "exit": 352.6,
+   "shares": 33,
+   "how": "time",
+   "usd": -1051.02,
+   "pct": -8.28
+  },
+  {
+   "ticker": "NTAP",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-11-02",
+   "signalClose": 185.26,
+   "entryDate": "2026-11-03",
+   "exitDate": "2026-11-05",
+   "entry": 188.13,
+   "exit": 170.74,
+   "shares": 69,
+   "how": "time",
+   "usd": -1199.9,
+   "pct": -9.24
   }
  ],
  "equity": [
@@ -964,9 +968,9 @@
   },
   {
    "d": "2026-11-05",
-   "value": 91473,
-   "pct": -8.53,
-   "spy": -3.92
+   "value": 91402,
+   "pct": -8.6,
+   "spy": -3.94
   }
  ],
  "lastOrders": {
@@ -1107,23 +1111,15 @@
   "queued": false
  },
  "lastExits": {
-  "forDate": "2026-11-04",
+  "forDate": "2026-11-05",
   "exits": [
    {
-    "ticker": "MRVL",
+    "ticker": "VLO",
     "note": "Sold at the market (3rd session)"
    },
    {
-    "ticker": "DDOG",
+    "ticker": "NTAP",
     "note": "Sold at the market (3rd session)"
-   },
-   {
-    "ticker": "ILMN",
-    "note": "Sold at the market (3rd session)"
-   },
-   {
-    "ticker": "PNR",
-    "note": "Bought back at the market (3rd session)"
    }
   ]
  },
