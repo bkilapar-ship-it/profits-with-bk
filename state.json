@@ -3,24 +3,9 @@
  "status": "running",
  "startedAt": "2026-09-26",
  "lastEntryRunDate": "2026-11-06",
- "lastExitRunDate": "2026-11-05",
+ "lastExitRunDate": "2026-11-06",
  "spyBaseline": 764.95,
  "positions": {
-  "ZBRA": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "green_or_sweep",
-   "pool": "sp500",
-   "signalDate": "2026-11-03",
-   "signalClose": 329.5,
-   "entryDate": "2026-11-04",
-   "entry": 335,
-   "shares": 38,
-   "target": 348.4,
-   "stop": 286.07,
-   "ocoOrderId": "93dc60b1-7858-4034-b17c-55c6c8cfbeef",
-   "now": 325
-  },
   "CRL": {
    "strategy": "dip",
    "side": "long",
@@ -34,7 +19,7 @@
    "target": 343.17,
    "stop": 274.98,
    "ocoOrderId": "a321919d-132a-4604-bf4d-212fc855a76e",
-   "now": 338.31
+   "now": 337.91
   },
   "ILMN": {
    "strategy": "dip",
@@ -49,7 +34,7 @@
    "target": 224.45,
    "stop": 162.68,
    "ocoOrderId": "79e529d7-ca00-46a7-a191-746e45e9e948",
-   "now": 212.19
+   "now": 213.09
   },
   "MPC": {
    "strategy": "dip",
@@ -64,7 +49,7 @@
    "target": 407.45,
    "stop": 327.1,
    "ocoOrderId": "cbdbda73-6e78-4dad-b330-8b36ec9c7ef3",
-   "now": 374.45
+   "now": 372.49
   },
   "IT": {
    "strategy": "dip",
@@ -79,7 +64,7 @@
    "target": 200.07,
    "stop": 155.44,
    "ocoOrderId": "df9e4cb3-150f-48e4-ae82-3effd6c6ec45",
-   "now": 189.98
+   "now": 190.77
   }
  },
  "pendingEntries": {},
@@ -797,6 +782,23 @@
    "how": "target",
    "usd": 480.94,
    "pct": 3.99
+  },
+  {
+   "ticker": "ZBRA",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "green_or_sweep",
+   "pool": "sp500",
+   "signalDate": "2026-11-03",
+   "signalClose": 329.5,
+   "entryDate": "2026-11-04",
+   "exitDate": "2026-11-06",
+   "entry": 335,
+   "exit": 323.12,
+   "shares": 38,
+   "how": "time",
+   "usd": -451.44,
+   "pct": -3.55
   }
  ],
  "equity": [
@@ -1006,9 +1008,9 @@
   },
   {
    "d": "2026-11-06",
-   "value": 92777,
-   "pct": -7.22,
-   "spy": -3.52
+   "value": 92731,
+   "pct": -7.27,
+   "spy": -3.66
   }
  ],
  "lastOrders": {
@@ -1141,14 +1143,10 @@
   "queued": false
  },
  "lastExits": {
-  "forDate": "2026-11-05",
+  "forDate": "2026-11-06",
   "exits": [
    {
-    "ticker": "VLO",
-    "note": "Sold at the market (3rd session)"
-   },
-   {
-    "ticker": "NTAP",
+    "ticker": "ZBRA",
     "note": "Sold at the market (3rd session)"
    }
   ]
