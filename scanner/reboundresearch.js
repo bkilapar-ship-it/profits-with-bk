@@ -27,6 +27,13 @@
  * so the headline number is the 5-day "excess" over that. Pass bar for V1/V2/V3, fixed in advance: positive excess in ALL THREE
  * periods and an overall date-clustered t-statistic of at least 2. The live Uptrend Dip is shown as a reference.
  *
+ * LONG HORIZONS (added after the first run showed nothing at 5 and 10 days): a rebound can take longer than a week to show up, so
+ * the same signals are also followed to 15, 20 and 30 sessions, and a realistic "15-session hold with a 3 ATR stop" is added.
+ * Returns that overlap for 15-30 sessions are shared by neighbouring days, so the t-statistics for the long horizons cluster by
+ * calendar MONTH (stricter than by day). New pass bar, fixed before the run: positive 15-day excess over the average stock in ALL
+ * THREE periods and an overall month-clustered t of at least 2. Signals from the last 30 sessions are left out (their 30-day
+ * outcome is not known yet).
+ *
  * Universe: S&P 500 members at the time, $20M/day and $5 floors (same as the live system). Before costs. Read-only.
  *
  * Usage: ALPACA_KEY_ID=... ALPACA_SECRET_KEY=... node scanner/reboundresearch.js
@@ -51,8 +58,8 @@ const CFG = {
   out: env.RB_OUT || 'research-out-rebound',
 };
 const PERIODS = [['Oct 2016 to 2019', '2016-01-01', '2019-12-31'], ['2020 to 2022', '2020-01-01', '2022-12-31'], ['2023 to 2026', '2023-01-01', '2026-12-31']];
-const H = ['r1', 'r3', 'r5', 'r10', 'plan'];            // measured outcomes; plan = the live +4% / 3 ATR / day-3 plan
-const HN = { r1: 1, r3: 3, r5: 5, r10: 10 };
+const HN = { r1: 1, r3: 3, r5: 5, r10: 10, r15: 15, r20: 20, r30: 30 };      // plain returns from the entry open to the close N sessions after the signal day
+const H = [...Object.keys(HN), 'plan', 'p15'];     // plan = the live +4% / 3 ATR / day-3 plan; p15 = hold 15 sessions with a 3 ATR stop, no target
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 const isNum = v => typeof v === 'number' && Number.isFinite(v);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -102,30 +109,47 @@ function simulate(P, i, entry, atr) {
   }
   return null;
 }
+/** Hold up to 15 sessions with a 3 ATR stop (checked on lows, gap-downs exit at the open) and no target; exit at the day-15 close. */
+function hold15(P, i, entry, atr) {
+  const stop = entry - 3 * atr;
+  for (let d = 1; d <= 15; d++) {
+    const k = i + d;
+    if (d > 1 && P.o[k] <= stop) return (P.o[k] / entry - 1) * 100;
+    if (P.l[k] <= stop) return (stop / entry - 1) * 100;
+    if (d === 15) return (P.c[k] / entry - 1) * 100;
+  }
+  return null;
+}
 /** Outcomes of buying the open after signal index i. Null if the live 2% entry cap would skip it. */
 function outcomes(P, i, atr) {
   const entry = P.o[i + 1];
   if (!(entry <= P.c[i] * 1.02)) return null;
-  const s = simulate(P, i, entry, atr), out = { entry, plan: s.pct, how: s.how };
+  const s = simulate(P, i, entry, atr), out = { entry, plan: s.pct, how: s.how, p15: hold15(P, i, entry, atr) };
   for (const [k, nd] of Object.entries(HN)) out[k] = (P.c[i + nd] / entry - 1) * 100;
   return out;
 }
 
 /* ----------------------------------------------------------------------- stats */
-function seMean(rows, f) {
+/** Standard error of the mean of f over rows, treating rows that share `key` (a date, or a calendar month) as ONE observation. */
+function seMean(rows, f, key = 'date') {
   const by = new Map();
-  for (const r of rows) { const v = f(r); if (!isNum(v)) continue; if (!by.has(r.date)) by.set(r.date, []); by.get(r.date).push(v); }
+  for (const r of rows) { const v = f(r); if (!isNum(v)) continue; const g = r[key]; if (!by.has(g)) by.set(g, []); by.get(g).push(v); }
   const m = [...by.values()].map(mean), n = m.length;
   if (n < 3) return NaN;
   const mu = mean(m);
   return Math.sqrt(m.reduce((s, x) => s + (x - mu) ** 2, 0) / (n - 1)) / Math.sqrt(n);
 }
-/** Stats for a group of signal rows: bought count, mean outcomes, 5-day win rate, and the excess over the same-day average stock. */
+/** Stats for a group of signal rows: bought count, mean outcomes, excess over the same-day average stock, and t-statistics by day and by month. */
 function groupStats(rows) {
-  const b = rows.filter(r => r.filled), s = { n: rows.length, bought: b.length };
-  for (const k of H) { s[k] = mean(b.map(r => r[k])); s['ex_' + k] = mean(b.map(r => r['ex_' + k])); }
+  const b = rows.filter(r => r.filled), s = { n: rows.length, bought: b.length, td: {}, tm: {}, pm: {} };
+  for (const k of H) {
+    s[k] = mean(b.map(r => r[k])); s['ex_' + k] = mean(b.map(r => r['ex_' + k]));
+    const f = r => r['ex_' + k];
+    s.td[k] = s['ex_' + k] / seMean(b, f, 'date'); s.tm[k] = s['ex_' + k] / seMean(b, f, 'month'); s.pm[k] = 1.96 * seMean(b, f, 'month');
+  }
   s.win5 = b.length ? b.filter(r => r.r5 > 0).length / b.length : NaN;
-  s.exSe5 = seMean(b, r => r.ex_r5); s.exT5 = s.ex_r5 / s.exSe5; s.exPm5 = 1.96 * s.exSe5;
+  s.win15 = b.length ? b.filter(r => r.r15 > 0).length / b.length : NaN;
+  s.exT5 = s.td.r5; s.exPm5 = 1.96 * seMean(b, r => r.ex_r5, 'date');
   return s;
 }
 
@@ -143,44 +167,46 @@ const GROUPS = [
   ['SENSITIVITY, quiet days allowed (volume up to 1.1x): V2', r => r.w2],
   ['SENSITIVITY, quiet days allowed (volume up to 1.1x): V3', r => r.w3],
 ];
+const SHOW = ['r5', 'r10', 'r15', 'r20', 'r30'];
 function line(label, s) {
   if (!s.n) return `  ${label.padEnd(52)}      0`;
-  return `  ${label.padEnd(52)} ${String(s.n).padStart(6)} ${String(s.bought).padStart(6)} | ${f2(s.r1).padStart(6)} ${f2(s.r3).padStart(6)} ${f2(s.r5).padStart(6)} ${f2(s.r10).padStart(6)} | ${p0(s.win5).padStart(4)} | ${f2(s.ex_r5).padStart(6)} ±${f2(s.exPm5).padStart(5)} (t ${f2(s.exT5).padStart(5)}) | ${f2(s.plan).padStart(6)} ${f2(s.ex_plan).padStart(6)}`;
+  const col = (k, w = 6) => f2(k).padStart(w);
+  return `  ${label.padEnd(52)} ${String(s.n).padStart(6)} ${String(s.bought).padStart(6)} | ${SHOW.map(k => col(s[k])).join(' ')} | ${SHOW.map(k => col(s['ex_' + k])).join(' ')} | ${['r10', 'r15', 'r20', 'r30'].map(k => col(s.tm[k], 5)).join(' ')} | ${p0(s.win15).padStart(4)} | ${col(s.p15)} ${col(s.ex_p15)}`;
 }
 function buildReport(rows, base, meta, spyRows) {
   const L = [], pr = [['ALL PERIODS', '0000', '9999'], ...PERIODS];
-  L.push(`RUN CHECK: ${meta.symbols} stocks with data, ${meta.skipped} download batches skipped, ${meta.stockDays} eligible stock-days, ${meta.dipAll} Dip signals found (the earlier research found 2,963 through mid-Oct 2026; a few more are expected if the data is newer).`);
+  L.push(`RUN CHECK: ${meta.symbols} stocks with data, ${meta.skipped} download batches skipped, ${meta.stockDays} eligible stock-days (signals from the last 30 sessions are left out), ${meta.dipAll} Dip signals found.`);
   L.push(`Signals found with calm volume 1.0-1.1x (main test): V1 ${meta.v1}, V2 ${meta.v2}, V3 ${meta.v3}; with volume up to 1.1x (sensitivity): V1 ${meta.w1}, V2 ${meta.w2}, V3 ${meta.w3}. Rows below count only trades that the 2% entry cap allows ("bought").`);
   L.push('');
-  L.push('BOTTOM-AND-REBOUND RULE: selling settles to normal volume (1.0-1.1x the average) on a down day, strong finish, close back above the 20-day average');
-  L.push('Buy the next open (skipped if more than 2% above the signal close). Columns: avg % from that open to the close of day 1 / 3 / 5 / 10 | share of trades up after 5 days | 5-day EXCESS over the average S&P 500 stock on the same day, with a 95% margin and a date-clustered t | the live plan (+4% target, 3 ATR stop, exit day 3): average and excess.');
-  L.push('Pass bar, fixed in advance (V1, V2, V3): positive 5-day excess in ALL THREE periods and an overall t of at least 2.');
+  L.push('BOTTOM-AND-REBOUND RULE, LONG HORIZONS: selling settles to normal volume (1.0-1.1x the average) on a down day, strong finish, close back above the 20-day average');
+  L.push('Buy the next open (skipped if more than 2% above the signal close). Columns: signals | bought | avg % from that open to the close of day 5 / 10 / 15 / 20 / 30 | the same minus the average S&P 500 stock on the same day (EXCESS) | month-clustered t-statistic of that excess at day 10 / 15 / 20 / 30 | share up after 15 days | a 15-session hold with a 3 ATR stop: average, and its excess.');
+  L.push('Pass bar, fixed in advance (V1, V2, V3): positive 15-day excess in ALL THREE periods and an overall month-clustered t of at least 2.');
   for (const [name, a, b] of pr) {
     L.push('');
-    L.push('='.repeat(150));
+    L.push('='.repeat(190));
     L.push(` ${name}`);
-    L.push('='.repeat(150));
-    L.push(`  ${'group'.padEnd(52)} signals bought |  day1   day3   day5  day10 | up5  | 5-day excess over the average stock same day  |  plan  plan-ex`);
+    L.push('='.repeat(190));
+    L.push(`  ${'group'.padEnd(52)} signals bought | ${SHOW.map(k => ('d' + HN[k]).padStart(6)).join(' ')} | ${SHOW.map(k => ('ex' + HN[k]).padStart(6)).join(' ')} | ${['t10', 't15', 't20', 't30'].map(x => x.padStart(5)).join(' ')} | up15 |  hold15 hold15-ex`);
     const sub = rows.filter(r => r.date >= a && r.date <= b);
     for (const [label, test] of GROUPS) L.push(line(label, groupStats(sub.filter(test))));
     const bs = base(a, b);
-    L.push(`  ${'ALL stock-days (the baseline, bought the same way)'.padEnd(52)} ${String(bs.n).padStart(6)} ${String(bs.n).padStart(6)} | ${f2(bs.r1).padStart(6)} ${f2(bs.r3).padStart(6)} ${f2(bs.r5).padStart(6)} ${f2(bs.r10).padStart(6)} |      |        0.00                                   | ${f2(bs.plan).padStart(6)}   0.00`);
+    L.push(`  ${'ALL stock-days (the baseline, bought the same way)'.padEnd(52)} ${String(bs.n).padStart(6)} ${String(bs.n).padStart(6)} | ${SHOW.map(k => f2(bs[k]).padStart(6)).join(' ')} | ${SHOW.map(() => '  0.00').join(' ')} |                          |      | ${f2(bs.p15).padStart(6)}   0.00`);
   }
   L.push('');
-  L.push('='.repeat(150));
-  L.push(' VERDICTS against the pre-set bar (5-day excess over the average stock on the same day)');
-  L.push('='.repeat(150));
+  L.push('='.repeat(190));
+  L.push(' VERDICTS against the pre-set bar (15-day excess over the average stock on the same day; t clustered by month)');
+  L.push('='.repeat(190));
   for (const [label, test] of [GROUPS[0], GROUPS[1], GROUPS[4], GROUPS[7], GROUPS[8], GROUPS[9], GROUPS[10]]) {
     const per = PERIODS.map(p => groupStats(rows.filter(r => r.date >= p[1] && r.date <= p[2] && test(r))));
-    const all = groupStats(rows.filter(test)), pos = per.every(s => s.bought >= 10 && isNum(s.ex_r5) && s.ex_r5 > 0);
-    const ok = pos && isNum(all.exT5) && all.exT5 >= 2;
-    L.push(` ${label.trim().padEnd(52)} periods: ${per.map(s => (s.bought >= 10 ? `${f2(s.ex_r5)} (n ${s.bought})` : `too few (n ${s.bought})`)).join(' | ')} | overall ${f2(all.ex_r5)} (t ${f2(all.exT5)}) -> ${ok ? 'PASSES' : per.some(s => s.bought < 10) ? 'does NOT pass (too few trades in a period)' : pos ? 'does NOT pass (consistent sign, overall t below 2)' : 'does NOT pass (sign not consistent across periods)'}`);
+    const all = groupStats(rows.filter(test)), pos = per.every(s => s.bought >= 10 && isNum(s.ex_r15) && s.ex_r15 > 0);
+    const ok = pos && isNum(all.tm.r15) && all.tm.r15 >= 2;
+    L.push(` ${label.trim().padEnd(52)} 15-day excess by period: ${per.map(s => (s.bought >= 10 ? `${f2(s.ex_r15)} (n ${s.bought})` : `too few (n ${s.bought})`)).join(' | ')} | overall ${f2(all.ex_r15)} (t ${f2(all.tm.r15)}) | 20-day ${f2(all.ex_r20)} (t ${f2(all.tm.r20)}) | 30-day ${f2(all.ex_r30)} (t ${f2(all.tm.r30)}) -> ${ok ? 'PASSES' : per.some(s => s.bought < 10) ? 'does NOT pass (too few trades in a period)' : pos ? 'does NOT pass (consistent sign, overall t below 2)' : 'does NOT pass (sign not consistent across periods)'}`);
   }
   L.push('');
-  L.push('='.repeat(150));
+  L.push('='.repeat(190));
   L.push(' EXPLORATORY: THE SAME RULE ON THE INDEX (SPY), bought at the next open; few events, read as colour only');
-  L.push('='.repeat(150));
-  for (const r of spyRows) L.push(`  ${r.label.padEnd(40)} ${r.period.padEnd(18)} events ${String(r.n).padStart(3)} | avg SPY return after 5 / 10 / 20 days: ${[5, 10, 20].map(d => `${f2(r.avg[d]).padStart(6)}%`).join(' ')} | all days: ${[5, 10, 20].map(d => `${f2(r.base[d]).padStart(5)}%`).join(' ')} | up after 10 days ${p0(r.win10).padStart(4)}`);
+  L.push('='.repeat(190));
+  for (const r of spyRows) L.push(`  ${r.label.padEnd(40)} ${r.period.padEnd(18)} events ${String(r.n).padStart(3)} | avg SPY return after 5 / 10 / 15 / 20 / 30 days: ${[5, 10, 15, 20, 30].map(d => `${f2(r.avg[d]).padStart(6)}%`).join(' ')} | all days: ${[5, 10, 15, 20, 30].map(d => `${f2(r.base[d]).padStart(5)}%`).join(' ')} | up after 15 days ${p0(r.win15).padStart(4)}`);
   return L.join('\n');
 }
 
@@ -191,17 +217,17 @@ function processSymbol(sym, candles, isSp, dayAgg) {
   if (clean.length < 260) return null;
   const ind = core.setupIndicators(clean), n = clean.length, { o, h, l, c, s200, atr, dollarVol } = ind, P = { o, h, l, c };
   const s20 = core.sma(c, 20), fl = detect(ind, s20, BANDS.A), fb = detect(ind, s20, BANDS.B), rows = []; let days = 0;
-  for (let i = 200; i < n - 10; i++) {
+  for (let i = 200; i < n - 30; i++) {
     const date = clean[i].t;
     if (date < CFG.testFrom || !isSp(sym, date)) continue;
     if (!(c[i] >= core.SETUP.MIN_PRICE) || !(dollarVol[i] >= core.SETUP.MIN_LIQUIDITY) || !isNum(atr[i]) || !(atr[i] > 0) || !isNum(s20[i])) continue;
     const f = core.setupFlags(ind, i), oc = outcomes(P, i, atr[i]);
     if (oc) {
-      let d = dayAgg.get(date); if (!d) { d = { n: 0, s: { r1: 0, r3: 0, r5: 0, r10: 0, plan: 0 } }; dayAgg.set(date, d); }
+      let d = dayAgg.get(date); if (!d) { d = { n: 0, s: Object.fromEntries(H.map(k => [k, 0])) }; dayAgg.set(date, d); }
       d.n++; for (const k of H) d.s[k] += oc[k]; days++;
     }
     const dip = !!(f && f.dip);
-    if (fl.v1[i] || fl.v2[i] || fl.v3[i] || fb.v1[i] || fb.v2[i] || fb.v3[i] || dip) rows.push({ date, sym, v1: fl.v1[i], v2: fl.v2[i], v3: fl.v3[i], w1: fb.v1[i], w2: fb.v2[i], w3: fb.v3[i], dip, above200: c[i] > s200[i], atr: atr[i], filled: !!oc, ...(oc || {}) });
+    if (fl.v1[i] || fl.v2[i] || fl.v3[i] || fb.v1[i] || fb.v2[i] || fb.v3[i] || dip) rows.push({ date, month: date.slice(0, 7), sym, v1: fl.v1[i], v2: fl.v2[i], v3: fl.v3[i], w1: fb.v1[i], w2: fb.v2[i], w3: fb.v3[i], dip, above200: c[i] > s200[i], atr: atr[i], filled: !!oc, ...(oc || {}) });
   }
   return { rows, days };
 }
@@ -216,10 +242,10 @@ function spyStudy(candles) {
     const fl = detect(ind, s20, band);
     for (const [label, flags] of [['V1 literal', fl.v1], ['V2 settle day then reclaim', fl.v2], ['V3 V2 after a panic', fl.v3]]) {
       for (const p of [['ALL PERIODS', '0000', '9999'], ...PERIODS]) {
-        const idx = []; for (let i = 25; i < n - 21; i++) if (clean[i].t >= p[1] && clean[i].t <= p[2]) idx.push(i);
-        const ev = idx.filter(i => flags[i]), row = { label: `${label} (${bname})`, period: p[0], n: ev.length, avg: {}, base: {}, win10: NaN };
-        for (const d of [5, 10, 20]) { row.avg[d] = mean(ev.map(i => spyRet(i, d)).filter(isNum)); row.base[d] = mean(idx.map(i => spyRet(i, d)).filter(isNum)); }
-        const w = ev.map(i => spyRet(i, 10)).filter(isNum); row.win10 = w.length ? w.filter(x => x > 0).length / w.length : NaN;
+        const idx = []; for (let i = 25; i < n - 31; i++) if (clean[i].t >= p[1] && clean[i].t <= p[2]) idx.push(i);
+        const ev = idx.filter(i => flags[i]), row = { label: `${label} (${bname})`, period: p[0], n: ev.length, avg: {}, base: {}, win15: NaN };
+        for (const d of [5, 10, 15, 20, 30]) { row.avg[d] = mean(ev.map(i => spyRet(i, d)).filter(isNum)); row.base[d] = mean(idx.map(i => spyRet(i, d)).filter(isNum)); }
+        const w = ev.map(i => spyRet(i, 15)).filter(isNum); row.win15 = w.length ? w.filter(x => x > 0).length / w.length : NaN;
         out.push(row);
       }
     }
@@ -261,7 +287,7 @@ function addExcess(rows, dayAgg) {
 }
 function baselineFn(dayAgg) {
   return (a, b) => {
-    const s = { n: 0, r1: 0, r3: 0, r5: 0, r10: 0, plan: 0 };
+    const s = { n: 0, ...Object.fromEntries(H.map(k => [k, 0])) };
     for (const [date, d] of dayAgg) if (date >= a && date <= b) { s.n += d.n; for (const k of H) s[k] += d.s[k]; }
     for (const k of H) s[k] = s.n ? s[k] / s.n : NaN;
     return s;
@@ -290,12 +316,13 @@ async function main() {
   const report = rows.length ? buildReport(rows, baselineFn(dayAgg), meta, spyStudy(spy)) : 'No signals were found. Check the data download above.';
   fs.writeFileSync(path.join(CFG.out, 'summary.txt'), report + '\n');
   const cell = x => (isNum(x) ? x.toFixed(3) : '');
-  fs.writeFileSync(path.join(CFG.out, 'signals.csv'), ['date,sym,v1,v2,v3,w1,w2,w3,dip,above200,filled,entryOpen,atr,r1,r3,r5,r10,plan,how,ex_r5']
-    .concat(rows.map(r => [r.date, r.sym, +r.v1, +r.v2, +r.v3, +r.w1, +r.w2, +r.w3, +r.dip, +r.above200, +r.filled, cell(r.entry), r.atr.toFixed(4), cell(r.r1), cell(r.r3), cell(r.r5), cell(r.r10), cell(r.plan), r.how || '', cell(r.ex_r5)].join(','))).join('\n') + '\n');
-  fs.writeFileSync(path.join(CFG.out, 'daymean.csv'), ['date,stocks,mean1,mean3,mean5,mean10,meanPlan'].concat([...dayAgg].sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([d, x]) => [d, x.n, ...H.map(k => (x.s[k] / x.n).toFixed(4))].join(','))).join('\n') + '\n');
+  const hdr = ['date', 'sym', 'v1', 'v2', 'v3', 'w1', 'w2', 'w3', 'dip', 'above200', 'filled', 'entryOpen', 'atr', ...Object.keys(HN), 'plan', 'p15', 'how', 'ex_r15'];
+  fs.writeFileSync(path.join(CFG.out, 'signals.csv'), [hdr.join(',')]
+    .concat(rows.map(r => [r.date, r.sym, +r.v1, +r.v2, +r.v3, +r.w1, +r.w2, +r.w3, +r.dip, +r.above200, +r.filled, cell(r.entry), r.atr.toFixed(4), ...Object.keys(HN).map(k => cell(r[k])), cell(r.plan), cell(r.p15), r.how || '', cell(r.ex_r15)].join(','))).join('\n') + '\n');
+  fs.writeFileSync(path.join(CFG.out, 'daymean.csv'), ['date,stocks,' + H.map(k => 'mean_' + k).join(',')].concat([...dayAgg].sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([d, x]) => [d, x.n, ...H.map(k => (x.s[k] / x.n).toFixed(4))].join(','))).join('\n') + '\n');
   console.log('\n' + report);
   log(`Done: ${rows.length} flagged stock-days; results in ${CFG.out}/`);
 }
 
 if (require.main === module) main().catch(e => { console.error('FAILED:', e.message); process.exit(1); });
-module.exports = { BANDS, detect, outcomes, simulate, groupStats, seMean, addExcess, baselineFn, processSymbol, spyStudy, buildReport, GROUPS };
+module.exports = { BANDS, H, HN, detect, outcomes, simulate, hold15, groupStats, seMean, addExcess, baselineFn, processSymbol, spyStudy, buildReport, GROUPS };
