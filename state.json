@@ -3,39 +3,9 @@
  "status": "running",
  "startedAt": "2026-09-26",
  "lastEntryRunDate": "2026-11-09",
- "lastExitRunDate": "2026-11-06",
+ "lastExitRunDate": "2026-11-09",
  "spyBaseline": 764.95,
  "positions": {
-  "ILMN": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "bearEngulf",
-   "pool": "sp500",
-   "signalDate": "2026-11-04",
-   "signalClose": 226.54,
-   "entryDate": "2026-11-05",
-   "entry": 215.81,
-   "shares": 55,
-   "target": 224.45,
-   "stop": 162.68,
-   "ocoOrderId": "79e529d7-ca00-46a7-a191-746e45e9e948",
-   "now": 221.41
-  },
-  "MPC": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-11-04",
-   "signalClose": 392.68,
-   "entryDate": "2026-11-05",
-   "entry": 391.78,
-   "shares": 31,
-   "target": 407.45,
-   "stop": 327.1,
-   "ocoOrderId": "cbdbda73-6e78-4dad-b330-8b36ec9c7ef3",
-   "now": 386.62
-  },
   "IT": {
    "strategy": "dip",
    "side": "long",
@@ -49,7 +19,7 @@
    "target": 200.07,
    "stop": 155.44,
    "ocoOrderId": "df9e4cb3-150f-48e4-ae82-3effd6c6ec45",
-   "now": 190.6
+   "now": 191.22
   },
   "PSX": {
    "strategy": "dip",
@@ -64,7 +34,7 @@
    "target": 254.79,
    "stop": 210.64,
    "ocoOrderId": "2152d0cd-6f33-438a-98ac-51eb778a62a8",
-   "now": 250.49
+   "now": 252.75
   },
   "VLO": {
    "strategy": "dip",
@@ -79,7 +49,7 @@
    "target": 359.91,
    "stop": 286.51,
    "ocoOrderId": "7985a9fd-5ab3-4b4c-8adc-cdd36ba04d2d",
-   "now": 353.75
+   "now": 356.17
   }
  },
  "pendingEntries": {},
@@ -848,6 +818,40 @@
    "how": "target",
    "usd": 496.09,
    "pct": 4.04
+  },
+  {
+   "ticker": "ILMN",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "bearEngulf",
+   "pool": "sp500",
+   "signalDate": "2026-11-04",
+   "signalClose": 226.54,
+   "entryDate": "2026-11-05",
+   "exitDate": "2026-11-09",
+   "entry": 215.81,
+   "exit": 221.36,
+   "shares": 55,
+   "how": "time",
+   "usd": 305.25,
+   "pct": 2.57
+  },
+  {
+   "ticker": "MPC",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-11-04",
+   "signalClose": 392.68,
+   "entryDate": "2026-11-05",
+   "exitDate": "2026-11-09",
+   "entry": 391.78,
+   "exit": 390.24,
+   "shares": 31,
+   "how": "time",
+   "usd": -47.74,
+   "pct": -0.39
   }
  ],
  "equity": [
@@ -1069,9 +1073,9 @@
   },
   {
    "d": "2026-11-09",
-   "value": 94928,
-   "pct": -5.07,
-   "spy": -1.32
+   "value": 95286,
+   "pct": -4.71,
+   "spy": -1.4
   }
  ],
  "lastOrders": {
@@ -1177,10 +1181,14 @@
   "queued": false
  },
  "lastExits": {
-  "forDate": "2026-11-06",
+  "forDate": "2026-11-09",
   "exits": [
    {
-    "ticker": "ZBRA",
+    "ticker": "ILMN",
+    "note": "Sold at the market (3rd session)"
+   },
+   {
+    "ticker": "MPC",
     "note": "Sold at the market (3rd session)"
    }
   ]
