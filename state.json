@@ -6,21 +6,6 @@
  "lastExitRunDate": "2026-11-06",
  "spyBaseline": 764.95,
  "positions": {
-  "CRL": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-11-04",
-   "signalClose": 326.29,
-   "entryDate": "2026-11-05",
-   "entry": 329.97,
-   "shares": 38,
-   "target": 343.17,
-   "stop": 274.98,
-   "ocoOrderId": "a321919d-132a-4604-bf4d-212fc855a76e",
-   "now": 346
-  },
   "ILMN": {
    "strategy": "dip",
    "side": "long",
@@ -34,7 +19,7 @@
    "target": 224.45,
    "stop": 162.68,
    "ocoOrderId": "79e529d7-ca00-46a7-a191-746e45e9e948",
-   "now": 216.46
+   "now": 220.19
   },
   "MPC": {
    "strategy": "dip",
@@ -49,7 +34,7 @@
    "target": 407.45,
    "stop": 327.1,
    "ocoOrderId": "cbdbda73-6e78-4dad-b330-8b36ec9c7ef3",
-   "now": 371.8
+   "now": 386.5
   },
   "IT": {
    "strategy": "dip",
@@ -64,7 +49,7 @@
    "target": 200.07,
    "stop": 155.44,
    "ocoOrderId": "df9e4cb3-150f-48e4-ae82-3effd6c6ec45",
-   "now": 188.52
+   "now": 190.98
   },
   "PSX": {
    "strategy": "dip",
@@ -78,43 +63,41 @@
    "shares": 50,
    "target": 254.79,
    "stop": 210.64,
-   "ocoOrderId": "2152d0cd-6f33-438a-98ac-51eb778a62a8"
-  }
- },
- "pendingEntries": {
+   "ocoOrderId": "2152d0cd-6f33-438a-98ac-51eb778a62a8",
+   "now": 250.02
+  },
   "CRWD": {
-   "orderId": "d7ca7820-8749-4c30-8dd9-710f00b97c03",
    "strategy": "dip",
    "side": "long",
    "tag": "normal",
    "pool": "sp500",
-   "size": 12556.4013,
-   "shares": 56,
-   "limit": 221.24,
-   "opg": false,
-   "forDate": "2026-11-09",
    "signalDate": "2026-11-06",
    "signalClose": 216.9,
-   "atr": 14.76,
-   "placedAt": "2026-11-09T14:32:16.529Z"
+   "entryDate": "2026-11-09",
+   "entry": 219.27,
+   "shares": 56,
+   "target": 228.04,
+   "stop": 174.99,
+   "ocoOrderId": "2068c90b-b1d9-4e65-bff0-1c5771ee37bf",
+   "now": 221.81
   },
   "VLO": {
-   "orderId": "aeb75aef-9617-4db5-9ee9-ea6aab33fe1d",
    "strategy": "dip",
    "side": "long",
    "tag": "normal",
    "pool": "sp500",
-   "size": 12556.4013,
-   "shares": 35,
-   "limit": 353.38,
-   "opg": false,
-   "forDate": "2026-11-09",
    "signalDate": "2026-11-06",
    "signalClose": 346.45,
-   "atr": 19.85,
-   "placedAt": "2026-11-09T14:32:16.723Z"
+   "entryDate": "2026-11-09",
+   "entry": 346.06,
+   "shares": 35,
+   "target": 359.91,
+   "stop": 286.51,
+   "ocoOrderId": "7985a9fd-5ab3-4b4c-8adc-cdd36ba04d2d",
+   "now": 354.16
   }
  },
+ "pendingEntries": {},
  "pendingCloses": {},
  "trades": [
   {
@@ -846,6 +829,23 @@
    "how": "time",
    "usd": -451.44,
    "pct": -3.55
+  },
+  {
+   "ticker": "CRL",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-11-04",
+   "signalClose": 326.29,
+   "entryDate": "2026-11-05",
+   "exitDate": "2026-11-09",
+   "entry": 329.97,
+   "exit": 343.94,
+   "shares": 38,
+   "how": "target",
+   "usd": 530.87,
+   "pct": 4.23
   }
  ],
  "equity": [
@@ -1067,9 +1067,9 @@
   },
   {
    "d": "2026-11-09",
-   "value": 93007,
-   "pct": -6.99,
-   "spy": -3.09
+   "value": 94510,
+   "pct": -5.49,
+   "spy": -2.07
   }
  ],
  "lastOrders": {
