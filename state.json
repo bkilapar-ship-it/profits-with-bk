@@ -34,7 +34,7 @@
    "target": 254.79,
    "stop": 210.64,
    "ocoOrderId": "2152d0cd-6f33-438a-98ac-51eb778a62a8",
-   "now": 253.02
+   "now": 252.5
   },
   "VLO": {
    "strategy": "dip",
@@ -49,7 +49,7 @@
    "target": 359.91,
    "stop": 286.51,
    "ocoOrderId": "7985a9fd-5ab3-4b4c-8adc-cdd36ba04d2d",
-   "now": 356.75
+   "now": 353.5
   }
  },
  "pendingEntries": {},
@@ -1073,8 +1073,8 @@
   },
   {
    "d": "2026-11-09",
-   "value": 95301,
-   "pct": -4.7,
+   "value": 95156,
+   "pct": -4.84,
    "spy": -1.6
   }
  ],
