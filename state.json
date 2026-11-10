@@ -19,7 +19,7 @@
    "target": 200.07,
    "stop": 155.44,
    "ocoOrderId": "df9e4cb3-150f-48e4-ae82-3effd6c6ec45",
-   "now": 187.06
+   "now": 187.36
   },
   "PSX": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 254.79,
    "stop": 210.64,
    "ocoOrderId": "2152d0cd-6f33-438a-98ac-51eb778a62a8",
-   "now": 249.99
+   "now": 249.17
   },
   "VLO": {
    "strategy": "dip",
@@ -49,7 +49,7 @@
    "target": 359.91,
    "stop": 286.51,
    "ocoOrderId": "7985a9fd-5ab3-4b4c-8adc-cdd36ba04d2d",
-   "now": 348.69
+   "now": 348.97
   },
   "TPR": {
    "strategy": "rip",
@@ -64,7 +64,7 @@
    "target": 131.02,
    "stop": 150.49,
    "ocoOrderId": "4bb6481b-7b26-4d2b-9c7e-f9fe6b29695f",
-   "now": 135.53
+   "now": 135.7
   },
   "BNO": {
    "strategy": "dip",
@@ -79,7 +79,7 @@
    "target": 59.25,
    "stop": 49.29,
    "ocoOrderId": "8e0c6a5a-4e0f-45e8-978c-64cb1eb6a9be",
-   "now": 58.24
+   "now": 57.94
   },
   "EXPE": {
    "strategy": "dip",
@@ -94,7 +94,7 @@
    "target": 271.24,
    "stop": 207.98,
    "ocoOrderId": "6654926e-035d-4040-8319-6bb7b82ae72c",
-   "now": 258.89
+   "now": 251.85
   }
  },
  "pendingEntries": {},
@@ -1124,9 +1124,9 @@
   },
   {
    "d": "2026-11-10",
-   "value": 94855,
-   "pct": -5.14,
-   "spy": -2.5
+   "value": 94436,
+   "pct": -5.56,
+   "spy": -2.18
   }
  ],
  "lastOrders": {
