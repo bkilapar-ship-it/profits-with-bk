@@ -2,7 +2,7 @@
  "version": 1,
  "status": "running",
  "startedAt": "2026-09-26",
- "lastEntryRunDate": "2026-11-10",
+ "lastEntryRunDate": "2026-11-11",
  "lastExitRunDate": "2026-11-10",
  "spyBaseline": 764.95,
  "positions": {
@@ -19,7 +19,7 @@
    "target": 254.79,
    "stop": 210.64,
    "ocoOrderId": "2152d0cd-6f33-438a-98ac-51eb778a62a8",
-   "now": 250.7
+   "now": 253.74
   },
   "VLO": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 359.91,
    "stop": 286.51,
    "ocoOrderId": "7985a9fd-5ab3-4b4c-8adc-cdd36ba04d2d",
-   "now": 351.98
+   "now": 353.91
   },
   "TPR": {
    "strategy": "rip",
@@ -49,7 +49,7 @@
    "target": 131.02,
    "stop": 150.49,
    "ocoOrderId": "4bb6481b-7b26-4d2b-9c7e-f9fe6b29695f",
-   "now": 135.62
+   "now": 133.47
   },
   "BNO": {
    "strategy": "dip",
@@ -64,7 +64,7 @@
    "target": 59.25,
    "stop": 49.29,
    "ocoOrderId": "8e0c6a5a-4e0f-45e8-978c-64cb1eb6a9be",
-   "now": 58.75
+   "now": 58.92
   },
   "EXPE": {
    "strategy": "dip",
@@ -79,10 +79,41 @@
    "target": 271.24,
    "stop": 207.98,
    "ocoOrderId": "6654926e-035d-4040-8319-6bb7b82ae72c",
-   "now": 255.68
+   "now": 251.12
+  },
+  "APP": {
+   "strategy": "rip",
+   "side": "short",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-11-10",
+   "signalClose": 395.51,
+   "entryDate": "2026-11-11",
+   "entry": 399.17,
+   "shares": 33,
+   "target": 383.2,
+   "stop": 470.45,
+   "ocoOrderId": "2076e999-3556-4524-9e7f-e41a643e4e79"
   }
  },
- "pendingEntries": {},
+ "pendingEntries": {
+  "GTLB": {
+   "orderId": "6b79df15-02e5-4128-bbe5-368b64f56b5b",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "nonsp",
+   "size": 12870.70425,
+   "shares": 270,
+   "limit": 47.59,
+   "opg": false,
+   "forDate": "2026-11-11",
+   "signalDate": "2026-11-10",
+   "signalClose": 46.66,
+   "atr": 2.78,
+   "placedAt": "2026-11-11T14:32:20.641Z"
+  }
+ },
  "pendingCloses": {},
  "trades": [
   {
@@ -1132,64 +1163,51 @@
   },
   {
    "d": "2026-11-11",
-   "value": 95074,
-   "pct": -4.93,
-   "spy": null
+   "value": 95335,
+   "pct": -4.66,
+   "spy": -0.96
   }
  ],
  "lastOrders": {
-  "forDate": "2026-11-10",
+  "forDate": "2026-11-11",
   "entries": [
    {
     "rank": 1,
-    "ticker": "EXPE",
-    "strategy": "dip",
-    "tag": "green_or_sweep",
-    "pool": "sp500",
-    "opg": false,
-    "size": 12772.23,
-    "shares": 48,
-    "limit": 264.34,
-    "vs200": 0,
-    "chg5d": -13.32
-   },
-   {
-    "rank": 2,
-    "ticker": "TPR",
+    "ticker": "APP",
     "strategy": "rip",
     "tag": "normal",
     "pool": "sp500",
     "opg": false,
-    "size": 12772.23,
-    "shares": 95,
-    "limit": 133.35,
-    "vs200": -0.77,
-    "chg5d": 12.68
+    "size": 12870.7,
+    "shares": 33,
+    "limit": 387.6,
+    "vs200": -3.07,
+    "chg5d": 61.1
    },
    {
-    "rank": 6,
-    "ticker": "BNO",
+    "rank": 4,
+    "ticker": "GTLB",
     "strategy": "dip",
     "tag": "normal",
     "pool": "nonsp",
     "opg": false,
-    "size": 12772.23,
-    "shares": 212,
-    "limit": 60.11,
-    "vs200": 16.06,
-    "chg5d": -10.64
+    "size": 12870.7,
+    "shares": 270,
+    "limit": 47.59,
+    "vs200": 35.02,
+    "chg5d": -10.9
    }
   ],
   "skipped": [
    {
-    "ticker": "11 non-S&P",
+    "ticker": "12 non-S&P",
     "strategy": "dip",
     "reason": "Signals outside the S&P 500 below the $100M/day floor for stocks outside the S&P 500"
    },
    {
     "ticker": "8 non-S&P",
     "strategy": "dip",
-    "reason": "Signals outside the S&P 500 no spare cash left after the S&P signals"
+    "reason": "Signals outside the S&P 500 limit of 2 open positions outside the S&P 500 reached (keeping room for S&P signals)"
    }
   ],
   "queued": false
