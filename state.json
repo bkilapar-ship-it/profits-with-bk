@@ -34,7 +34,7 @@
    "target": 359.91,
    "stop": 286.51,
    "ocoOrderId": "7985a9fd-5ab3-4b4c-8adc-cdd36ba04d2d",
-   "now": 350.02
+   "now": 351.98
   },
   "TPR": {
    "strategy": "rip",
@@ -64,7 +64,7 @@
    "target": 59.25,
    "stop": 49.29,
    "ocoOrderId": "8e0c6a5a-4e0f-45e8-978c-64cb1eb6a9be",
-   "now": 58.4
+   "now": 58.8
   },
   "EXPE": {
    "strategy": "dip",
@@ -1126,8 +1126,8 @@
   },
   {
    "d": "2026-11-10",
-   "value": 94819,
-   "pct": -5.18,
+   "value": 94983,
+   "pct": -5.02,
    "spy": -1.96
   }
  ],
