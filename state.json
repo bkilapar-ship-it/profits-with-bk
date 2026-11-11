@@ -6,21 +6,6 @@
  "lastExitRunDate": "2026-11-10",
  "spyBaseline": 764.95,
  "positions": {
-  "PSX": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-11-06",
-   "signalClose": 245.72,
-   "entryDate": "2026-11-09",
-   "entry": 244.99,
-   "shares": 50,
-   "target": 254.79,
-   "stop": 210.64,
-   "ocoOrderId": "2152d0cd-6f33-438a-98ac-51eb778a62a8",
-   "now": 253.74
-  },
   "VLO": {
    "strategy": "dip",
    "side": "long",
@@ -34,37 +19,7 @@
    "target": 359.91,
    "stop": 286.51,
    "ocoOrderId": "7985a9fd-5ab3-4b4c-8adc-cdd36ba04d2d",
-   "now": 353.91
-  },
-  "TPR": {
-   "strategy": "rip",
-   "side": "short",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-11-09",
-   "signalClose": 136.07,
-   "entryDate": "2026-11-10",
-   "entry": 136.48,
-   "shares": 95,
-   "target": 131.02,
-   "stop": 150.49,
-   "ocoOrderId": "4bb6481b-7b26-4d2b-9c7e-f9fe6b29695f",
-   "now": 133.47
-  },
-  "BNO": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "nonsp",
-   "signalDate": "2026-11-09",
-   "signalClose": 58.93,
-   "entryDate": "2026-11-10",
-   "entry": 56.97,
-   "shares": 212,
-   "target": 59.25,
-   "stop": 49.29,
-   "ocoOrderId": "8e0c6a5a-4e0f-45e8-978c-64cb1eb6a9be",
-   "now": 58.92
+   "now": 359.75
   },
   "EXPE": {
    "strategy": "dip",
@@ -79,7 +34,7 @@
    "target": 271.24,
    "stop": 207.98,
    "ocoOrderId": "6654926e-035d-4040-8319-6bb7b82ae72c",
-   "now": 251.12
+   "now": 255.33
   },
   "APP": {
    "strategy": "rip",
@@ -93,27 +48,26 @@
    "shares": 33,
    "target": 383.2,
    "stop": 470.45,
-   "ocoOrderId": "2076e999-3556-4524-9e7f-e41a643e4e79"
-  }
- },
- "pendingEntries": {
+   "ocoOrderId": "2076e999-3556-4524-9e7f-e41a643e4e79",
+   "now": 401.74
+  },
   "GTLB": {
-   "orderId": "6b79df15-02e5-4128-bbe5-368b64f56b5b",
    "strategy": "dip",
    "side": "long",
    "tag": "normal",
    "pool": "nonsp",
-   "size": 12870.70425,
-   "shares": 270,
-   "limit": 47.59,
-   "opg": false,
-   "forDate": "2026-11-11",
    "signalDate": "2026-11-10",
    "signalClose": 46.66,
-   "atr": 2.78,
-   "placedAt": "2026-11-11T14:32:20.641Z"
+   "entryDate": "2026-11-11",
+   "entry": 47.59,
+   "shares": 270,
+   "target": 49.49,
+   "stop": 39.25,
+   "ocoOrderId": "5e2abb4a-051a-4dba-8e54-4abce03063b9",
+   "now": 47.45
   }
  },
+ "pendingEntries": {},
  "pendingCloses": {},
  "trades": [
   {
@@ -930,6 +884,57 @@
    "how": "time",
    "usd": -261.66,
    "pct": -2.23
+  },
+  {
+   "ticker": "PSX",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-11-06",
+   "signalClose": 245.72,
+   "entryDate": "2026-11-09",
+   "exitDate": "2026-11-11",
+   "entry": 244.99,
+   "exit": 254.79,
+   "shares": 50,
+   "how": "target",
+   "usd": 490,
+   "pct": 4
+  },
+  {
+   "ticker": "TPR",
+   "strategy": "rip",
+   "side": "short",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-11-09",
+   "signalClose": 136.07,
+   "entryDate": "2026-11-10",
+   "exitDate": "2026-11-11",
+   "entry": 136.48,
+   "exit": 130.88,
+   "shares": 95,
+   "how": "target",
+   "usd": 532,
+   "pct": 4.1
+  },
+  {
+   "ticker": "BNO",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "nonsp",
+   "signalDate": "2026-11-09",
+   "signalClose": 58.93,
+   "entryDate": "2026-11-10",
+   "exitDate": "2026-11-11",
+   "entry": 56.97,
+   "exit": 59.25,
+   "shares": 212,
+   "how": "target",
+   "usd": 483.36,
+   "pct": 4
   }
  ],
  "equity": [
@@ -1163,9 +1168,9 @@
   },
   {
    "d": "2026-11-11",
-   "value": 95335,
-   "pct": -4.66,
-   "spy": -0.96
+   "value": 95999,
+   "pct": -4,
+   "spy": -1.16
   }
  ],
  "lastOrders": {
