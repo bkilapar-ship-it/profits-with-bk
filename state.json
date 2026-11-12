@@ -19,7 +19,7 @@
    "target": 271.24,
    "stop": 207.98,
    "ocoOrderId": "6654926e-035d-4040-8319-6bb7b82ae72c",
-   "now": 261.99
+   "now": 265.06
   },
   "APP": {
    "strategy": "rip",
@@ -34,7 +34,7 @@
    "target": 383.2,
    "stop": 470.45,
    "ocoOrderId": "2076e999-3556-4524-9e7f-e41a643e4e79",
-   "now": 401.7
+   "now": 406.3
   },
   "GTLB": {
    "strategy": "dip",
@@ -49,21 +49,7 @@
    "target": 49.49,
    "stop": 39.25,
    "ocoOrderId": "5e2abb4a-051a-4dba-8e54-4abce03063b9",
-   "now": 45.9
-  },
-  "TWST": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "nonsp",
-   "signalDate": "2026-11-11",
-   "signalClose": 122.59,
-   "entryDate": "2026-11-12",
-   "entry": 97.49,
-   "shares": 103,
-   "target": 101.39,
-   "stop": 45.56,
-   "ocoOrderId": "8726cf0b-2339-48e4-bc69-3104637748c5"
+   "now": 46.46
   }
  },
  "pendingEntries": {},
@@ -951,6 +937,23 @@
    "how": "target",
    "usd": 485.48,
    "pct": 4.01
+  },
+  {
+   "ticker": "TWST",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "nonsp",
+   "signalDate": "2026-11-11",
+   "signalClose": 122.59,
+   "entryDate": "2026-11-12",
+   "exitDate": "2026-11-12",
+   "entry": 97.49,
+   "exit": 101.48,
+   "shares": 103,
+   "how": "target",
+   "usd": 410.97,
+   "pct": 4.09
   }
  ],
  "equity": [
@@ -1190,9 +1193,9 @@
   },
   {
    "d": "2026-11-12",
-   "value": 95881,
-   "pct": -4.12,
-   "spy": -1.35
+   "value": 96458,
+   "pct": -3.54,
+   "spy": -1.03
   }
  ],
  "lastOrders": {
