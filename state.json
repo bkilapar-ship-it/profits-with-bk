@@ -2,7 +2,7 @@
  "version": 1,
  "status": "running",
  "startedAt": "2026-09-26",
- "lastEntryRunDate": "2026-11-11",
+ "lastEntryRunDate": "2026-11-12",
  "lastExitRunDate": "2026-11-11",
  "spyBaseline": 764.95,
  "positions": {
@@ -19,7 +19,7 @@
    "target": 271.24,
    "stop": 207.98,
    "ocoOrderId": "6654926e-035d-4040-8319-6bb7b82ae72c",
-   "now": 259.6
+   "now": 261.99
   },
   "APP": {
    "strategy": "rip",
@@ -34,7 +34,7 @@
    "target": 383.2,
    "stop": 470.45,
    "ocoOrderId": "2076e999-3556-4524-9e7f-e41a643e4e79",
-   "now": 399.92
+   "now": 401.7
   },
   "GTLB": {
    "strategy": "dip",
@@ -49,7 +49,21 @@
    "target": 49.49,
    "stop": 39.25,
    "ocoOrderId": "5e2abb4a-051a-4dba-8e54-4abce03063b9",
-   "now": 47.07
+   "now": 45.9
+  },
+  "TWST": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "nonsp",
+   "signalDate": "2026-11-11",
+   "signalClose": 122.59,
+   "entryDate": "2026-11-12",
+   "entry": 97.49,
+   "shares": 103,
+   "target": 101.39,
+   "stop": 45.56,
+   "ocoOrderId": "8726cf0b-2339-48e4-bc69-3104637748c5"
   }
  },
  "pendingEntries": {},
@@ -1176,49 +1190,41 @@
   },
   {
    "d": "2026-11-12",
-   "value": 96156,
-   "pct": -3.84,
-   "spy": null
+   "value": 95881,
+   "pct": -4.12,
+   "spy": -1.35
   }
  ],
  "lastOrders": {
-  "forDate": "2026-11-11",
+  "forDate": "2026-11-12",
   "entries": [
    {
-    "rank": 1,
-    "ticker": "APP",
-    "strategy": "rip",
-    "tag": "normal",
-    "pool": "sp500",
-    "opg": false,
-    "size": 12870.7,
-    "shares": 33,
-    "limit": 387.6,
-    "vs200": -3.07,
-    "chg5d": 61.1
-   },
-   {
     "rank": 4,
-    "ticker": "GTLB",
+    "ticker": "TWST",
     "strategy": "dip",
     "tag": "normal",
     "pool": "nonsp",
     "opg": false,
-    "size": 12870.7,
-    "shares": 270,
-    "limit": 47.59,
-    "vs200": 35.02,
-    "chg5d": -10.9
+    "size": 12945.14,
+    "shares": 103,
+    "limit": 125.04,
+    "vs200": 32.49,
+    "chg5d": -14.02
    }
   ],
   "skipped": [
    {
-    "ticker": "12 non-S&P",
+    "ticker": "GRAL",
+    "strategy": "dip",
+    "reason": "Opened at 130.28, past the 2% cap (128.15)"
+   },
+   {
+    "ticker": "8 non-S&P",
     "strategy": "dip",
     "reason": "Signals outside the S&P 500 below the $100M/day floor for stocks outside the S&P 500"
    },
    {
-    "ticker": "8 non-S&P",
+    "ticker": "2 non-S&P",
     "strategy": "dip",
     "reason": "Signals outside the S&P 500 limit of 2 open positions outside the S&P 500 reached (keeping room for S&P signals)"
    }
