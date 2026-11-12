@@ -3,7 +3,7 @@
  "status": "running",
  "startedAt": "2026-09-26",
  "lastEntryRunDate": "2026-11-12",
- "lastExitRunDate": "2026-11-11",
+ "lastExitRunDate": "2026-11-12",
  "spyBaseline": 764.95,
  "positions": {
   "EXPE": {
@@ -19,7 +19,7 @@
    "target": 271.24,
    "stop": 207.98,
    "ocoOrderId": "6654926e-035d-4040-8319-6bb7b82ae72c",
-   "now": 260.53
+   "now": 261.58
   },
   "APP": {
    "strategy": "rip",
@@ -34,7 +34,7 @@
    "target": 383.2,
    "stop": 470.45,
    "ocoOrderId": "2076e999-3556-4524-9e7f-e41a643e4e79",
-   "now": 394.95
+   "now": 395
   },
   "GTLB": {
    "strategy": "dip",
@@ -49,11 +49,15 @@
    "target": 49.49,
    "stop": 39.25,
    "ocoOrderId": "5e2abb4a-051a-4dba-8e54-4abce03063b9",
-   "now": 47.34
+   "now": 47.32
   }
  },
  "pendingEntries": {},
- "pendingCloses": {},
+ "pendingCloses": {
+  "EXPE": {
+   "reason": "time"
+  }
+ },
  "trades": [
   {
    "ticker": "CF",
@@ -1193,9 +1197,9 @@
   },
   {
    "d": "2026-11-12",
-   "value": 96858,
-   "pct": -3.14,
-   "spy": -1
+   "value": 96903,
+   "pct": -3.1,
+   "spy": -1.04
   }
  ],
  "lastOrders": {
@@ -1235,8 +1239,13 @@
   "queued": false
  },
  "lastExits": {
-  "forDate": "2026-11-11",
-  "exits": []
+  "forDate": "2026-11-12",
+  "exits": [
+   {
+    "ticker": "EXPE",
+    "note": "Sold at the market (3rd session)"
+   }
+  ]
  },
  "lastQueueFor": "2026-10-13"
 }
