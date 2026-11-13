@@ -19,7 +19,7 @@
    "target": 383.2,
    "stop": 470.45,
    "ocoOrderId": "2076e999-3556-4524-9e7f-e41a643e4e79",
-   "now": 408.26
+   "now": 409.88
   },
   "GTLB": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 49.49,
    "stop": 39.25,
    "ocoOrderId": "5e2abb4a-051a-4dba-8e54-4abce03063b9",
-   "now": 47.27
+   "now": 47.97
   },
   "HALO": {
    "strategy": "dip",
@@ -49,7 +49,7 @@
    "target": 104.74,
    "stop": 85.62,
    "ocoOrderId": "17e4c418-2e4f-42f4-add3-a9cb3be863fc",
-   "now": 100.26
+   "now": 100.46
   }
  },
  "pendingEntries": {},
@@ -1216,9 +1216,9 @@
   },
   {
    "d": "2026-11-13",
-   "value": 96358,
-   "pct": -3.64,
-   "spy": -1.75
+   "value": 96525,
+   "pct": -3.47,
+   "spy": -1.48
   }
  ],
  "lastOrders": {
