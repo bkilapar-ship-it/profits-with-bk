@@ -3,39 +3,9 @@
  "status": "running",
  "startedAt": "2026-09-26",
  "lastEntryRunDate": "2026-11-13",
- "lastExitRunDate": "2026-11-12",
+ "lastExitRunDate": "2026-11-13",
  "spyBaseline": 764.95,
  "positions": {
-  "APP": {
-   "strategy": "rip",
-   "side": "short",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-11-10",
-   "signalClose": 395.51,
-   "entryDate": "2026-11-11",
-   "entry": 399.17,
-   "shares": 33,
-   "target": 383.2,
-   "stop": 470.45,
-   "ocoOrderId": "2076e999-3556-4524-9e7f-e41a643e4e79",
-   "now": 407.63
-  },
-  "GTLB": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "nonsp",
-   "signalDate": "2026-11-10",
-   "signalClose": 46.66,
-   "entryDate": "2026-11-11",
-   "entry": 47.59,
-   "shares": 270,
-   "target": 49.49,
-   "stop": 39.25,
-   "ocoOrderId": "5e2abb4a-051a-4dba-8e54-4abce03063b9",
-   "now": 47.8
-  },
   "HALO": {
    "strategy": "dip",
    "side": "long",
@@ -49,7 +19,7 @@
    "target": 104.74,
    "stop": 85.62,
    "ocoOrderId": "17e4c418-2e4f-42f4-add3-a9cb3be863fc",
-   "now": 100.42
+   "now": 100.62
   }
  },
  "pendingEntries": {},
@@ -971,6 +941,40 @@
    "how": "time",
    "usd": 26.37,
    "pct": 0.21
+  },
+  {
+   "ticker": "APP",
+   "strategy": "rip",
+   "side": "short",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-11-10",
+   "signalClose": 395.51,
+   "entryDate": "2026-11-11",
+   "exitDate": "2026-11-13",
+   "entry": 399.17,
+   "exit": 409.65,
+   "shares": 33,
+   "how": "time",
+   "usd": -345.77,
+   "pct": -2.62
+  },
+  {
+   "ticker": "GTLB",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "nonsp",
+   "signalDate": "2026-11-10",
+   "signalClose": 46.66,
+   "entryDate": "2026-11-11",
+   "exitDate": "2026-11-13",
+   "entry": 47.59,
+   "exit": 47.9,
+   "shares": 270,
+   "how": "time",
+   "usd": 83.7,
+   "pct": 0.65
   }
  ],
  "equity": [
@@ -1216,9 +1220,9 @@
   },
   {
    "d": "2026-11-13",
-   "value": 96548,
-   "pct": -3.45,
-   "spy": -1.63
+   "value": 96555,
+   "pct": -3.44,
+   "spy": -1.5
   }
  ],
  "lastOrders": {
@@ -1253,10 +1257,14 @@
   "queued": false
  },
  "lastExits": {
-  "forDate": "2026-11-12",
+  "forDate": "2026-11-13",
   "exits": [
    {
-    "ticker": "EXPE",
+    "ticker": "APP",
+    "note": "Bought back at the market (3rd session)"
+   },
+   {
+    "ticker": "GTLB",
     "note": "Sold at the market (3rd session)"
    }
   ]
