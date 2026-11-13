@@ -19,7 +19,7 @@
    "target": 104.74,
    "stop": 85.62,
    "ocoOrderId": "17e4c418-2e4f-42f4-add3-a9cb3be863fc",
-   "now": 100.62
+   "now": 100.39
   }
  },
  "pendingEntries": {},
@@ -1220,9 +1220,9 @@
   },
   {
    "d": "2026-11-13",
-   "value": 96555,
-   "pct": -3.44,
-   "spy": -1.5
+   "value": 96506,
+   "pct": -3.49,
+   "spy": -1.41
   }
  ],
  "lastOrders": {
