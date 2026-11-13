@@ -19,7 +19,7 @@
    "target": 383.2,
    "stop": 470.45,
    "ocoOrderId": "2076e999-3556-4524-9e7f-e41a643e4e79",
-   "now": 395.5
+   "now": 394
   },
   "GTLB": {
    "strategy": "dip",
@@ -1198,6 +1198,12 @@
    "value": 96903,
    "pct": -3.1,
    "spy": -1.02
+  },
+  {
+   "d": "2026-11-13",
+   "value": 96937,
+   "pct": -3.06,
+   "spy": null
   }
  ],
  "lastOrders": {
