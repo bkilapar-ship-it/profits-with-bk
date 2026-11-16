@@ -19,7 +19,7 @@
    "target": 104.74,
    "stop": 85.62,
    "ocoOrderId": "17e4c418-2e4f-42f4-add3-a9cb3be863fc",
-   "now": 101.22
+   "now": 100.2
   },
   "RVMD": {
    "strategy": "dip",
@@ -33,27 +33,26 @@
    "shares": 74,
    "target": 180.17,
    "stop": 142.52,
-   "ocoOrderId": "4b20b4b7-a871-4673-94c8-c69c5945bc89"
-  }
- },
- "pendingEntries": {
+   "ocoOrderId": "4b20b4b7-a871-4673-94c8-c69c5945bc89",
+   "now": 168.45
+  },
   "MRNA": {
-   "orderId": "fd842d52-ae53-41e4-9a9b-10e06aeea14f",
    "strategy": "dip",
    "side": "long",
    "tag": "normal",
    "pool": "sp500",
-   "size": 13038.2865,
-   "shares": 57,
-   "limit": 227.84,
-   "opg": false,
-   "forDate": "2026-11-16",
    "signalDate": "2026-11-13",
    "signalClose": 223.37,
-   "atr": 19.16,
-   "placedAt": "2026-11-16T14:32:28.366Z"
+   "entryDate": "2026-11-16",
+   "entry": 218.25,
+   "shares": 57,
+   "target": 226.98,
+   "stop": 160.77,
+   "ocoOrderId": "9eac3eeb-bbd8-4856-8ad9-3daa28033720",
+   "now": 215.15
   }
  },
+ "pendingEntries": {},
  "pendingCloses": {},
  "trades": [
   {
@@ -1263,9 +1262,9 @@
   },
   {
    "d": "2026-11-16",
-   "value": 96580,
-   "pct": -3.42,
-   "spy": -2.33
+   "value": 95917,
+   "pct": -4.08,
+   "spy": -2.61
   }
  ],
  "lastOrders": {
