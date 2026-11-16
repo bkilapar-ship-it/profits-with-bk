@@ -3,7 +3,7 @@
  "status": "running",
  "startedAt": "2026-09-26",
  "lastEntryRunDate": "2026-11-16",
- "lastExitRunDate": "2026-11-13",
+ "lastExitRunDate": "2026-11-16",
  "spyBaseline": 764.95,
  "positions": {
   "HALO": {
@@ -19,7 +19,7 @@
    "target": 104.74,
    "stop": 85.62,
    "ocoOrderId": "17e4c418-2e4f-42f4-add3-a9cb3be863fc",
-   "now": 97.39
+   "now": 96.51
   },
   "RVMD": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 180.17,
    "stop": 142.52,
    "ocoOrderId": "4b20b4b7-a871-4673-94c8-c69c5945bc89",
-   "now": 166.77
+   "now": 166.46
   },
   "MRNA": {
    "strategy": "dip",
@@ -49,7 +49,7 @@
    "target": 226.98,
    "stop": 160.77,
    "ocoOrderId": "9eac3eeb-bbd8-4856-8ad9-3daa28033720",
-   "now": 216.17
+   "now": 214.99
   }
  },
  "pendingEntries": {},
@@ -1262,9 +1262,9 @@
   },
   {
    "d": "2026-11-16",
-   "value": 95500,
-   "pct": -4.5,
-   "spy": -3.34
+   "value": 95297,
+   "pct": -4.7,
+   "spy": -3.37
   }
  ],
  "lastOrders": {
@@ -1307,17 +1307,8 @@
   "queued": false
  },
  "lastExits": {
-  "forDate": "2026-11-13",
-  "exits": [
-   {
-    "ticker": "APP",
-    "note": "Bought back at the market (3rd session)"
-   },
-   {
-    "ticker": "GTLB",
-    "note": "Sold at the market (3rd session)"
-   }
-  ]
+  "forDate": "2026-11-16",
+  "exits": []
  },
  "lastQueueFor": "2026-10-13"
 }
