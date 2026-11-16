@@ -34,7 +34,7 @@
    "target": 180.17,
    "stop": 142.52,
    "ocoOrderId": "4b20b4b7-a871-4673-94c8-c69c5945bc89",
-   "now": 167.05
+   "now": 166.57
   },
   "MRNA": {
    "strategy": "dip",
@@ -49,7 +49,7 @@
    "target": 226.98,
    "stop": 160.77,
    "ocoOrderId": "9eac3eeb-bbd8-4856-8ad9-3daa28033720",
-   "now": 214
+   "now": 214.19
   }
  },
  "pendingEntries": {},
@@ -1262,8 +1262,8 @@
   },
   {
    "d": "2026-11-16",
-   "value": 95284,
-   "pct": -4.72,
+   "value": 95261,
+   "pct": -4.74,
    "spy": -3.27
   }
  ],
