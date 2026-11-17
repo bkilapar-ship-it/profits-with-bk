@@ -2,7 +2,7 @@
  "version": 1,
  "status": "running",
  "startedAt": "2026-09-26",
- "lastEntryRunDate": "2026-11-16",
+ "lastEntryRunDate": "2026-11-17",
  "lastExitRunDate": "2026-11-16",
  "spyBaseline": 764.95,
  "positions": {
@@ -19,7 +19,7 @@
    "target": 104.74,
    "stop": 85.62,
    "ocoOrderId": "17e4c418-2e4f-42f4-add3-a9cb3be863fc",
-   "now": 96.5
+   "now": 96.51
   },
   "RVMD": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 180.17,
    "stop": 142.52,
    "ocoOrderId": "4b20b4b7-a871-4673-94c8-c69c5945bc89",
-   "now": 166.04
+   "now": 167.22
   },
   "MRNA": {
    "strategy": "dip",
@@ -49,7 +49,21 @@
    "target": 226.98,
    "stop": 160.77,
    "ocoOrderId": "9eac3eeb-bbd8-4856-8ad9-3daa28033720",
-   "now": 214.8
+   "now": 210.47
+  },
+  "ILMN": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "green_or_sweep",
+   "pool": "sp500",
+   "signalDate": "2026-11-16",
+   "signalClose": 198,
+   "entryDate": "2026-11-17",
+   "entry": 201.54,
+   "shares": 63,
+   "target": 209.6,
+   "stop": 151.56,
+   "ocoOrderId": "2c9ac9db-38c1-48da-a24b-a8baf1982355"
   }
  },
  "pendingEntries": {},
@@ -1268,44 +1282,36 @@
   },
   {
    "d": "2026-11-17",
-   "value": 95258,
-   "pct": -4.74,
-   "spy": null
+   "value": 95102,
+   "pct": -4.9,
+   "spy": -3.5
   }
  ],
  "lastOrders": {
-  "forDate": "2026-11-16",
+  "forDate": "2026-11-17",
   "entries": [
    {
     "rank": 1,
-    "ticker": "MRNA",
+    "ticker": "ILMN",
     "strategy": "dip",
-    "tag": "normal",
+    "tag": "green_or_sweep",
     "pool": "sp500",
     "opg": false,
-    "size": 13038.29,
-    "shares": 57,
-    "limit": 227.84,
-    "vs200": 131.68,
-    "chg5d": -12.12
-   },
-   {
-    "rank": 6,
-    "ticker": "RVMD",
-    "strategy": "dip",
-    "tag": "normal",
-    "pool": "nonsp",
-    "opg": false,
-    "size": 13038.29,
-    "shares": 74,
-    "limit": 175.74,
-    "vs200": 7.76,
-    "chg5d": -10.4
+    "size": 12838.65,
+    "shares": 63,
+    "limit": 201.96,
+    "vs200": 10.13,
+    "chg5d": -10.32
    }
   ],
   "skipped": [
    {
-    "ticker": "6 non-S&P",
+    "ticker": "10 non-S&P",
+    "strategy": "dip",
+    "reason": "Signals outside the S&P 500 limit of 2 open positions outside the S&P 500 reached (keeping room for S&P signals)"
+   },
+   {
+    "ticker": "31 non-S&P",
     "strategy": "dip",
     "reason": "Signals outside the S&P 500 below the $100M/day floor for stocks outside the S&P 500"
    }
