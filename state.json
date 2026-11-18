@@ -19,7 +19,7 @@
    "target": 180.17,
    "stop": 142.52,
    "ocoOrderId": "4b20b4b7-a871-4673-94c8-c69c5945bc89",
-   "now": 160.7
+   "now": 159.73
   },
   "MRNA": {
    "strategy": "dip",
@@ -34,22 +34,7 @@
    "target": 226.98,
    "stop": 160.77,
    "ocoOrderId": "9eac3eeb-bbd8-4856-8ad9-3daa28033720",
-   "now": 204.5
-  },
-  "ILMN": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "green_or_sweep",
-   "pool": "sp500",
-   "signalDate": "2026-11-16",
-   "signalClose": 198,
-   "entryDate": "2026-11-17",
-   "entry": 201.54,
-   "shares": 63,
-   "target": 209.6,
-   "stop": 151.56,
-   "ocoOrderId": "2c9ac9db-38c1-48da-a24b-a8baf1982355",
-   "now": 209.71
+   "now": 200.87
   },
   "BB": {
    "strategy": "dip",
@@ -64,7 +49,7 @@
    "target": 8.58,
    "stop": 6.42,
    "ocoOrderId": "9dafee0f-4e15-4412-83cf-b24bbcf0d214",
-   "now": 8.28
+   "now": 8.49
   },
   "GPN": {
    "strategy": "dip",
@@ -79,7 +64,7 @@
    "target": 89.25,
    "stop": 69.35,
    "ocoOrderId": "e5b16455-5f5f-43de-8dfc-9b81d3285dc8",
-   "now": 86.75
+   "now": 86.39
   }
  },
  "pendingEntries": {},
@@ -1052,6 +1037,23 @@
    "how": "time",
    "usd": -612.14,
    "pct": -4.79
+  },
+  {
+   "ticker": "ILMN",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "green_or_sweep",
+   "pool": "sp500",
+   "signalDate": "2026-11-16",
+   "signalClose": 198,
+   "entryDate": "2026-11-17",
+   "exitDate": "2026-11-18",
+   "entry": 201.54,
+   "exit": 209.66,
+   "shares": 63,
+   "how": "target",
+   "usd": 511.42,
+   "pct": 4.03
   }
  ],
  "equity": [
@@ -1321,8 +1323,8 @@
   },
   {
    "d": "2026-11-18",
-   "value": 94907,
-   "pct": -5.09,
+   "value": 94896,
+   "pct": -5.1,
    "spy": -4.43
   }
  ],
