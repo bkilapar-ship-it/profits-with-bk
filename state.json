@@ -3,39 +3,9 @@
  "status": "running",
  "startedAt": "2026-09-26",
  "lastEntryRunDate": "2026-11-18",
- "lastExitRunDate": "2026-11-17",
+ "lastExitRunDate": "2026-11-18",
  "spyBaseline": 764.95,
  "positions": {
-  "RVMD": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "nonsp",
-   "signalDate": "2026-11-13",
-   "signalClose": 172.29,
-   "entryDate": "2026-11-16",
-   "entry": 173.24,
-   "shares": 74,
-   "target": 180.17,
-   "stop": 142.52,
-   "ocoOrderId": "4b20b4b7-a871-4673-94c8-c69c5945bc89",
-   "now": 159.8
-  },
-  "MRNA": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-11-13",
-   "signalClose": 223.37,
-   "entryDate": "2026-11-16",
-   "entry": 218.25,
-   "shares": 57,
-   "target": 226.98,
-   "stop": 160.77,
-   "ocoOrderId": "9eac3eeb-bbd8-4856-8ad9-3daa28033720",
-   "now": 198.06
-  },
   "GPN": {
    "strategy": "dip",
    "side": "long",
@@ -49,7 +19,7 @@
    "target": 89.25,
    "stop": 69.35,
    "ocoOrderId": "e5b16455-5f5f-43de-8dfc-9b81d3285dc8",
-   "now": 85.89
+   "now": 85.9
   }
  },
  "pendingEntries": {},
@@ -1056,6 +1026,40 @@
    "how": "target",
    "usd": 506.55,
    "pct": 4
+  },
+  {
+   "ticker": "RVMD",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "nonsp",
+   "signalDate": "2026-11-13",
+   "signalClose": 172.29,
+   "entryDate": "2026-11-16",
+   "exitDate": "2026-11-18",
+   "entry": 173.24,
+   "exit": 159.37,
+   "shares": 74,
+   "how": "time",
+   "usd": -1026.38,
+   "pct": -8.01
+  },
+  {
+   "ticker": "MRNA",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-11-13",
+   "signalClose": 223.37,
+   "entryDate": "2026-11-16",
+   "exitDate": "2026-11-18",
+   "entry": 218.25,
+   "exit": 197.25,
+   "shares": 57,
+   "how": "time",
+   "usd": -1197,
+   "pct": -9.62
   }
  ],
  "equity": [
@@ -1325,9 +1329,9 @@
   },
   {
    "d": "2026-11-18",
-   "value": 94799,
-   "pct": -5.2,
-   "spy": -4.52
+   "value": 94755,
+   "pct": -5.24,
+   "spy": -4.49
   }
  ],
  "lastOrders": {
@@ -1375,10 +1379,14 @@
   "queued": false
  },
  "lastExits": {
-  "forDate": "2026-11-17",
+  "forDate": "2026-11-18",
   "exits": [
    {
-    "ticker": "HALO",
+    "ticker": "RVMD",
+    "note": "Sold at the market (3rd session)"
+   },
+   {
+    "ticker": "MRNA",
     "note": "Sold at the market (3rd session)"
    }
   ]
