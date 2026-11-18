@@ -19,7 +19,7 @@
    "target": 180.17,
    "stop": 142.52,
    "ocoOrderId": "4b20b4b7-a871-4673-94c8-c69c5945bc89",
-   "now": 160.67
+   "now": 159.8
   },
   "MRNA": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 226.98,
    "stop": 160.77,
    "ocoOrderId": "9eac3eeb-bbd8-4856-8ad9-3daa28033720",
-   "now": 198.58
+   "now": 198.06
   },
   "GPN": {
    "strategy": "dip",
@@ -49,7 +49,7 @@
    "target": 89.25,
    "stop": 69.35,
    "ocoOrderId": "e5b16455-5f5f-43de-8dfc-9b81d3285dc8",
-   "now": 86.2
+   "now": 85.89
   }
  },
  "pendingEntries": {},
@@ -1325,9 +1325,9 @@
   },
   {
    "d": "2026-11-18",
-   "value": 94935,
-   "pct": -5.06,
-   "spy": -4.5
+   "value": 94799,
+   "pct": -5.2,
+   "spy": -4.52
   }
  ],
  "lastOrders": {
