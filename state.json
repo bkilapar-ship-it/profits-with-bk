@@ -19,7 +19,7 @@
    "target": 180.17,
    "stop": 142.52,
    "ocoOrderId": "4b20b4b7-a871-4673-94c8-c69c5945bc89",
-   "now": 159.73
+   "now": 160.67
   },
   "MRNA": {
    "strategy": "dip",
@@ -34,22 +34,7 @@
    "target": 226.98,
    "stop": 160.77,
    "ocoOrderId": "9eac3eeb-bbd8-4856-8ad9-3daa28033720",
-   "now": 200.87
-  },
-  "BB": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "bearEngulf",
-   "pool": "nonsp",
-   "signalDate": "2026-11-17",
-   "signalClose": 8.16,
-   "entryDate": "2026-11-18",
-   "entry": 8.25,
-   "shares": 1535,
-   "target": 8.58,
-   "stop": 6.42,
-   "ocoOrderId": "9dafee0f-4e15-4412-83cf-b24bbcf0d214",
-   "now": 8.49
+   "now": 198.58
   },
   "GPN": {
    "strategy": "dip",
@@ -64,7 +49,7 @@
    "target": 89.25,
    "stop": 69.35,
    "ocoOrderId": "e5b16455-5f5f-43de-8dfc-9b81d3285dc8",
-   "now": 86.39
+   "now": 86.2
   }
  },
  "pendingEntries": {},
@@ -1054,6 +1039,23 @@
    "how": "target",
    "usd": 511.42,
    "pct": 4.03
+  },
+  {
+   "ticker": "BB",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "bearEngulf",
+   "pool": "nonsp",
+   "signalDate": "2026-11-17",
+   "signalClose": 8.16,
+   "entryDate": "2026-11-18",
+   "exitDate": "2026-11-18",
+   "entry": 8.25,
+   "exit": 8.58,
+   "shares": 1535,
+   "how": "target",
+   "usd": 506.55,
+   "pct": 4
   }
  ],
  "equity": [
@@ -1323,9 +1325,9 @@
   },
   {
    "d": "2026-11-18",
-   "value": 94896,
-   "pct": -5.1,
-   "spy": -4.43
+   "value": 94935,
+   "pct": -5.06,
+   "spy": -4.5
   }
  ],
  "lastOrders": {
