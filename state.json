@@ -2,7 +2,7 @@
  "version": 1,
  "status": "running",
  "startedAt": "2026-09-26",
- "lastEntryRunDate": "2026-11-18",
+ "lastEntryRunDate": "2026-11-19",
  "lastExitRunDate": "2026-11-18",
  "spyBaseline": 764.95,
  "positions": {
@@ -19,10 +19,85 @@
    "target": 89.25,
    "stop": 69.35,
    "ocoOrderId": "e5b16455-5f5f-43de-8dfc-9b81d3285dc8",
-   "now": 85.62
+   "now": 85.3
+  },
+  "HUM": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-11-18",
+   "signalClose": 385.78,
+   "entryDate": "2026-11-19",
+   "entry": 389.86,
+   "shares": 32,
+   "target": 405.45,
+   "stop": 322.03,
+   "ocoOrderId": "67bdbb23-1b71-4a3e-bff6-25603b3c5b75"
+  },
+  "ACN": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-11-18",
+   "signalClose": 227.49,
+   "entryDate": "2026-11-19",
+   "entry": 229.19,
+   "shares": 55,
+   "target": 238.36,
+   "stop": 200.15,
+   "ocoOrderId": "10dd3f8f-5004-4f94-8131-adcd160d0e4d"
+  },
+  "CTSH": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-11-18",
+   "signalClose": 57.95,
+   "entryDate": "2026-11-19",
+   "entry": 58.38,
+   "shares": 216,
+   "target": 60.71,
+   "stop": 51.24,
+   "ocoOrderId": "58e651d8-489f-491a-9a0e-78390176bf24"
   }
  },
- "pendingEntries": {},
+ "pendingEntries": {
+  "MRNA": {
+   "orderId": "9536ddab-2aa3-4b67-942f-d14cdcef1397",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "size": 12780.643049999999,
+   "shares": 63,
+   "limit": 200.73,
+   "opg": false,
+   "forDate": "2026-11-19",
+   "signalDate": "2026-11-18",
+   "signalClose": 196.79,
+   "atr": 18.15,
+   "placedAt": "2026-11-19T14:32:12.567Z"
+  },
+  "TEAM": {
+   "orderId": "2e64f7a0-56aa-4431-89c3-d8d2882dbca9",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "nonsp",
+   "size": 12780.643049999999,
+   "shares": 92,
+   "limit": 137.75,
+   "opg": false,
+   "forDate": "2026-11-19",
+   "signalDate": "2026-11-18",
+   "signalClose": 135.05,
+   "atr": 10.78,
+   "placedAt": "2026-11-19T14:32:12.700Z"
+  }
+ },
  "pendingCloses": {},
  "trades": [
   {
@@ -1335,51 +1410,90 @@
   },
   {
    "d": "2026-11-19",
-   "value": 94706,
-   "pct": -5.29,
-   "spy": null
+   "value": 94670,
+   "pct": -5.33,
+   "spy": -3.37
   }
  ],
  "lastOrders": {
-  "forDate": "2026-11-18",
+  "forDate": "2026-11-19",
   "entries": [
    {
     "rank": 1,
-    "ticker": "GPN",
+    "ticker": "MRNA",
     "strategy": "dip",
     "tag": "normal",
     "pool": "sp500",
     "opg": false,
-    "size": 12774.57,
-    "shares": 146,
-    "limit": 87.03,
-    "vs200": 9.08,
-    "chg5d": -16.02
+    "size": 12780.64,
+    "shares": 63,
+    "limit": 200.73,
+    "vs200": 99.06,
+    "chg5d": -20.87
    },
    {
     "rank": 2,
-    "ticker": "BB",
+    "ticker": "HUM",
     "strategy": "dip",
-    "tag": "bearEngulf",
+    "tag": "normal",
+    "pool": "sp500",
+    "opg": false,
+    "size": 12780.64,
+    "shares": 32,
+    "limit": 393.5,
+    "vs200": 20.21,
+    "chg5d": -13.56
+   },
+   {
+    "rank": 3,
+    "ticker": "ACN",
+    "strategy": "dip",
+    "tag": "normal",
+    "pool": "sp500",
+    "opg": false,
+    "size": 12780.64,
+    "shares": 55,
+    "limit": 232.04,
+    "vs200": 19.7,
+    "chg5d": -10.32
+   },
+   {
+    "rank": 4,
+    "ticker": "CTSH",
+    "strategy": "dip",
+    "tag": "normal",
+    "pool": "sp500",
+    "opg": false,
+    "size": 12780.64,
+    "shares": 216,
+    "limit": 59.11,
+    "vs200": 0.46,
+    "chg5d": -10.06
+   },
+   {
+    "rank": 15,
+    "ticker": "TEAM",
+    "strategy": "dip",
+    "tag": "normal",
     "pool": "nonsp",
     "opg": false,
-    "size": 12774.57,
-    "shares": 1535,
-    "limit": 8.32,
-    "vs200": 13.93,
-    "chg5d": -10.72
+    "size": 12780.64,
+    "shares": 92,
+    "limit": 137.75,
+    "vs200": 12.38,
+    "chg5d": -11.41
    }
   ],
   "skipped": [
    {
-    "ticker": "30 non-S&P",
+    "ticker": "28 non-S&P",
     "strategy": "dip",
     "reason": "Signals outside the S&P 500 below the $100M/day floor for stocks outside the S&P 500"
    },
    {
-    "ticker": "8 non-S&P",
+    "ticker": "6 non-S&P",
     "strategy": "dip",
-    "reason": "Signals outside the S&P 500 limit of 2 open positions outside the S&P 500 reached (keeping room for S&P signals)"
+    "reason": "Signals outside the S&P 500 no spare cash left after the S&P signals"
    }
   ],
   "queued": false
