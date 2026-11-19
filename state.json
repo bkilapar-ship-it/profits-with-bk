@@ -19,7 +19,7 @@
    "target": 89.25,
    "stop": 69.35,
    "ocoOrderId": "e5b16455-5f5f-43de-8dfc-9b81d3285dc8",
-   "now": 85.3
+   "now": 85.25
   },
   "HUM": {
    "strategy": "dip",
@@ -33,7 +33,8 @@
    "shares": 32,
    "target": 405.45,
    "stop": 322.03,
-   "ocoOrderId": "67bdbb23-1b71-4a3e-bff6-25603b3c5b75"
+   "ocoOrderId": "67bdbb23-1b71-4a3e-bff6-25603b3c5b75",
+   "now": 382.79
   },
   "ACN": {
    "strategy": "dip",
@@ -47,7 +48,8 @@
    "shares": 55,
    "target": 238.36,
    "stop": 200.15,
-   "ocoOrderId": "10dd3f8f-5004-4f94-8131-adcd160d0e4d"
+   "ocoOrderId": "10dd3f8f-5004-4f94-8131-adcd160d0e4d",
+   "now": 219.76
   },
   "CTSH": {
    "strategy": "dip",
@@ -61,43 +63,41 @@
    "shares": 216,
    "target": 60.71,
    "stop": 51.24,
-   "ocoOrderId": "58e651d8-489f-491a-9a0e-78390176bf24"
-  }
- },
- "pendingEntries": {
+   "ocoOrderId": "58e651d8-489f-491a-9a0e-78390176bf24",
+   "now": 56.64
+  },
   "MRNA": {
-   "orderId": "9536ddab-2aa3-4b67-942f-d14cdcef1397",
    "strategy": "dip",
    "side": "long",
    "tag": "normal",
    "pool": "sp500",
-   "size": 12780.643049999999,
-   "shares": 63,
-   "limit": 200.73,
-   "opg": false,
-   "forDate": "2026-11-19",
    "signalDate": "2026-11-18",
    "signalClose": 196.79,
-   "atr": 18.15,
-   "placedAt": "2026-11-19T14:32:12.567Z"
+   "entryDate": "2026-11-19",
+   "entry": 200.63,
+   "shares": 63,
+   "target": 208.66,
+   "stop": 146.18,
+   "ocoOrderId": "b82dca4d-aabf-453e-8e2d-04d3553bde31",
+   "now": 195.47
   },
   "TEAM": {
-   "orderId": "2e64f7a0-56aa-4431-89c3-d8d2882dbca9",
    "strategy": "dip",
    "side": "long",
    "tag": "normal",
    "pool": "nonsp",
-   "size": 12780.643049999999,
-   "shares": 92,
-   "limit": 137.75,
-   "opg": false,
-   "forDate": "2026-11-19",
    "signalDate": "2026-11-18",
    "signalClose": 135.05,
-   "atr": 10.78,
-   "placedAt": "2026-11-19T14:32:12.700Z"
+   "entryDate": "2026-11-19",
+   "entry": 137.65,
+   "shares": 92,
+   "target": 143.16,
+   "stop": 105.31,
+   "ocoOrderId": "aebf45ab-816f-4c16-8d97-13af77a751e1",
+   "now": 135.99
   }
  },
+ "pendingEntries": {},
  "pendingCloses": {},
  "trades": [
   {
@@ -1410,9 +1410,9 @@
   },
   {
    "d": "2026-11-19",
-   "value": 94670,
-   "pct": -5.33,
-   "spy": -3.37
+   "value": 93057,
+   "pct": -6.94,
+   "spy": -4.23
   }
  ],
  "lastOrders": {
