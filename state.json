@@ -79,7 +79,7 @@
    "target": 208.66,
    "stop": 146.18,
    "ocoOrderId": "b82dca4d-aabf-453e-8e2d-04d3553bde31",
-   "now": 198
+   "now": 197.7
   },
   "TEAM": {
    "strategy": "dip",
@@ -94,7 +94,7 @@
    "target": 143.16,
    "stop": 105.31,
    "ocoOrderId": "aebf45ab-816f-4c16-8d97-13af77a751e1",
-   "now": 132
+   "now": 131.5
   }
  },
  "pendingEntries": {},
@@ -1410,8 +1410,8 @@
   },
   {
    "d": "2026-11-19",
-   "value": 92347,
-   "pct": -7.65,
+   "value": 92281,
+   "pct": -7.72,
    "spy": -6.42
   }
  ],
