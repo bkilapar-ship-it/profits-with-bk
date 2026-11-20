@@ -19,7 +19,7 @@
    "target": 405.45,
    "stop": 322.03,
    "ocoOrderId": "67bdbb23-1b71-4a3e-bff6-25603b3c5b75",
-   "now": 392.62
+   "now": 390
   },
   "ACN": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 238.36,
    "stop": 200.15,
    "ocoOrderId": "10dd3f8f-5004-4f94-8131-adcd160d0e4d",
-   "now": 222.19
+   "now": 221.17
   },
   "CTSH": {
    "strategy": "dip",
@@ -49,7 +49,7 @@
    "target": 60.71,
    "stop": 51.24,
    "ocoOrderId": "58e651d8-489f-491a-9a0e-78390176bf24",
-   "now": 58.39
+   "now": 58
   },
   "TEAM": {
    "strategy": "dip",
@@ -64,7 +64,7 @@
    "target": 143.16,
    "stop": 105.31,
    "ocoOrderId": "aebf45ab-816f-4c16-8d97-13af77a751e1",
-   "now": 135.64
+   "now": 138.92
   }
  },
  "pendingEntries": {},
@@ -1420,9 +1420,9 @@
   },
   {
    "d": "2026-11-20",
-   "value": 95308,
-   "pct": -4.69,
-   "spy": -9.27
+   "value": 95391,
+   "pct": -4.61,
+   "spy": -9.82
   }
  ],
  "lastOrders": {
