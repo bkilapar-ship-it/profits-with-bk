@@ -19,7 +19,7 @@
    "target": 405.45,
    "stop": 322.03,
    "ocoOrderId": "67bdbb23-1b71-4a3e-bff6-25603b3c5b75",
-   "now": 390
+   "now": 385.05
   },
   "ACN": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 238.36,
    "stop": 200.15,
    "ocoOrderId": "10dd3f8f-5004-4f94-8131-adcd160d0e4d",
-   "now": 221.17
+   "now": 225
   },
   "CTSH": {
    "strategy": "dip",
@@ -64,7 +64,7 @@
    "target": 143.16,
    "stop": 105.31,
    "ocoOrderId": "aebf45ab-816f-4c16-8d97-13af77a751e1",
-   "now": 136.01
+   "now": 136
   }
  },
  "pendingEntries": {},
@@ -1420,8 +1420,8 @@
   },
   {
    "d": "2026-11-20",
-   "value": 95138,
-   "pct": -4.86,
+   "value": 95190,
+   "pct": -4.81,
    "spy": -9.82
   }
  ],
