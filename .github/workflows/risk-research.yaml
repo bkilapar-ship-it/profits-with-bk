@@ -12,7 +12,7 @@ on:
         default: '0'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   research:
@@ -45,3 +45,17 @@ jobs:
           name: risk-results
           path: research-out-risk/
           if-no-files-found: warn
+
+      - name: Save the summary into the repository (research-results branch)
+        if: always()
+        run: |
+          set -e
+          mkdir -p /tmp/rr && cp research-out-risk/* /tmp/rr/ 2>/dev/null || true
+          git config user.name "research-bot"; git config user.email "research-bot@users.noreply.github.com"
+          git fetch origin research-results:research-results 2>/dev/null || true
+          if git show-ref -q refs/heads/research-results; then git checkout -q research-results
+          else git checkout -q --orphan research-results; git rm -rfq . ; fi
+          rm -rf risk
+          mkdir -p risk && cp /tmp/rr/* risk/
+          git add risk && git commit -q -m "Risk research results $(date -u +%Y-%m-%dT%H:%M:%SZ)" || echo "nothing to commit"
+          for i in 1 2 3 4; do git push -q origin research-results && break || { git pull -q --rebase origin research-results || true; sleep 5; }; done
