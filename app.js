@@ -3305,6 +3305,8 @@ function paperHistory(P, st) {
   if (f.result === 'won') t = t.filter(x => x.usd > 0);
   if (f.result === 'lost') t = t.filter(x => x.usd <= 0);
   t = t.filter(x => paperMatchesFind(state.paperFindHistory, x.ticker));
+  // Newest first: latest exit date on top, then latest entry date, then ticker so the order never jumps around.
+  t = [...t].sort((a, b) => (a.exitDate < b.exitDate ? 1 : a.exitDate > b.exitDate ? -1 : a.entryDate < b.entryDate ? 1 : a.entryDate > b.entryDate ? -1 : String(a.ticker).localeCompare(String(b.ticker))));
   const shown = t.slice(0, state.paperLimit);
   const chip = (group, key, label) => `<button type="button" class="chip${f[group] === key ? ' active' : ''}" data-paper-filter="${group}:${key}" aria-pressed="${f[group] === key}">${label}</button>`;
   const how = { target: ['Target', 'good'], stop: ['Stop', 'bad'], time: ['Day-3 exit', ''] };

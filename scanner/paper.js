@@ -88,7 +88,7 @@ const CFG = {
   feed: (env.ALPACA_FEED || 'sip').toLowerCase(),
 
   reservePct: num(env.PAPER_RESERVE_PCT, 0.10),     // held back, never spent
-  sizePct: num(env.PAPER_SIZE_PCT, 0.15),           // per trade, as a share of the sleeve's current value
+  sizePct: num(env.PAPER_SIZE_PCT, 0.06),           // per trade, as a share of the sleeve's current value
   chase: num(env.PAPER_CHASE, core.SETUP.CHASE),    // entry price cap: skip if the market has already moved further than this
   targetPct: num(env.PAPER_TARGET_PCT, 4) / 100,    // fixed take-profit, as a share of the fill price (was 1.5 x ATR, about 7%)
   stopAtr: num(env.PAPER_STOP_ATR, 3),

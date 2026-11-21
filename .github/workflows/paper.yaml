@@ -123,7 +123,7 @@ jobs:
           # amount, so winnings compound. No cap on open positions or new trades per day -- the
           # only limit is whether the sleeve still has spendable cash once the reserve is set aside.
           PAPER_RESERVE_PCT: '0.10'
-          PAPER_SIZE_PCT: '0.15'
+          PAPER_SIZE_PCT: '0.06'
           PAPER_CHASE: '0.02'
           PAPER_ON_OPEN: 'false'                 # 'true' queues on-the-open orders the evening before. Keep 'false' for the PAPER account: it does not run opening auctions, so those orders never execute. For a live account.
           PAPER_OPEN_GUARD: 'true'               # at 9:32, skip a stock that has already opened past the 2% cap (the tested rule)

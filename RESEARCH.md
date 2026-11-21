@@ -17,7 +17,7 @@ Goal: improve the live Uptrend Dip plan's return per unit of drawdown, without f
 | 2026-11-21 | Stop rules: fixed 3-8% vs 3 ATR | None beat live. 4% stop: CAGR 3.1% vs 7.1% |
 | 2026-11-21 | Risk rules (13) | Only 7.5% size passed: CAGR 6.5%, worst drawdown -12.0% (live 7.1%, -17.2%) |
 
-| 2026-11-21 | Batch 1 launched: size 9/7.5/6/5%, 7.5%+max-4-open, 7.5%+30% day cap (6 variants; ledger now 38, so the 40% drawdown-cut bar applies) | Size 6% and 5% PASS the 40% bar (6%: keeps 85% of return, drawdown -9.9% vs -17.2%; 5%: keeps 81%, drawdown -8.6%). 7.5% fails only because 2016-19 return/risk is negative for every rule there (noise). Max-4-open and day-cap combos cost too much return. Final exam 2023-26: 5% return/risk 1.07, 6% 1.00, live 0.75. Awaiting owner decision on size. |
+| 2026-11-21 | Batch 1 launched: size 9/7.5/6/5%, 7.5%+max-4-open, 7.5%+30% day cap (6 variants; ledger now 38, so the 40% drawdown-cut bar applies) | Size 6% and 5% PASS the 40% bar (6%: keeps 85% of return, drawdown -9.9% vs -17.2%; 5%: keeps 81%, drawdown -8.6%). 7.5% fails only because 2016-19 return/risk is negative for every rule there (noise). Max-4-open and day-cap combos cost too much return. Final exam 2023-26: 5% return/risk 1.07, 6% 1.00, live 0.75. Owner chose 6% on 2026-11-21 (PAPER_SIZE_PCT set to 0.06). |
 
 ## Queue (pre-registered, not yet run)
 - Batch 1: 7.5% size combined with max-4-open and with 30% day cap; size 5% and 6% to check the curve is smooth.
