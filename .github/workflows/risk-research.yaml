@@ -36,7 +36,7 @@ jobs:
       - name: Pick the experiment set (first line of research-trigger/risk.txt)
         id: set
         run: |
-          s=base; [ -f research-trigger/risk.txt ] && s=$(head -1 research-trigger/risk.txt | tr -cd 'a-z0-9'); case "$s" in base|batch1|batch3) ;; *) s=base;; esac
+          s=base; [ -f research-trigger/risk.txt ] && s=$(head -1 research-trigger/risk.txt | tr -cd 'a-z0-9'); case "$s" in base|batch1|batch2|batch3) ;; *) s=base;; esac
           echo "s=$s" >> "$GITHUB_OUTPUT"
 
       - name: Restore cached price data (same calendar day)
@@ -55,9 +55,9 @@ jobs:
           RR_OUT: research-out-risk
           RR_SET: ${{ steps.set.outputs.s }}
           RR_CACHE: price-cache
-          RR_DD_CUT: ${{ steps.set.outputs.s == 'base' && '0.25' || steps.set.outputs.s == 'batch3' && '0' || '0.40' }}
-          RR_BASE: ${{ steps.set.outputs.s == 'batch3' && 's6' || '' }}
-          RR_KEEP_MIN: ${{ steps.set.outputs.s == 'batch3' && '0.90' || '0.70' }}
+          RR_DD_CUT: ${{ steps.set.outputs.s == 'base' && '0.25' || (steps.set.outputs.s == 'batch3' || steps.set.outputs.s == 'batch2') && '0' || '0.40' }}
+          RR_BASE: ${{ (steps.set.outputs.s == 'batch3' || steps.set.outputs.s == 'batch2') && 's6' || '' }}
+          RR_KEEP_MIN: ${{ steps.set.outputs.s == 'batch3' && '0.90' || steps.set.outputs.s == 'batch2' && '0.95' || '0.70' }}
           NODE_OPTIONS: '--max-old-space-size=4096'
         run: node scanner/riskresearch.js
 

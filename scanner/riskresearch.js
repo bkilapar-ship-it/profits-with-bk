@@ -77,7 +77,15 @@ const BATCH3 = [
   { id: 'v5', label: '5% scaled by volatility (0.5x-1.5x)', rule: { size: 0.05, volScale: { lo: 0.5, hi: 1.5 } } },
   { id: 'v75', label: '7.5% scaled by volatility (0.5x-1.5x)', rule: { size: 0.075, volScale: { lo: 0.5, hi: 1.5 } } },
 ];
-const SETS = { base: BASE_SCENARIOS, batch1: BATCH1, batch3: BATCH3 };
+const BATCH2 = [
+  { id: 'live', label: 'LIVE rules before the change (15% flat)', rule: {} },
+  { id: 's6', label: 'CURRENT: 6% flat, live ranking (baseline for this batch)', rule: { size: 0.06 } },
+  { id: 'rk_vol', label: '6%, rank by highest relative volume first', rule: { size: 0.06, rank: 'relvol' } },
+  { id: 'rk_drop', label: '6%, rank by biggest 5-day drop first', rule: { size: 0.06, rank: 'drop' } },
+  { id: 'rk_rsi', label: '6%, rank by lowest RSI(5) first', rule: { size: 0.06, rank: 'rsi5' } },
+  { id: 'rk_rand', label: '6%, RANDOM order (control: shows what ranking is worth at all)', rule: { size: 0.06, rank: 'rand' } },
+];
+const SETS = { base: BASE_SCENARIOS, batch1: BATCH1, batch2: BATCH2, batch3: BATCH3 };
 const SCENARIOS = SETS[CFG.set] || BASE_SCENARIOS;
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 const isNum = v => typeof v === 'number' && Number.isFinite(v);
@@ -107,7 +115,9 @@ function account(recs, results, dates, rule, spy) {
   rule = rule || {};
   const byEntry = new Map();
   recs.forEach((r, i) => { const res = results[i]; if (!res) return; const e = r.bars[0].t; if (!byEntry.has(e)) byEntry.set(e, []); byEntry.get(e).push({ r, res }); });
-  for (const list of byEntry.values()) list.sort((a, b) => (a.r.prio - b.r.prio) || (b.r.vs200 - a.r.vs200));
+  const hash = x => { let h = 2166136261; for (const ch of x) h = Math.imul(h ^ ch.charCodeAt(0), 16777619); return h >>> 0; };
+  const RANKS = { relvol: (a, b) => b.r.relVol - a.r.relVol, drop: (a, b) => a.r.r5 - b.r.r5, rsi5: (a, b) => a.r.rsi5 - b.r.rsi5, rand: (a, b) => hash(a.r.sym + a.r.date) - hash(b.r.sym + b.r.date) };
+  for (const list of byEntry.values()) list.sort(RANKS[rule.rank] || ((a, b) => (a.r.prio - b.r.prio) || (b.r.vs200 - a.r.vs200)));
   const sizePct = rule.size || CFG.size;
   let cash = CFG.startEquity, eqPrev = CFG.startEquity, open = [], opened = 0, skippedCash = 0, blocked = 0, peak = CFG.startEquity, pausedUntil = -1;
   const eq = [];
@@ -277,7 +287,7 @@ function signalsFor(sym, candles, isSp) {
     if (!f || !f.dip || !isNum(f.atr) || f.atr <= 0 || !(f.dollarVol >= CFG.minDollarVol)) continue;
     const entry = clean[i + 1].o;
     if (!(entry <= clean[i].c * (1 + CFG.chase))) continue;
-    out.push({ date: String(date).slice(0, 10), sym, atr: f.atr, entry, vs200: f.vs200, prio: f.bearEngulf ? 0 : (f.green || f.sweep10) ? 2 : 1,
+    out.push({ date: String(date).slice(0, 10), sym, atr: f.atr, entry, vs200: f.vs200, relVol: isNum(f.relVol) ? f.relVol : 0, r5: isNum(f.r5) ? f.r5 : 0, rsi5: isNum(f.rsi5) ? f.rsi5 : 50, prio: f.bearEngulf ? 0 : (f.green || f.sweep10) ? 2 : 1,
       bars: [1, 2, 3].map(d => { const b = clean[i + d]; return { t: String(b.t).slice(0, 10), o: b.o, h: b.h, l: b.l, c: b.c }; }) });
   }
   return out;
