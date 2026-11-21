@@ -24,6 +24,8 @@ on:
     - cron: '30 0 * * 2-6'    # ~19:30 ET (EST), which is 00:30 UTC the next day
     - cron: '45 12 * * 1-5'   # ~8:45 ET (EDT)
     - cron: '45 13 * * 1-5'   # ~8:45 ET (EST)
+  push:
+    paths: ['research-trigger/paper.txt']   # Claude can request a run by pushing this file: line 1 = mode, line 2 = action
   workflow_dispatch:
     inputs:
       mode:
@@ -90,10 +92,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Read the run request (only when started by pushing research-trigger/paper.txt)
+        id: req
+        if: github.event_name == 'push'
+        run: |
+          m=reconcile; a=none
+          if [ -f research-trigger/paper.txt ]; then m=$(sed -n 1p research-trigger/paper.txt | tr -cd 'a-z'); a=$(sed -n 2p research-trigger/paper.txt | tr -cd 'a-z'); fi
+          case "$m" in auto|entry|exit|reconcile|queue) ;; *) m=reconcile;; esac
+          case "$a" in none|pause|resume|adopt) ;; *) a=none;; esac
+          echo "mode=$m" >> "$GITHUB_OUTPUT"; echo "action=$a" >> "$GITHUB_OUTPUT"
+
       - name: Decide today's mode
         id: pick_mode
         run: |
-          mode="${{ inputs.mode || 'auto' }}"
+          mode="${{ inputs.mode || steps.req.outputs.mode || 'auto' }}"
           if [ "$mode" = "auto" ]; then
             case "${{ github.event.schedule }}" in
               '35 13 * * 1-5'|'35 14 * * 1-5') mode="entry" ;;
@@ -110,7 +122,7 @@ jobs:
           ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
           ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
           MODE: ${{ steps.pick_mode.outputs.mode }}
-          ACTION: ${{ inputs.action || 'none' }}
+          ACTION: ${{ inputs.action || steps.req.outputs.action || 'none' }}
           FORCE: ${{ inputs.force || 'false' }}
           PAPER_STATE_DIR: paper-state
           # The live setups.json this repo publishes. Override with a repository variable
