@@ -1,0 +1,86 @@
+RUN CHECK: 666 symbols requested, 663 had enough data, 0 download batches skipped, 2625 bought signals, 2635 trading days, 2738 SPY bars.
+
+RISK-LIMIT RESEARCH: the live Dip plan (3 ATR stop unchanged) with portfolio rules added
+S&P 500 members at the time, $20M/day floor, 2625 Dip signals bought at the next open (skipped above +2%), +4% target, exit at the close of session 3. Before costs.
+Account: $100,000 start, 10% reserve, 15% of the rest per trade unless the rule changes it, ranked like the live system, marked to market daily.
+Pre-registered pass bar (batch 3): compared with the CURRENT 6% flat size, keep 95%+ of its CAGR, not make its worst drawdown worse by more than 0%-equivalent (drawdown cut of at least 0%), raise return/risk overall, and have return/risk not lower than it in BOTH development periods. Set: batch2.
+
+===============================================================================================================================================================================
+ ALL PERIODS
+  rule                                                                | CAGR   | worst drawdown (date)   | return/risk | Sharpe | worst day | worst 5 days | worst month        | entries taken | blocked by rule | skipped (no cash)
+  LIVE rules before the change (15% flat)                             |   7.1% | -17.2% (2026-11-05)     |        0.41 |   0.63 |     -6.0% |       -11.9% | -8.0% (2026-11)    |          1547 |               0 |              1078
+  CURRENT: 6% flat, live ranking (baseline for this batch)            |   6.0% | -9.9% (2020-02-27)      |        0.61 |   0.79 |     -5.0% |        -8.2% | -5.6% (2022-06)    |          2145 |               0 |               480
+  6%, rank by highest relative volume first                           |   5.9% | -10.0% (2020-02-28)     |        0.59 |   0.79 |     -4.7% |        -7.8% | -5.1% (2020-02)    |          2141 |               0 |               484
+  6%, rank by biggest 5-day drop first                                |   6.2% | -10.0% (2020-02-27)     |        0.62 |   0.82 |     -4.8% |        -7.8% | -5.1% (2022-06)    |          2148 |               0 |               477
+  6%, rank by lowest RSI(5) first                                     |   5.9% | -10.7% (2020-02-28)     |        0.55 |   0.79 |     -5.1% |        -6.5% | -5.9% (2020-02)    |          2139 |               0 |               486
+  6%, RANDOM order (control: shows what ranking is worth at all)      |   5.7% | -10.2% (2020-02-28)     |        0.56 |   0.76 |     -5.0% |        -7.4% | -5.7% (2020-02)    |          2140 |               0 |               485
+
+===============================================================================================================================================================================
+ Oct 2016 to 2019
+  rule                                                                | CAGR   | worst drawdown (date)   | return/risk | worst day | worst 5 days | worst month
+  LIVE rules before the change (15% flat)                             |  -1.8% | -14.0% (2019-08-05)     |       -0.13 |     -3.8% |        -7.4% | -4.2% (2019-08)
+  CURRENT: 6% flat, live ranking (baseline for this batch)            |  -0.9% | -8.3% (2019-08-05)      |       -0.11 |     -2.5% |        -5.3% | -2.9% (2019-08)
+  6%, rank by highest relative volume first                           |  -1.0% | -8.0% (2019-08-05)      |       -0.13 |     -2.5% |        -5.3% | -3.0% (2019-08)
+  6%, rank by biggest 5-day drop first                                |  -0.8% | -8.0% (2019-08-05)      |       -0.10 |     -2.5% |        -5.3% | -3.0% (2019-08)
+  6%, rank by lowest RSI(5) first                                     |  -0.8% | -8.0% (2019-08-05)      |       -0.10 |     -2.5% |        -5.3% | -3.0% (2019-08)
+  6%, RANDOM order (control: shows what ranking is worth at all)      |  -0.7% | -7.8% (2019-08-05)      |       -0.10 |     -2.5% |        -5.3% | -2.9% (2019-08)
+
+===============================================================================================================================================================================
+ 2020 to 2022
+  rule                                                                | CAGR   | worst drawdown (date)   | return/risk | worst day | worst 5 days | worst month
+  LIVE rules before the change (15% flat)                             |  10.9% | -12.2% (2022-06-24)     |        0.89 |     -6.0% |       -10.6% | -7.9% (2022-06)
+  CURRENT: 6% flat, live ranking (baseline for this batch)            |  10.1% | -9.5% (2022-06-23)      |        1.05 |     -3.5% |        -8.2% | -5.6% (2022-06)
+  6%, rank by highest relative volume first                           |   9.5% | -9.1% (2022-06-23)      |        1.05 |     -3.5% |        -7.8% | -5.1% (2020-02)
+  6%, rank by biggest 5-day drop first                                |   9.9% | -9.3% (2022-06-23)      |        1.06 |     -3.5% |        -7.8% | -5.1% (2022-06)
+  6%, rank by lowest RSI(5) first                                     |   9.3% | -7.9% (2022-06-23)      |        1.18 |     -3.4% |        -6.5% | -5.9% (2020-02)
+  6%, RANDOM order (control: shows what ranking is worth at all)      |   9.2% | -8.8% (2022-06-23)      |        1.05 |     -3.5% |        -7.4% | -5.7% (2020-02)
+
+===============================================================================================================================================================================
+ 2023 to 2026
+  rule                                                                | CAGR   | worst drawdown (date)   | return/risk | worst day | worst 5 days | worst month
+  LIVE rules before the change (15% flat)                             |  12.9% | -17.2% (2026-11-05)     |        0.75 |     -5.5% |       -11.9% | -8.0% (2026-11)
+  CURRENT: 6% flat, live ranking (baseline for this batch)            |   9.6% | -9.6% (2026-11-05)      |        1.00 |     -5.0% |        -6.1% | -3.1% (2023-03)
+  6%, rank by highest relative volume first                           |   9.8% | -9.1% (2026-11-05)      |        1.07 |     -4.7% |        -5.7% | -3.3% (2023-03)
+  6%, rank by biggest 5-day drop first                                |  10.1% | -9.3% (2026-11-05)      |        1.09 |     -4.8% |        -5.9% | -3.3% (2023-03)
+  6%, rank by lowest RSI(5) first                                     |   9.7% | -9.5% (2026-11-05)      |        1.02 |     -5.1% |        -6.4% | -3.5% (2023-03)
+  6%, RANDOM order (control: shows what ranking is worth at all)      |   9.4% | -10.1% (2026-11-05)     |        0.93 |     -5.0% |        -6.1% | -3.3% (2026-10)
+
+===============================================================================================================================================================================
+ CRASH WINDOWS: account return / worst drawdown inside the window
+  Feb-Mar 2020 (COVID crash)   2020-02-15 to 2020-04-15
+      LIVE rules before the change (15% flat)                             return    2.0%   worst drawdown   -6.4%
+      CURRENT: 6% flat, live ranking (baseline for this batch)            return    1.4%   worst drawdown   -5.2%
+      6%, rank by highest relative volume first                           return   -0.0%   worst drawdown   -5.5%
+      6%, rank by biggest 5-day drop first                                return    0.6%   worst drawdown   -5.6%
+      6%, rank by lowest RSI(5) first                                     return   -1.1%   worst drawdown   -6.3%
+      6%, RANDOM order (control: shows what ranking is worth at all)      return   -0.7%   worst drawdown   -6.1%
+  2022 bear market   2022-01-01 to 2022-10-31
+      LIVE rules before the change (15% flat)                             return   -3.5%   worst drawdown  -12.2%
+      CURRENT: 6% flat, live ranking (baseline for this batch)            return   -0.5%   worst drawdown   -9.5%
+      6%, rank by highest relative volume first                           return    0.1%   worst drawdown   -9.1%
+      6%, rank by biggest 5-day drop first                                return   -0.5%   worst drawdown   -9.3%
+      6%, rank by lowest RSI(5) first                                     return    1.0%   worst drawdown   -7.9%
+      6%, RANDOM order (control: shows what ranking is worth at all)      return    0.1%   worst drawdown   -8.8%
+  Nov 2026 (post-midterm AI sell-off)   2026-10-25 to 2026-11-30
+      LIVE rules before the change (15% flat)                             return   -9.0%   worst drawdown  -11.9%
+      CURRENT: 6% flat, live ranking (baseline for this batch)            return   -1.7%   worst drawdown   -5.7%
+      6%, rank by highest relative volume first                           return   -1.8%   worst drawdown   -5.7%
+      6%, rank by biggest 5-day drop first                                return   -1.9%   worst drawdown   -5.7%
+      6%, rank by lowest RSI(5) first                                     return   -1.9%   worst drawdown   -5.7%
+      6%, RANDOM order (control: shows what ranking is worth at all)      return   -1.6%   worst drawdown   -5.7%
+  Last 2 months (Sep 21-Nov 20 2026)   2026-09-21 to 2026-11-20
+      LIVE rules before the change (15% flat)                             return  -14.6%   worst drawdown  -17.2%
+      CURRENT: 6% flat, live ranking (baseline for this batch)            return   -5.8%   worst drawdown   -9.6%
+      6%, rank by highest relative volume first                           return   -5.5%   worst drawdown   -9.1%
+      6%, rank by biggest 5-day drop first                                return   -5.7%   worst drawdown   -9.3%
+      6%, rank by lowest RSI(5) first                                     return   -5.8%   worst drawdown   -9.5%
+      6%, RANDOM order (control: shows what ranking is worth at all)      return   -6.2%   worst drawdown  -10.1%
+
+===============================================================================================================================================================================
+ PASS / FAIL against the pre-registered bar
+  fail  6%, rank by highest relative volume first                           keeps 98% of CAGR | drawdown cut -1% | return/risk not lower in BOTH development periods (2016-19, 2020-22): no
+  fail  6%, rank by biggest 5-day drop first                                keeps 103% of CAGR | drawdown cut -2% | return/risk not lower in BOTH development periods (2016-19, 2020-22): yes
+  fail  6%, rank by lowest RSI(5) first                                     keeps 98% of CAGR | drawdown cut -9% | return/risk not lower in BOTH development periods (2016-19, 2020-22): yes
+  fail  6%, RANDOM order (control: shows what ranking is worth at all)      keeps 96% of CAGR | drawdown cut -4% | return/risk not lower in BOTH development periods (2016-19, 2020-22): no
+
+How to read: "return/risk" is CAGR divided by the worst drawdown. A good rule raises it. Smaller size always shrinks drawdown AND profit together; it only counts as an improvement if return/risk goes UP.
