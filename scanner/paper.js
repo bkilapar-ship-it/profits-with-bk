@@ -103,6 +103,7 @@ const CFG = {
   onOpen: bool(env.PAPER_ON_OPEN, false),         // queue entries the evening before as on-the-open orders. Off by default: Alpaca's PAPER account does not run opening auctions, so such orders never execute there. For a live account.
   openGuard: bool(env.PAPER_OPEN_GUARD, true),    // at 9:32, skip a stock that has already opened past the 2% cap (the tested rule), using its real-time opening price
   openFeed: (env.PAPER_OPEN_FEED || 'iex').toLowerCase(),   // real-time prices on the free plan come from the IEX feed
+  ignoreSymbols: new Set(String(env.PAPER_IGNORE_SYMBOLS || '').split(',').map(s => s.trim().toUpperCase()).filter(Boolean)),   // held by hand: never reported or adopted
   nonSpMaxOpen: num(env.PAPER_NONSP_MAX_OPEN, 2),                 // keep cash free for the next days' S&P signals
   reviewAfter: num(env.PAPER_REVIEW_AFTER, 100),
   successAvgPct: num(env.PAPER_SUCCESS_AVG_PCT, 0.3),
@@ -399,7 +400,9 @@ async function reconcilePendingEntries(state) {
     const p = state.pendingEntries[ticker];
     let order;
     try { order = await getOrder(p.orderId); } catch (e) { log(`  ${ticker}: could not check its order (${e.message}).`); continue; }
-    if (order.status === 'filled') {
+    const filledQty = Number(order.filled_qty || 0);
+    // A cancelled or expired order can still have filled in part. Those shares are a real position and must be tracked.
+    if (order.status === 'filled' || (['canceled', 'expired'].includes(order.status) && filledQty > 0)) {
       const entry = Number(order.filled_avg_price);
       const shares = Number(order.filled_qty);
       const long = p.side === 'long';
@@ -482,6 +485,83 @@ function rankCandidates(setups, state) {
  *  a share of THIS, not of the whole account -- so the reserve genuinely never gets spent. */
 function sleeveEquity(totalEquity) { return totalEquity * (1 - CFG.reservePct); }
 
+/* ------------------------------------------------- positions the saved state does not know about */
+/** Wilder ATR(14) from daily bars (oldest first), using bars up to and including index `upto`. */
+function atr14(bars, upto = bars.length - 1) {
+  if (upto < 14) return null;
+  const tr = i => Math.max(bars[i].h - bars[i].l, Math.abs(bars[i].h - bars[i - 1].c), Math.abs(bars[i].l - bars[i - 1].c));
+  let atr = 0;
+  for (let i = 1; i <= 14; i++) atr += tr(i);
+  atr /= 14;
+  for (let i = 15; i <= upto; i++) atr = (atr * 13 + tr(i)) / 14;
+  return atr;
+}
+async function getDailyBars(symbol) {
+  const start = new Date(nowFn().getTime() - 80 * 864e5).toISOString().slice(0, 10);
+  for (const feed of ['sip', 'iex']) {
+    try {
+      const q = new URLSearchParams({ symbols: symbol, timeframe: '1Day', start, limit: '100', adjustment: 'split', feed });
+      const j = await alpaca('GET', `${CFG.dataBase}/v2/stocks/bars?${q.toString()}`);
+      const list = (j.bars && j.bars[symbol]) || [];
+      if (list.length >= 16) return list.map(b => ({ date: String(b.t).slice(0, 10), o: b.o, h: b.h, l: b.l, c: b.c }));
+    } catch (e) { /* try the next feed */ }
+  }
+  return [];
+}
+/** Alpaca positions that are neither tracked nor waiting on a pending entry order (and not on the ignore list). */
+const findUntracked = (state, live) => live.filter(x => !state.positions[x.symbol] && !state.pendingEntries[x.symbol] && !CFG.ignoreSymbols.has(String(x.symbol).toUpperCase()));
+
+/**
+ * Starts tracking positions Alpaca holds that the saved state does not know about: it reads how and when each was entered,
+ * reuses a protective OCO order if one is already there (otherwise places one: target 4% from the fill, stop 3 ATR), and registers
+ * the position so it appears on the dashboard and gets its normal time exit. A position whose entry date cannot be found is
+ * treated as overdue and exits at the next exit run. Manual action only (ACTION=adopt): it never adopts anything by itself.
+ */
+async function adoptOrphans(state, live) {
+  const orphans = findUntracked(state, live), adopted = [];
+  if (!orphans.length) { log('Nothing to adopt: every position at Alpaca is already tracked.'); return adopted; }
+  const openOrders = await getOpenOrders().catch(() => []);
+  for (const x of orphans) {
+    const ticker = x.symbol, qty = Number(x.qty), long = qty > 0, shares = Math.abs(qty), entry = Number(x.avg_entry_price);
+    if (!(shares > 0) || !(entry > 0)) { log(`  ${ticker}: unusable position data (qty ${x.qty}, entry ${x.avg_entry_price}); skipped.`); continue; }
+    // When did we get in? The most recent filled order on the entry side.
+    let entryDate = null;
+    try {
+      const closed = await getRecentClosedOrders(ticker, new Date(nowFn().getTime() - 45 * 864e5).toISOString(), 30);
+      const f = closed.find(o => Number(o.filled_qty || 0) > 0 && o.side === (long ? 'buy' : 'sell'));
+      if (f && f.filled_at) entryDate = String(f.filled_at).slice(0, 10);
+    } catch (e) { log(`  ${ticker}: could not read its order history (${String(e.message).slice(0, 80)}).`); }
+    if (!entryDate) { entryDate = new Date(nowFn().getTime() - 7 * 864e5).toISOString().slice(0, 10); log(`  ${ticker}: entry date unknown, so it is treated as overdue and will exit at the next exit run.`); }
+    // Protection that is already in place?
+    let target = null, stop = null, ocoId = null;
+    const oco = openOrders.find(o => o.symbol === ticker && o.order_class === 'oco');
+    if (oco) {
+      const legs = [oco, ...(oco.legs || [])];
+      const tp = legs.find(l => l.type === 'limit'), sl = legs.find(l => l.type === 'stop' || l.type === 'stop_limit');
+      target = tp ? Number(tp.limit_price) : null; stop = sl ? Number(sl.stop_price) : null; ocoId = oco.id;
+    }
+    let placed = false;
+    if (!ocoId) {
+      target = r2(long ? entry * (1 + CFG.targetPct) : entry * (1 - CFG.targetPct));
+      const bars = await getDailyBars(ticker);
+      const before = bars.filter(b => b.date < entryDate);
+      const a = bars.length ? atr14(before.length >= 15 ? before : bars) : null;
+      if (isNum(a) && a > 0) stop = r2(long ? entry - CFG.stopAtr * a : entry + CFG.stopAtr * a);
+      else { stop = r2(long ? entry * 0.9 : entry * 1.1); log(`  ${ticker}: no price history for the ATR, so a 10% stop was used.`); }
+      try {
+        const o = await alpaca('POST', '/v2/orders', { symbol: ticker, qty: String(shares), side: long ? 'sell' : 'buy', type: 'limit', time_in_force: 'gtc',
+          order_class: 'oco', take_profit: { limit_price: String(target) }, stop_loss: { stop_price: String(stop) } });
+        ocoId = o.id; placed = true;
+      } catch (e) { log(`  ${ticker}: could not place the protective OCO order (${String(e.message).slice(0, 100)}). It is tracked, but has NO automatic stop.`); }
+    }
+    state.positions[ticker] = { strategy: long ? 'dip' : 'rip', side: long ? 'long' : 'short', tag: 'normal', pool: 'sp500', signalDate: null, signalClose: null,
+      entryDate, entry: r2(entry), shares, target: isNum(target) ? r2(target) : null, stop: isNum(stop) ? r2(stop) : null, ocoOrderId: ocoId, adopted: true };
+    adopted.push({ ticker, side: long ? 'long' : 'short', shares, entry: r2(entry), entryDate, target, stop, placed });
+    log(`  ${ticker}: adopted ${long ? 'long' : 'short'} ${shares} shares from ${entry}, entered ${entryDate}; target ${target}, stop ${stop} (${placed ? 'new OCO placed' : ocoId ? 'existing OCO kept' : 'NO OCO'}).`);
+  }
+  return adopted;
+}
+
 /**
  * After the open, deal with queued on-the-open orders that did not execute. Alpaca's PAPER account does not run opening
  * auctions, so such an order can stay "accepted" all day, or be cancelled at the open, even when the stock opened inside the cap.
@@ -501,12 +581,22 @@ async function resolveQueued(state) {
   const decide = [], replaced = [];
   for (const [ticker, q] of queued) {
     if (q.forDate && q.forDate < today) {
-      log(`  ${ticker}: its on-the-open order was for the ${q.forDate} open; dropping it as stale.`);
-      await cancelOrder(q.orderId).catch(() => null); delete state.pendingEntries[ticker]; continue;
+      // An order from an earlier day may still have filled (the paper account can fill such orders late). Never drop one that did:
+      // leave it pending so reconcile registers the position.
+      const o0 = await getOrder(q.orderId).catch(() => null);
+      if (o0 && (o0.status === 'filled' || o0.status === 'partially_filled' || Number(o0.filled_qty || 0) > 0)) continue;
+      if (o0 && !TERMINAL.has(o0.status)) {
+        await cancelAndWait(q.orderId, ticker);
+        const o1 = await getOrder(q.orderId).catch(() => null);
+        if (o1 && (o1.status === 'filled' || o1.status === 'partially_filled' || Number(o1.filled_qty || 0) > 0)) continue;
+        if (!o1 || !TERMINAL.has(o1.status)) { log(`  ${ticker}: stale on-the-open order, but the cancel has not completed; keeping it for the next run.`); continue; }
+      }
+      log(`  ${ticker}: its on-the-open order was for the ${q.forDate} open and never filled; dropping it as stale.`);
+      delete state.pendingEntries[ticker]; continue;
     }
     const o = await getOrder(q.orderId).catch(() => null);
     if (!o) { log(`  ${ticker}: could not read its queued order; leaving it for the next run.`); continue; }
-    if (o.status === 'filled' || o.status === 'partially_filled') continue;
+    if (o.status === 'filled' || o.status === 'partially_filled' || Number(o.filled_qty || 0) > 0) continue;
     if (TERMINAL.has(o.status)) {
       const when = o.canceled_at || o.expired_at || o.failed_at;
       if (when) {
@@ -521,7 +611,7 @@ async function resolveQueued(state) {
     log(`  ${ticker}: the on-the-open order is still "${o.status}" after the open; cancelling it.`);
     await cancelAndWait(q.orderId, ticker);
     const after = await getOrder(q.orderId).catch(() => null);
-    if (after && (after.status === 'filled' || after.status === 'partially_filled')) continue;   // it filled while we were cancelling
+    if (after && (after.status === 'filled' || after.status === 'partially_filled' || Number(after.filled_qty || 0) > 0)) continue;   // it filled while we were cancelling
     if (!after || !TERMINAL.has(after.status)) {
       log(`  ${ticker}: the cancel has not completed; no replacement placed (the old order could still fill). Will check again next run.`);
       continue;
@@ -833,6 +923,23 @@ async function main() {
     }
     await updateEquitySnapshot(state);
     await alertSafely(() => notify.closedAlert(state.trades.slice(tradesBefore)));
+    // Safety net: a position Alpaca holds that this trader does not know about has no stop, target or time exit and is not on the dashboard.
+    try {
+      const live = await getPositions();
+      const orphans = findUntracked(state, live);
+      if (CFG.action === 'adopt') {
+        const adopted = await adoptOrphans(state, live);
+        state.untrackedKey = null;
+        if (adopted.length) await alertSafely(() => notify.send(`✅ Paper trading: now tracking ${adopted.map(a => a.ticker).join(', ')}, which were open at Alpaca but missing from the dashboard. They get their normal stop, target and time exit.`));
+      } else if (orphans.length) {
+        const key = orphans.map(x => x.symbol).sort().join(',');
+        log(`  WARNING: Alpaca holds ${key}, which this paper trader is not tracking (no stop, target or time exit, and not on the dashboard). Run Paper trading with action "adopt" to start tracking.`);
+        if (state.untrackedKey !== key) {
+          state.untrackedKey = key;
+          await alertSafely(() => notify.send(`⚠️ Paper trading: Alpaca holds ${key}, which the paper trader is not tracking (no stop, target or time exit, and not on the dashboard). Run Paper trading with action "adopt".`));
+        }
+      } else state.untrackedKey = null;
+    } catch (e) { log(`Could not compare the positions at Alpaca with the saved state (${String(e.message).slice(0, 100)}).`); }
     if (replaced.length) {
       await alertSafely(() => notify.send(`⚠️ Alpaca's paper account did not execute the on-the-open order${replaced.length > 1 ? 's' : ''} for ${replaced.map(r => r.ticker).join(', ')}. ` +
         `${replaced.length > 1 ? 'They were' : 'It was'} replaced by ${replaced.length > 1 ? 'limit orders' : 'a limit order'} at the 2% cap.`));
@@ -880,7 +987,7 @@ if (require.main === module) {
 }
 
 module.exports = {
-  CFG, RULES, setNow, etMinutes, resolveQueued, getOpenPrices, defaultState, loadState, saveState, todayEastern, dayCount, main,
+  CFG, RULES, setNow, etMinutes, resolveQueued, getOpenPrices, findUntracked, adoptOrphans, atr14, defaultState, loadState, saveState, todayEastern, dayCount, main,
   reconcile, reconcileClosedPositions, reconcilePendingEntries, runEntries, runExits, rankCandidates,
   updateEquitySnapshot, renderPublicJson, fetchSetups, assertPaperOnly,
   alpaca, getClock, getAccount, getPositions, getOpenOrders, getOrder, getAsset, getLatestDailyClose, cancelOrder, closePositionMarket,

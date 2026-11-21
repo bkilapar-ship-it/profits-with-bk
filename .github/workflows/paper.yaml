@@ -32,10 +32,10 @@ on:
         default: auto
         options: [auto, entry, exit, reconcile, queue]
       action:
-        description: 'Pause or resume paper trading (takes effect immediately)'
+        description: 'Pause or resume paper trading, or adopt = start tracking positions that Alpaca holds but the dashboard is missing (run with mode reconcile)'
         type: choice
         default: none
-        options: [none, pause, resume]
+        options: [none, pause, resume, adopt]
       force:
         description: 'Bypass the once-per-day guard (for testing only — can duplicate orders if used carelessly)'
         type: boolean
@@ -153,10 +153,36 @@ jobs:
           git add state.json
           if git diff --cached --quiet; then
             echo "No change to paper trading state."
-          else
-            git commit -q -m "Paper trading: ${{ steps.pick_mode.outputs.mode }} run, $(date -u +%Y-%m-%dT%H:%M:%SZ)"
-            git push -q origin paper-state
+            exit 0
           fi
+          git commit -q -m "Paper trading: ${{ steps.pick_mode.outputs.mode }} run, $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          # The saved state is what keeps the dashboard in step with Alpaca, so a failed push is retried (a brief GitHub or
+          # network hiccup is the usual cause). If another commit has landed on the branch meanwhile, our commit is rebased on
+          # top of it; if the two versions of state.json genuinely conflict we stop and say so rather than overwrite either.
+          for attempt in 1 2 3 4; do
+            if git push -q origin paper-state; then
+              echo "State saved (attempt $attempt)."
+              exit 0
+            fi
+            echo "Push failed on attempt $attempt. Waiting, then fetching the latest branch and retrying."
+            sleep $((attempt * 5))
+            if ! git pull -q --rebase origin paper-state; then
+              git rebase --abort || true
+              echo "::error::The paper-state branch changed underneath this run and the two versions of state.json conflict. The state from this run was NOT saved. A copy is attached to this run as the state-backup artifact."
+              exit 1
+            fi
+          done
+          echo "::error::Could not push the paper trading state after 4 attempts. The state from this run was NOT saved. A copy is attached to this run as the state-backup artifact."
+          exit 1
+
+      - name: Keep a copy of the state if saving it failed
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: state-backup
+          path: paper-state/state.json
+          retention-days: 14
+          if-no-files-found: ignore
 
       - name: Alert if the run failed
         if: failure()
