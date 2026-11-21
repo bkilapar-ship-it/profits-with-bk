@@ -19,9 +19,11 @@ Goal: improve the live Uptrend Dip plan's return per unit of drawdown, without f
 
 | 2026-11-21 | Batch 1 launched: size 9/7.5/6/5%, 7.5%+max-4-open, 7.5%+30% day cap (6 variants; ledger now 38, so the 40% drawdown-cut bar applies) | Size 6% and 5% PASS the 40% bar (6%: keeps 85% of return, drawdown -9.9% vs -17.2%; 5%: keeps 81%, drawdown -8.6%). 7.5% fails only because 2016-19 return/risk is negative for every rule there (noise). Max-4-open and day-cap combos cost too much return. Final exam 2023-26: 5% return/risk 1.07, 6% 1.00, live 0.75. Owner chose 6% on 2026-11-21 (PAPER_SIZE_PCT set to 0.06). |
 | 2026-11-21 | Batch 3 launched (volatility-scaled sizing): 6% scaled 0.5-1.5x, 6% scaled 0.33-2x, 5% and 7.5% scaled. Baseline is now the adopted 6% flat. Bar: keep 90%+ of its return, drawdown no worse, return/risk higher overall and not lower in either development period. Ledger now 42 variants. | All 4 FAIL: scaling cut return more than drawdown (6% scaled: CAGR 4.9% vs 6.0% flat, drawdown -11.0% vs -9.9%). It did help the Nov 2026 window only (that is one event). Keep flat 6%. |
-| 2026-11-21 | Batch 2 launched (signal ranking, 6% size): rank by relative volume, by biggest 5-day drop, by lowest RSI(5), plus a RANDOM-order control. 480 of 2,625 signals are still skipped for cash at 6%, so ranking can matter. Bar: vs flat 6% with live ranking, keep 95%+ of return, drawdown no worse, return/risk higher overall and not lower in either development period. Ledger 46. | running |
+| 2026-11-21 | Batch 2 launched (signal ranking, 6% size): rank by relative volume, by biggest 5-day drop, by lowest RSI(5), plus a RANDOM-order control. 480 of 2,625 signals are still skipped for cash at 6%, so ranking can matter. Bar: vs flat 6% with live ranking, keep 95%+ of return, drawdown no worse, return/risk higher overall and not lower in either development period. Ledger 46. | All 4 FAIL. Ranking is worth little: live ranking 6.0%/yr vs random order 5.7%/yr; best variant (biggest 5-day drop first) 6.2% with the same drawdown, inside noise. Keep live ranking. |
 
-## Queue (pre-registered, not yet run)
+## Status: 3 batches done (budget used). Adopted: 6% flat size. Nothing else passed.
+
+## Not run (needs owner go-ahead to extend the budget)
 - Batch 1: 7.5% size combined with max-4-open and with 30% day cap; size 5% and 6% to check the curve is smooth.
 - Batch 2: does signal-day relative volume or distance above the 200-day average rank signals better (use as ranking, not as a filter).
 - Batch 3: dollar-risk sizing (smaller size where ATR is large).
