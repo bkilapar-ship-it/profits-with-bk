@@ -65,6 +65,21 @@
    "stop": 105.31,
    "ocoOrderId": "aebf45ab-816f-4c16-8d97-13af77a751e1",
    "now": 134.65
+  },
+  "STX": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": null,
+   "signalClose": null,
+   "entryDate": "2026-11-14",
+   "entry": 789,
+   "shares": 1,
+   "target": 820.56,
+   "stop": 634.67,
+   "ocoOrderId": null,
+   "adopted": true
   }
  },
  "pendingEntries": {},
@@ -1426,8 +1441,8 @@
   },
   {
    "d": "2026-11-21",
-   "value": 95006,
-   "pct": -4.99,
+   "value": 95005,
+   "pct": -5,
    "spy": null
   }
  ],
@@ -1472,5 +1487,6 @@
   "forDate": "2026-11-20",
   "exits": []
  },
- "lastQueueFor": "2026-10-13"
+ "lastQueueFor": "2026-10-13",
+ "untrackedKey": null
 }
