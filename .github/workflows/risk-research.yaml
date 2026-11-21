@@ -5,6 +5,8 @@ name: Research - risk limits (cut crash drawdowns)
 # Runs only when you start it.
 
 on:
+  push:
+    paths: ['research-trigger/risk.txt']     # Claude starts the run by pushing this file
   workflow_dispatch:
     inputs:
       max_symbols:
