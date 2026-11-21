@@ -1,0 +1,423 @@
+{
+ "version": 1,
+ "asOf": "2026-11-20",
+ "market": {
+  "asOf": "2026-11-20",
+  "chg20d": -6.4
+ },
+ "dip": [
+  {
+   "ticker": "ABT",
+   "sp500": true,
+   "kind": "dip",
+   "signalDate": "2026-11-20",
+   "sessionsAgo": 0,
+   "close": 111.12,
+   "chg5d": -11.8,
+   "rsi": 29,
+   "rsi5": 29,
+   "vs200": 9.4,
+   "atr": 3.1,
+   "atrPct": 2.79,
+   "relVol": 2.1,
+   "dollarVol": 400000000.0,
+   "green": false,
+   "bearEngulf": true,
+   "sweep10": false,
+   "priority": 0,
+   "reasons": [
+    "closed near the day\u2019s low",
+    "3 down days in a row"
+   ],
+   "levels": {
+    "ref": 111.12,
+    "entryLimit": 113.34,
+    "target": 115.56,
+    "stop": 101.82
+   }
+  },
+  {
+   "ticker": "CRWD",
+   "sp500": true,
+   "kind": "dip",
+   "signalDate": "2026-11-20",
+   "sessionsAgo": 0,
+   "close": 207.2,
+   "chg5d": -13.2,
+   "rsi": 24,
+   "rsi5": 24,
+   "vs200": 4.8,
+   "atr": 7.5,
+   "atrPct": 3.62,
+   "relVol": 1.2,
+   "dollarVol": 400000000.0,
+   "green": false,
+   "bearEngulf": false,
+   "sweep10": false,
+   "priority": 1,
+   "reasons": [
+    "new 20-day low"
+   ],
+   "levels": {
+    "ref": 207.2,
+    "entryLimit": 211.34,
+    "target": 215.49,
+    "stop": 184.7
+   }
+  },
+  {
+   "ticker": "HUM",
+   "sp500": true,
+   "kind": "dip",
+   "signalDate": "2026-11-20",
+   "sessionsAgo": 0,
+   "close": 582.89,
+   "chg5d": -10.4,
+   "rsi": 31,
+   "rsi5": 31,
+   "vs200": 15.1,
+   "atr": 9.8,
+   "atrPct": 1.68,
+   "relVol": 1.7,
+   "dollarVol": 400000000.0,
+   "green": true,
+   "bearEngulf": false,
+   "sweep10": false,
+   "priority": 2,
+   "reasons": [
+    "closed near the day\u2019s low"
+   ],
+   "levels": {
+    "ref": 582.89,
+    "entryLimit": 594.55,
+    "target": 606.21,
+    "stop": 553.49
+   }
+  },
+  {
+   "ticker": "MRNA",
+   "sp500": true,
+   "kind": "dip",
+   "signalDate": "2026-11-20",
+   "sessionsAgo": 0,
+   "close": 175.27,
+   "chg5d": -12.1,
+   "rsi": 27,
+   "rsi5": 27,
+   "vs200": 6.2,
+   "atr": 8,
+   "atrPct": 3.99,
+   "relVol": 1.1,
+   "dollarVol": 400000000.0,
+   "green": false,
+   "bearEngulf": false,
+   "sweep10": false,
+   "priority": 1,
+   "reasons": [
+    "3 down days in a row"
+   ],
+   "levels": {
+    "ref": 175.27,
+    "entryLimit": 178.78,
+    "target": 182.28,
+    "stop": 151.27
+   }
+  },
+  {
+   "ticker": "BB",
+   "sp500": false,
+   "kind": "dip",
+   "signalDate": "2026-11-20",
+   "sessionsAgo": 0,
+   "close": 12.46,
+   "chg5d": -14,
+   "rsi": 30,
+   "rsi5": 30,
+   "vs200": 9,
+   "atr": 0.4,
+   "atrPct": 4.85,
+   "relVol": 1.4,
+   "dollarVol": 400000000.0,
+   "green": false,
+   "bearEngulf": false,
+   "sweep10": false,
+   "priority": 1,
+   "reasons": [
+    "new 20-day low"
+   ],
+   "levels": {
+    "ref": 12.46,
+    "entryLimit": 12.71,
+    "target": 12.96,
+    "stop": 11.26
+   }
+  },
+  {
+   "ticker": "GPN",
+   "sp500": true,
+   "kind": "dip",
+   "signalDate": "2026-11-20",
+   "sessionsAgo": 0,
+   "close": 100.22,
+   "chg5d": -10.9,
+   "rsi": 28,
+   "rsi5": 28,
+   "vs200": 7,
+   "atr": 2.6,
+   "atrPct": 3.03,
+   "relVol": 1.0,
+   "dollarVol": 400000000.0,
+   "green": false,
+   "bearEngulf": false,
+   "sweep10": false,
+   "priority": 1,
+   "reasons": [
+    "closed near the day\u2019s low"
+   ],
+   "levels": {
+    "ref": 100.22,
+    "entryLimit": 102.22,
+    "target": 104.23,
+    "stop": 92.42
+   }
+  },
+  {
+   "ticker": "MRVL",
+   "sp500": true,
+   "kind": "dip",
+   "signalDate": "2026-11-20",
+   "sessionsAgo": 2,
+   "close": 186,
+   "chg5d": -11,
+   "rsi": 33,
+   "rsi5": 33,
+   "vs200": 12,
+   "atr": 8,
+   "atrPct": 4.3,
+   "relVol": 1.1,
+   "dollarVol": 400000000.0,
+   "green": false,
+   "bearEngulf": false,
+   "sweep10": false,
+   "priority": 1,
+   "reasons": [
+    "new 20-day low"
+   ],
+   "levels": {
+    "ref": 186,
+    "entryLimit": 189.72,
+    "target": 193.44,
+    "stop": 162
+   },
+   "track": {
+    "state": "stop",
+    "pct": -11.2
+   }
+  },
+  {
+   "ticker": "PANW",
+   "sp500": true,
+   "kind": "dip",
+   "signalDate": "2026-11-20",
+   "sessionsAgo": 3,
+   "close": 343,
+   "chg5d": -10.5,
+   "rsi": 30,
+   "rsi5": 30,
+   "vs200": 8,
+   "atr": 8,
+   "atrPct": 2.33,
+   "relVol": 1.0,
+   "dollarVol": 400000000.0,
+   "green": false,
+   "bearEngulf": false,
+   "sweep10": false,
+   "priority": 1,
+   "reasons": [
+    "new 20-day low"
+   ],
+   "levels": {
+    "ref": 343,
+    "entryLimit": 349.86,
+    "target": 356.72,
+    "stop": 319
+   },
+   "track": {
+    "state": "target",
+    "pct": 4.0
+   }
+  },
+  {
+   "ticker": "DDOG",
+   "sp500": true,
+   "kind": "dip",
+   "signalDate": "2026-11-20",
+   "sessionsAgo": 3,
+   "close": 230,
+   "chg5d": -12,
+   "rsi": 30,
+   "rsi5": 30,
+   "vs200": 8,
+   "atr": 9,
+   "atrPct": 3.91,
+   "relVol": 1.0,
+   "dollarVol": 400000000.0,
+   "green": false,
+   "bearEngulf": false,
+   "sweep10": false,
+   "priority": 1,
+   "reasons": [
+    "new 20-day low"
+   ],
+   "levels": {
+    "ref": 230,
+    "entryLimit": 234.6,
+    "target": 239.2,
+    "stop": 203
+   },
+   "track": {
+    "state": "closed",
+    "pct": -18.3
+   }
+  },
+  {
+   "ticker": "HPQ",
+   "sp500": true,
+   "kind": "dip",
+   "signalDate": "2026-11-20",
+   "sessionsAgo": 4,
+   "close": 29,
+   "chg5d": -10,
+   "rsi": 30,
+   "rsi5": 30,
+   "vs200": 5,
+   "atr": 1,
+   "atrPct": 3.45,
+   "relVol": 1.0,
+   "dollarVol": 400000000.0,
+   "green": false,
+   "bearEngulf": false,
+   "sweep10": false,
+   "priority": 1,
+   "reasons": [
+    "new 20-day low"
+   ],
+   "levels": {
+    "ref": 29,
+    "entryLimit": 29.58,
+    "target": 30.16,
+    "stop": 26
+   },
+   "track": {
+    "state": "target",
+    "pct": 4.0
+   }
+  },
+  {
+   "ticker": "ILMN",
+   "sp500": true,
+   "kind": "dip",
+   "signalDate": "2026-11-20",
+   "sessionsAgo": 4,
+   "close": 201,
+   "chg5d": -10,
+   "rsi": 30,
+   "rsi5": 30,
+   "vs200": 5,
+   "atr": 1,
+   "atrPct": 0.5,
+   "relVol": 1.0,
+   "dollarVol": 400000000.0,
+   "green": false,
+   "bearEngulf": false,
+   "sweep10": false,
+   "priority": 1,
+   "reasons": [
+    "new 20-day low"
+   ],
+   "levels": {
+    "ref": 201,
+    "entryLimit": 205.02,
+    "target": 209.04,
+    "stop": 198
+   },
+   "track": {
+    "state": "closed",
+    "pct": 2.6
+   }
+  }
+ ],
+ "rip": [
+  {
+   "ticker": "TPR",
+   "sp500": true,
+   "kind": "rip",
+   "signalDate": "2026-11-20",
+   "sessionsAgo": 0,
+   "close": 193.34,
+   "chg5d": 14.2,
+   "rsi": 86,
+   "rsi5": 86,
+   "vs200": -6,
+   "atr": 4.2,
+   "atrPct": 3.08,
+   "relVol": 1.3,
+   "dollarVol": 400000000.0,
+   "green": false,
+   "bearEngulf": true,
+   "sweep10": false,
+   "priority": 0,
+   "reasons": [],
+   "levels": {
+    "ref": 193.34,
+    "entryLimit": 189.47,
+    "target": 185.61,
+    "stop": 205.94
+   }
+  }
+ ],
+ "status": {
+  "AAPL": [
+   210,
+   -8.1,
+   12,
+   38
+  ],
+  "MSFT": [
+   400,
+   -7.2,
+   5,
+   41
+  ],
+  "NVDA": [
+   180,
+   -9.4,
+   22,
+   35
+  ],
+  "AMD": [
+   150,
+   -6.9,
+   9,
+   40
+  ],
+  "ORCL": [
+   170,
+   -8.8,
+   3,
+   36
+  ],
+  "ADBE": [
+   330,
+   -7.7,
+   2,
+   39
+  ],
+  "NFLX": [
+   900,
+   -3,
+   5,
+   50
+  ]
+ }
+}

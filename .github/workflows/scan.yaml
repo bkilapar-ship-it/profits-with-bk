@@ -42,6 +42,13 @@ jobs:
           ref: paper-state
           path: paper-state
 
+      - name: Check out studio-latest branch (read-only)
+        continue-on-error: true   # fine if no video episode has been built yet
+        uses: actions/checkout@v6
+        with:
+          ref: studio-latest
+          path: studio-latest
+
       - name: Run market scan
         id: scan
         continue-on-error: true   # still deploy the site (and keep previous results) if the scan fails
@@ -84,6 +91,7 @@ jobs:
         run: |
           mkdir -p _site
           cp index.html style.css app.js _site/
+          if [ -d studio-latest ]; then mkdir -p _site/studio && cp -r studio-latest/. _site/studio/ && rm -rf _site/studio/.git; fi
           touch _site/.nojekyll
 
       - name: Upload site

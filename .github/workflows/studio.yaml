@@ -1,0 +1,94 @@
+name: Studio (daily and weekly video)
+
+# Builds the day's video visuals, teleprompter, thumbnail and YouTube title/description from the latest
+# screener signals. Free: no paid services. Output is published on your site at /studio/ (phone-friendly page).
+# Also starts when Claude pushes research-trigger/studio.txt (line 1 = daily or weekly).
+
+on:
+  schedule:
+    - cron: '25 23 * * 1-5'    # about 7:25 pm ET (EDT) / 6:25 pm (EST): after the 22:45 UTC scan has published today's signals
+    - cron: '55 23 * * 5'      # Fridays: the weekly review, a little later
+  push:
+    paths: ['research-trigger/studio.txt']
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Which episode to build'
+        type: choice
+        default: daily
+        options: [daily, weekly]
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: studio
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Decide the episode type
+        id: mode
+        run: |
+          m=daily
+          if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" = "55 23 * * 5" ]; then m=weekly; fi
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then m="${{ inputs.mode }}"; fi
+          if [ "${{ github.event_name }}" = "push" ] && [ -f research-trigger/studio.txt ]; then m=$(sed -n 1p research-trigger/studio.txt | tr -cd 'a-z'); fi
+          case "$m" in daily|weekly) ;; *) m=daily;; esac
+          echo "m=$m" >> "$GITHUB_OUTPUT"
+
+      - name: Install the video tools
+        working-directory: studio
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+          ffmpeg -version | head -1
+
+      - name: Build the episode
+        env:
+          ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          STUDIO_SETUPS_URL: ${{ vars.PAGES_BASE_URL && format('{0}/data/setups.json', vars.PAGES_BASE_URL) || format('https://{0}.github.io/{1}/data/setups.json', github.repository_owner, github.event.repository.name) }}
+        run: node studio/make.js --mode "${{ steps.mode.outputs.m }}" --out studio-out/${{ steps.mode.outputs.m }}
+
+      - name: Keep a copy for 14 days (backup)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: studio-${{ steps.mode.outputs.m }}
+          path: studio-out/
+          retention-days: 14
+          if-no-files-found: warn
+
+      - name: Publish to the studio-latest branch (only the newest episode of each type is kept)
+        run: |
+          set -e
+          mkdir -p /tmp/pub
+          if git fetch -q --depth=1 origin studio-latest 2>/dev/null; then git archive FETCH_HEAD | tar -x -C /tmp/pub; fi
+          m="${{ steps.mode.outputs.m }}"
+          rm -rf "/tmp/pub/$m"; mkdir -p "/tmp/pub/$m"
+          cp studio-out/$m/{visuals.mp4,thumbnail.png,script.txt,metadata.txt,teleprompter.html,meta.json} "/tmp/pub/$m/"
+          node studio/publish-index.js /tmp/pub
+          cd /tmp/pub
+          rm -rf .git; git init -q -b studio-latest
+          git config user.name "studio-bot"; git config user.email "studio-bot@users.noreply.github.com"
+          git add -A; git commit -q -m "Studio: $m episode $(date -u +%FT%TZ)"
+          git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
+          for i in 1 2 3; do git push -q -f origin studio-latest && break || sleep 8; done
+
+      - name: Redeploy the site so the new files go live
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run scan.yaml --ref "${{ github.event.repository.default_branch }}" || echo "Could not start the site deploy; the files go live on the next scan run."

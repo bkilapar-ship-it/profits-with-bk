@@ -1,0 +1,14 @@
+{
+  "name": "trade-with-bk-studio",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Daily and weekly video visuals, teleprompter and YouTube metadata from the screener's live signals. Free: no paid services.",
+  "scripts": {
+    "daily": "node make.js --mode daily",
+    "weekly": "node make.js --mode weekly"
+  },
+  "dependencies": {
+    "@fontsource/inter": "^5.1.0",
+    "playwright": "1.49.1"
+  }
+}
