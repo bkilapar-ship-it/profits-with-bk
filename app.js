@@ -1007,6 +1007,9 @@ const state = {
   paperTab: 'overview',
   paperFilter: { strategy: 'all', result: 'all' },
   paperSide: 'all',
+  paperRange: 'all',              // all | 1m | 3m | 6m | ytd | 1y | custom
+  paperFrom: '',
+  paperTo: '',
   watchSource: 'scan',            // 'scan' = daily scan data (no key) | 'live' = Twelve Data
   paperLimit: 20,
   liquidityDemote: true,
@@ -1230,6 +1233,8 @@ function init() {
   const savedStrategy = storage.get('strategy');
   setStrategy(STRATEGIES[savedStrategy] ? savedStrategy : 'dip');
   initPaper();
+  const savedRange = storage.get('paperRange');
+  if (PAPER_RANGES.some(([k]) => k === savedRange)) state.paperRange = savedRange;
   const savedTab = storage.get('paperTab');
   if (PAPER_TABS.some(([k]) => k === savedTab)) state.paperTab = savedTab;
   if (storage.get('page') === 'paper') setPage('paper');
@@ -3057,6 +3062,101 @@ function money(x, signed = false) {
 function signedPct(x, digits = 1) { return isNum(x) ? `${x > 0 ? '+' : x < 0 ? '−' : ''}${Math.abs(x).toFixed(digits)}%` : '—'; }
 function cls(x) { return !isNum(x) || x === 0 ? '' : x > 0 ? 'up' : 'down'; }
 
+
+/* ---------- Paper dashboard: date range, annualised return, annual returns ---------- */
+const PAPER_RANGES = [['1m', '1M'], ['3m', '3M'], ['6m', '6M'], ['ytd', 'YTD'], ['1y', '1Y'], ['all', 'All'], ['custom', 'Custom']];
+const isoDay = d => d.toISOString().slice(0, 10);
+const monthsBack = (iso, m) => { const d = new Date(`${iso}T12:00:00Z`); d.setUTCMonth(d.getUTCMonth() - m); return isoDay(d); };
+const daysBetween = (a, b) => Math.round((Date.parse(`${b}T12:00:00Z`) - Date.parse(`${a}T12:00:00Z`)) / 864e5);
+
+/** First and last day (YYYY-MM-DD) of the chosen range, from the equity history. */
+function paperRangeBounds(eq, range, customFrom, customTo) {
+  if (!eq || !eq.length) return { from: '', to: '' };
+  const first = eq[0].d, last = eq[eq.length - 1].d;
+  let from = first, to = last;
+  if (range === '1m') from = monthsBack(last, 1);
+  else if (range === '3m') from = monthsBack(last, 3);
+  else if (range === '6m') from = monthsBack(last, 6);
+  else if (range === '1y') from = monthsBack(last, 12);
+  else if (range === 'ytd') from = `${last.slice(0, 4)}-01-01`;
+  else if (range === 'custom') { from = customFrom || first; to = customTo || last; }
+  if (from < first) from = first;
+  if (from > last) from = last;
+  if (to > last) to = last;
+  if (to < first) to = first;
+  if (from > to) { const t = from; from = to; to = t; }   // dates entered the wrong way round
+  return { from, to };
+}
+
+const growth = (a, b) => (isNum(a) && isNum(b) ? ((1 + b / 100) / (1 + a / 100) - 1) * 100 : null);   // % path rebased to a start point
+
+/**
+ * The paper data restricted to a date range: equity curve rebased to 0% at the start (account and S&P 500),
+ * closed trades whose exit falls in the range, and the headline numbers for the range.
+ */
+function paperRangeView(P, range, customFrom, customTo) {
+  const eq = P.equity || [];
+  const { from, to } = paperRangeBounds(eq, range, customFrom, customTo);
+  if (!eq.length) return { from, to, equity: [], trades: P.trades || [], ret: null, spy: null, annual: null, days: 0, base: P.account.start };
+  const inRange = eq.filter(e => e.d >= from && e.d <= to);
+  const before = eq.filter(e => e.d < from);
+  const baseRow = before.length ? before[before.length - 1] : (inRange[0] || eq[0]);
+  const rows = inRange.length && inRange[0] === baseRow ? inRange : (baseRow ? [baseRow, ...inRange] : inRange);
+  // Some days have no stored S&P figure (it could not be fetched that day): use the nearest earlier known one so the line has no gaps.
+  const firstSpy = (rows.find(e => isNum(e.spy)) || {}).spy;
+  const baseSpy = isNum(baseRow.spy) ? baseRow.spy : firstSpy;
+  let carry = null;
+  const equity = rows.map(e => { if (isNum(e.spy)) carry = e.spy; return { d: e.d, value: e.value, pct: (e.value / baseRow.value - 1) * 100, spy: growth(baseSpy, carry) }; });
+  const lastRow = equity[equity.length - 1];
+  const days = equity.length > 1 ? daysBetween(equity[0].d, lastRow.d) : 0;
+  const ret = lastRow ? lastRow.pct : null;
+  const spy = lastRow ? lastRow.spy : null;
+  const ann = r => (isNum(r) && days >= 1 ? ((1 + r / 100) ** (365.25 / days) - 1) * 100 : null);
+  const trades = (P.trades || []).filter(t => String(t.exitDate) >= from && String(t.exitDate) <= to);
+  return { from, to, equity, trades, ret, spy, annual: ann(ret), annualSpy: ann(spy), days, base: baseRow.value, dollars: lastRow ? lastRow.value - baseRow.value : null };
+}
+
+/** Return for each calendar year (and the year to date), account and S&P 500. */
+function paperAnnualReturns(eq) {
+  if (!eq || eq.length < 2) return [];
+  const years = [...new Set(eq.map(e => e.d.slice(0, 4)))];
+  const lastDay = eq[eq.length - 1].d;
+  return years.map(y => {
+    const rows = eq.filter(e => e.d.slice(0, 4) === y), prev = eq.filter(e => e.d.slice(0, 4) < y);
+    const base = prev.length ? prev[prev.length - 1] : rows[0], end = rows[rows.length - 1];
+    return { year: y, from: base.d, to: end.d, ret: (end.value / base.value - 1) * 100, spy: growth(base.spy, end.spy),
+      partial: !prev.length || end.d === lastDay && end.d.slice(5) < '12-25' };
+  });
+}
+
+function paperRangeControls(view, eq) {
+  const chip = ([k, label]) => `<button type="button" class="chip${state.paperRange === k ? ' active' : ''}" data-paper-range="${k}" aria-pressed="${state.paperRange === k}">${label}</button>`;
+  const lo = eq && eq.length ? eq[0].d : '', hi = eq && eq.length ? eq[eq.length - 1].d : '';
+  const custom = state.paperRange === 'custom'
+    ? `<div class="range-dates"><label>From <input type="date" id="paperFrom" value="${escapeHtml(view.from)}" min="${escapeHtml(lo)}" max="${escapeHtml(hi)}"></label><label>To <input type="date" id="paperTo" value="${escapeHtml(view.to)}" min="${escapeHtml(lo)}" max="${escapeHtml(hi)}"></label></div>` : '';
+  return `<div class="chips">${PAPER_RANGES.map(chip).join('')}</div>${custom}`;
+}
+
+function paperRangeSummary(view) {
+  if (!view.equity.length || view.equity.length < 2) return '<p class="hint">Not enough days in this range yet.</p>';
+  const short = view.days < 60;
+  return `<div class="pgrid three">
+      ${pstat('Account return', signedPct(view.ret, 2), `${money(view.dollars, true)}, ${view.days} day${view.days === 1 ? '' : 's'}`, cls(view.ret))}
+      ${pstat('S&amp;P 500, same days', signedPct(view.spy, 2), '', cls(view.spy))}
+      ${pstat('Annualised', signedPct(view.annual, 1), short ? 'short window, treat as a rough guide' : 'if this pace held for a year', short ? '' : cls(view.annual))}
+    </div>
+    <p class="hint">${escapeHtml(fmtSession(view.from))} to ${escapeHtml(fmtSession(view.to))}. Annualised compounds the range's return up to a full year, so a short window can look far better or worse than a year really would.</p>`;
+}
+
+function paperAnnualTable(eq) {
+  const rows = paperAnnualReturns(eq);
+  if (!rows.length) return '';
+  return `<section class="panel pcard"><h2>Annual returns</h2>
+    <div class="bt-scroll"><table class="bt-list ptable"><thead><tr><th>Year</th><th class="num">Account</th><th class="num">S&amp;P 500</th></tr></thead>
+    <tbody>${rows.map(r => `<tr><td>${escapeHtml(r.year)}${r.partial ? ` <span class="muted">(${escapeHtml(fmtSession(r.from))} to ${escapeHtml(fmtSession(r.to))})</span>` : ''}</td><td class="num"><b class="${cls(r.ret)}">${signedPct(r.ret, 2)}</b></td><td class="num ${cls(r.spy)}">${signedPct(r.spy, 2)}</td></tr>`).join('')}</tbody></table></div>
+    <p class="hint">Calendar years, measured from the last account value of the year before. The first and current years are partial.</p></section>`;
+}
+
 function paperStats(P) {
   const t = P.trades || [];
   const n = t.length;
@@ -3126,6 +3226,8 @@ function paperOverview(P, st) {
   const last = (P.equity || [])[P.equity.length - 1] || { pct: 0, spy: 0, value: P.account.value };
   const gain = P.account.value - P.account.start;
   const [verdict, vcls] = paperVerdict(P, st);
+  const view = paperRangeView(P, state.paperRange, state.paperFrom, state.paperTo);
+  const rst = paperStats({ ...P, trades: view.trades, equity: view.equity, account: { ...P.account, start: view.base } });
   const weeks = Math.max(1, (new Date(P.asOf) - new Date(P.startedAt)) / 6048e5);
   const perWeek = st.n / weeks;
   const toGo = perWeek > 0 ? Math.ceil(Math.max(0, R.reviewAfter - st.n) / perWeek) : null;
@@ -3138,17 +3240,20 @@ function paperOverview(P, st) {
       <div class="pvalue"><span>Account value</span><b>${money(P.account.value)}</b>
         <em class="${cls(gain)}">${money(gain, true)} (${signedPct(last.pct)}) since the start</em>
         <small>S&amp;P 500 over the same days: ${signedPct(last.spy)}</small></div>
-      ${equityChart(P.equity)}
+      ${paperRangeControls(view, P.equity)}
+      ${equityChart(view.equity)}
+      ${paperRangeSummary(view)}
     </section>
+    ${paperAnnualTable(P.equity)}
     <section class="panel pcard">
-      <div class="prow"><h2>Results so far</h2><span class="hint">${st.n} closed trade${st.n === 1 ? '' : 's'}</span></div>
+      <div class="prow"><h2>Results ${state.paperRange === 'all' ? 'so far' : 'in this range'}</h2><span class="hint">${rst.n} closed trade${rst.n === 1 ? '' : 's'}</span></div>
       <div class="pgrid">
-        ${pstat('Profitable', signedPct(st.winRate, 0).replace('+', ''), `${st.won} won, ${st.lost} lost`)}
-        ${pstat('Avg per trade', signedPct(st.avg), avgUsd !== null ? `${money(avgUsd, true)} average` : '', cls(st.avg))}
-        ${pstat('Hit target', signedPct(st.hitTarget, 0).replace('+', ''), `sold at ${targetShort(R)}`)}
-        ${pstat('Stopped out', signedPct(st.stopped, 0).replace('+', ''), `${st.stoppedN} trade${st.stoppedN === 1 ? '' : 's'}`)}
-        ${pstat('Worst trade', st.worst ? signedPct(st.worst.pct) : '—', st.worst ? `${escapeHtml(st.worst.ticker)}, ${escapeHtml(fmtSession(st.worst.exitDate))}` : '', 'down')}
-        ${pstat('Biggest dip in account', signedPct(st.maxDD), 'from its high', st.maxDD < 0 ? 'down' : '')}
+        ${pstat('Profitable', signedPct(rst.winRate, 0).replace('+', ''), `${rst.won} won, ${rst.lost} lost`)}
+        ${pstat('Avg per trade', signedPct(rst.avg), rst.n ? `${money(rst.totalUsd / rst.n, true)} average` : '', cls(rst.avg))}
+        ${pstat('Hit target', signedPct(rst.hitTarget, 0).replace('+', ''), `sold at ${targetShort(R)}`)}
+        ${pstat('Stopped out', signedPct(rst.stopped, 0).replace('+', ''), `${rst.stoppedN} trade${rst.stoppedN === 1 ? '' : 's'}`)}
+        ${pstat('Worst trade', rst.worst ? signedPct(rst.worst.pct) : '—', rst.worst ? `${escapeHtml(rst.worst.ticker)}, ${escapeHtml(fmtSession(rst.worst.exitDate))}` : '', 'down')}
+        ${pstat('Biggest dip in account', signedPct(rst.maxDD), 'from its high', rst.maxDD < 0 ? 'down' : '')}
       </div>
     </section>
     <section class="panel pcard">
@@ -3413,14 +3518,19 @@ function paperCsv() {
 function initPaper() {
   els.openPaper.addEventListener('click', () => setPage(state.page === 'paper' ? 'scanner' : 'paper'));
   els.paperPage.addEventListener('click', e => {
-    const t = e.target.closest('[data-paper-tab],[data-paper-back],[data-paper-filter],[data-paper-side],[data-paper-more],[data-paper-csv]');
+    const t = e.target.closest('[data-paper-tab],[data-paper-range],[data-paper-back],[data-paper-filter],[data-paper-side],[data-paper-more],[data-paper-csv]');
     if (!t) return;
     if (t.dataset.paperBack !== undefined) { setPage('scanner'); return; }
     if (t.dataset.paperTab) { state.paperTab = t.dataset.paperTab; state.paperLimit = 20; storage.set('paperTab', state.paperTab); renderPaper(); window.scrollTo({ top: 0 }); return; }
+    if (t.dataset.paperRange) { state.paperRange = t.dataset.paperRange; storage.set('paperRange', state.paperRange); renderPaper(); return; }
     if (t.dataset.paperSide) { state.paperSide = t.dataset.paperSide; renderPaper(); return; }
     if (t.dataset.paperFilter) { const [g, k] = t.dataset.paperFilter.split(':'); state.paperFilter[g] = k; state.paperLimit = 20; renderPaper(); return; }
     if (t.dataset.paperMore !== undefined) { state.paperLimit += 20; renderPaper(); return; }
     if (t.dataset.paperCsv !== undefined) paperCsv();
+  });
+  els.paperPage.addEventListener('change', e => {
+    if (e.target && e.target.id === 'paperFrom') { state.paperFrom = e.target.value; renderPaper(); }
+    else if (e.target && e.target.id === 'paperTo') { state.paperTo = e.target.value; renderPaper(); }
   });
   els.paperPage.addEventListener('input', debounce(e => {
     if (e.target && e.target.id === 'paperFindPositions') { state.paperFindPositions = e.target.value; renderPaper(); }
@@ -3442,6 +3552,7 @@ if (typeof module !== 'undefined' && module.exports) {
     ema, computeMACD, rsiWilder, sma, cleanCandles,
     computeMetrics, classify, evaluate, analyze, parseTickers,
     BT, backtestCandles, summarizeSignals, summarizeBacktest, packSignal, unpackSignal,
+    paperRangeBounds, paperRangeView, paperAnnualReturns,
     SETUP, addSessions, setupIndicators, setupFlags, setupLevels, trackSetup, describeSetup, scanSetups,
   };
 }

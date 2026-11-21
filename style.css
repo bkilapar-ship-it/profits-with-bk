@@ -614,3 +614,8 @@ tbody tr.row-approaching { box-shadow: inset 3px 0 0 var(--approach); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* Paper dashboard date range */
+.range-dates { display: flex; flex-wrap: wrap; gap: 12px; padding: 8px 0 4px; }
+.range-dates label { display: flex; align-items: center; gap: 6px; font-size: 14px; }
+.range-dates input[type="date"] { font: inherit; padding: 6px 8px; border: 1px solid var(--line, #d0d5dd); border-radius: 8px; background: var(--card, #fff); color: inherit; }
