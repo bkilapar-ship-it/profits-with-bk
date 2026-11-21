@@ -1,0 +1,96 @@
+RUN CHECK: 666 symbols requested, 663 had enough data, 0 download batches skipped, 2625 bought signals, 2635 trading days, 2738 SPY bars.
+
+RISK-LIMIT RESEARCH: the live Dip plan (3 ATR stop unchanged) with portfolio rules added
+S&P 500 members at the time, $20M/day floor, 2625 Dip signals bought at the next open (skipped above +2%), +4% target, exit at the close of session 3. Before costs.
+Account: $100,000 start, 10% reserve, 15% of the rest per trade unless the rule changes it, ranked like the live system, marked to market daily.
+Pre-registered pass bar: keeps 70%+ of live CAGR, cuts worst drawdown by 40%+, and CAGR/worst-drawdown is not lower than live in BOTH development periods (2016-19, 2020-22). The 2023-2026 final exam is only shown for rules that pass. Set: batch1.
+
+===============================================================================================================================================================================
+ ALL PERIODS
+  rule                                                                | CAGR   | worst drawdown (date)   | return/risk | Sharpe | worst day | worst 5 days | worst month        | entries taken | blocked by rule | skipped (no cash)
+  LIVE rules (no limits)                                              |   7.1% | -17.2% (2026-11-05)     |        0.41 |   0.63 |     -6.0% |       -11.9% | -8.0% (2026-11)    |          1547 |               0 |              1078
+  size 7.5% (previous finalist)                                       |   6.5% | -12.0% (2020-02-27)     |        0.54 |   0.77 |     -5.1% |        -8.9% | -6.1% (2022-06)    |          2029 |               0 |               596
+  size 9%                                                             |   7.1% | -14.0% (2026-11-05)     |        0.51 |   0.75 |     -5.9% |       -10.0% | -7.3% (2022-06)    |          1938 |               0 |               687
+  size 6%                                                             |   6.0% | -9.9% (2020-02-27)      |        0.61 |   0.79 |     -5.0% |        -8.2% | -5.6% (2022-06)    |          2145 |               0 |               480
+  size 5%                                                             |   5.7% | -8.6% (2022-06-23)      |        0.67 |   0.83 |     -5.1% |        -7.5% | -5.1% (2020-02)    |          2249 |               0 |               376
+  size 7.5% + max 4 open                                              |   3.2% | -7.7% (2025-03-13)      |        0.41 |   0.70 |     -3.2% |        -3.8% | -3.4% (2025-02)    |          1259 |            1366 |                 0
+  size 7.5% + a day's entries share 30% of the sleeve                 |   4.2% | -10.6% (2020-02-27)     |        0.40 |   0.63 |     -3.8% |        -6.5% | -4.1% (2022-06)    |          2625 |               0 |                 0
+
+===============================================================================================================================================================================
+ Oct 2016 to 2019
+  rule                                                                | CAGR   | worst drawdown (date)   | return/risk | worst day | worst 5 days | worst month
+  LIVE rules (no limits)                                              |  -1.8% | -14.0% (2019-08-05)     |       -0.13 |     -3.8% |        -7.4% | -4.2% (2019-08)
+  size 7.5% (previous finalist)                                       |  -1.6% | -10.8% (2019-08-05)     |       -0.15 |     -3.2% |        -6.5% | -4.1% (2019-08)
+  size 9%                                                             |  -1.7% | -12.3% (2019-08-05)     |       -0.14 |     -3.8% |        -6.8% | -3.9% (2019-08)
+  size 6%                                                             |  -0.9% | -8.3% (2019-08-05)      |       -0.11 |     -2.5% |        -5.3% | -2.9% (2019-08)
+  size 5%                                                             |  -0.2% | -6.4% (2019-08-05)      |       -0.03 |     -2.1% |        -4.4% | -2.0% (2019-08)
+  size 7.5% + max 4 open                                              |  -0.8% | -6.5% (2019-08-05)      |       -0.12 |     -1.3% |        -2.6% | -1.8% (2018-12)
+  size 7.5% + a day's entries share 30% of the sleeve                 |  -1.5% | -10.3% (2019-08-05)     |       -0.15 |     -2.9% |        -5.7% | -3.5% (2019-08)
+
+===============================================================================================================================================================================
+ 2020 to 2022
+  rule                                                                | CAGR   | worst drawdown (date)   | return/risk | worst day | worst 5 days | worst month
+  LIVE rules (no limits)                                              |  10.9% | -12.2% (2022-06-24)     |        0.89 |     -6.0% |       -10.6% | -7.9% (2022-06)
+  size 7.5% (previous finalist)                                       |  12.0% | -10.2% (2022-06-23)     |        1.17 |     -3.5% |        -8.9% | -6.1% (2022-06)
+  size 9%                                                             |  12.2% | -11.4% (2022-06-23)     |        1.07 |     -3.7% |       -10.0% | -7.3% (2022-06)
+  size 6%                                                             |  10.1% | -9.5% (2022-06-23)      |        1.05 |     -3.5% |        -8.2% | -5.6% (2022-06)
+  size 5%                                                             |   9.0% | -8.6% (2022-06-23)      |        1.05 |     -3.9% |        -7.5% | -5.1% (2020-02)
+  size 7.5% + max 4 open                                              |   4.4% | -4.3% (2022-09-27)      |        1.02 |     -3.2% |        -3.8% | -2.5% (2022-06)
+  size 7.5% + a day's entries share 30% of the sleeve                 |   7.6% | -7.7% (2022-06-23)      |        1.00 |     -3.1% |        -6.5% | -4.1% (2022-06)
+
+===============================================================================================================================================================================
+ 2023 to 2026
+  rule                                                                | CAGR   | worst drawdown (date)   | return/risk | worst day | worst 5 days | worst month
+  LIVE rules (no limits)                                              |  12.9% | -17.2% (2026-11-05)     |        0.75 |     -5.5% |       -11.9% | -8.0% (2026-11)
+  size 7.5% (previous finalist)                                       |  10.3% | -11.5% (2026-11-05)     |        0.90 |     -5.1% |        -7.1% | -3.9% (2025-03)
+  size 9%                                                             |  11.9% | -14.0% (2026-11-05)     |        0.85 |     -5.9% |        -8.8% | -3.8% (2026-10)
+  size 6%                                                             |   9.6% | -9.6% (2026-11-05)      |        1.00 |     -5.0% |        -6.1% | -3.1% (2023-03)
+  size 5%                                                             |   8.9% | -8.3% (2026-11-05)      |        1.07 |     -5.1% |        -5.8% | -2.7% (2026-10)
+  size 7.5% + max 4 open                                              |   6.1% | -7.7% (2025-03-13)      |        0.79 |     -1.8% |        -3.7% | -3.4% (2025-02)
+  size 7.5% + a day's entries share 30% of the sleeve                 |   7.2% | -9.6% (2026-11-05)      |        0.75 |     -3.8% |        -5.5% | -3.3% (2026-10)
+
+===============================================================================================================================================================================
+ CRASH WINDOWS: account return / worst drawdown inside the window
+  Feb-Mar 2020 (COVID crash)   2020-02-15 to 2020-04-15
+      LIVE rules (no limits)                                              return    2.0%   worst drawdown   -6.4%
+      size 7.5% (previous finalist)                                       return    2.3%   worst drawdown   -5.2%
+      size 9%                                                             return    3.0%   worst drawdown   -5.6%
+      size 6%                                                             return    1.4%   worst drawdown   -5.2%
+      size 5%                                                             return   -0.2%   worst drawdown   -5.5%
+      size 7.5% + max 4 open                                              return    1.2%   worst drawdown   -2.3%
+      size 7.5% + a day's entries share 30% of the sleeve                 return    0.9%   worst drawdown   -3.9%
+  2022 bear market   2022-01-01 to 2022-10-31
+      LIVE rules (no limits)                                              return   -3.5%   worst drawdown  -12.2%
+      size 7.5% (previous finalist)                                       return    0.3%   worst drawdown  -10.2%
+      size 9%                                                             return   -1.3%   worst drawdown  -11.4%
+      size 6%                                                             return   -0.5%   worst drawdown   -9.5%
+      size 5%                                                             return    0.3%   worst drawdown   -8.6%
+      size 7.5% + max 4 open                                              return   -1.8%   worst drawdown   -4.3%
+      size 7.5% + a day's entries share 30% of the sleeve                 return   -0.5%   worst drawdown   -7.7%
+  Nov 2026 (post-midterm AI sell-off)   2026-10-25 to 2026-11-30
+      LIVE rules (no limits)                                              return   -9.0%   worst drawdown  -11.9%
+      size 7.5% (previous finalist)                                       return   -3.1%   worst drawdown   -7.1%
+      size 9%                                                             return   -4.2%   worst drawdown   -8.8%
+      size 6%                                                             return   -1.7%   worst drawdown   -5.7%
+      size 5%                                                             return   -0.7%   worst drawdown   -4.8%
+      size 7.5% + max 4 open                                              return   -2.9%   worst drawdown   -3.8%
+      size 7.5% + a day's entries share 30% of the sleeve                 return   -2.3%   worst drawdown   -5.2%
+  Last 2 months (Sep 21-Nov 20 2026)   2026-09-21 to 2026-11-20
+      LIVE rules (no limits)                                              return  -14.6%   worst drawdown  -17.2%
+      size 7.5% (previous finalist)                                       return   -7.8%   worst drawdown  -11.5%
+      size 9%                                                             return   -9.7%   worst drawdown  -14.0%
+      size 6%                                                             return   -5.8%   worst drawdown   -9.6%
+      size 5%                                                             return   -4.5%   worst drawdown   -8.3%
+      size 7.5% + max 4 open                                              return   -4.8%   worst drawdown   -5.5%
+      size 7.5% + a day's entries share 30% of the sleeve                 return   -6.9%   worst drawdown   -9.6%
+
+===============================================================================================================================================================================
+ PASS / FAIL against the pre-registered bar
+  fail  size 7.5% (previous finalist)                                       keeps 92% of CAGR | drawdown cut 30% | return/risk not lower in BOTH development periods (2016-19, 2020-22): no
+  fail  size 9%                                                             keeps 101% of CAGR | drawdown cut 19% | return/risk not lower in BOTH development periods (2016-19, 2020-22): no
+  PASS  size 6%                                                             keeps 85% of CAGR | drawdown cut 43% | return/risk not lower in BOTH development periods (2016-19, 2020-22): yes | FINAL EXAM 2023-2026: CAGR 9.6%, drawdown -9.6%, return/risk 1.00 vs live 0.75
+  PASS  size 5%                                                             keeps 81% of CAGR | drawdown cut 50% | return/risk not lower in BOTH development periods (2016-19, 2020-22): yes | FINAL EXAM 2023-2026: CAGR 8.9%, drawdown -8.3%, return/risk 1.07 vs live 0.75
+  fail  size 7.5% + max 4 open                                              keeps 45% of CAGR | drawdown cut 56% | return/risk not lower in BOTH development periods (2016-19, 2020-22): yes
+  fail  size 7.5% + a day's entries share 30% of the sleeve                 keeps 60% of CAGR | drawdown cut 39% | return/risk not lower in BOTH development periods (2016-19, 2020-22): no
+
+How to read: "return/risk" is CAGR divided by the worst drawdown. A good rule raises it. Smaller size always shrinks drawdown AND profit together; it only counts as an improvement if return/risk goes UP.
