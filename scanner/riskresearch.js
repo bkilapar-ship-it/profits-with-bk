@@ -36,11 +36,14 @@ const CFG = {
   maxSymbols: num(env.RR_MAX_SYMBOLS, 0),
   batch: num(env.RR_BATCH, 50),
   out: env.RR_OUT || 'research-out-risk',
+  set: env.RR_SET || 'base',
+  cache: env.RR_CACHE || '',
+  ddCut: num(env.RR_DD_CUT, 0.25),
   minDollarVol: num(env.RR_MIN_DOLLAR_VOL, 20e6),
   chase: 0.02, target: 0.04, hold: 3, stopAtr: 3, reserve: 0.10, size: 0.15, startEquity: 100000,
 };
 const PERIODS = [['Oct 2016 to 2019', '2016-01-01', '2019-12-31'], ['2020 to 2022', '2020-01-01', '2022-12-31'], ['2023 to 2026', '2023-01-01', '2026-12-31']];
-const SCENARIOS = [
+const BASE_SCENARIOS = [
   { id: 'live', label: 'LIVE rules (no limits)', rule: {} },
   { id: 'd2', label: 'max 2 new entries per day', rule: { maxPerDay: 2 } },
   { id: 'd3', label: 'max 3 new entries per day', rule: { maxPerDay: 3 } },
@@ -55,6 +58,17 @@ const SCENARIOS = [
   { id: 'brk', label: 'circuit breaker: 8% account drawdown pauses entries 5 days', rule: { breaker: { dd: 0.08, days: 5 } } },
   { id: 'combo', label: 'COMBO: max 2 per day + pause when SPY fell 4%+ over 5 days', rule: { maxPerDay: 2, pause: st => st.ret5 <= -0.04 } },
 ];
+const BATCH1 = [
+  { id: 'live', label: 'LIVE rules (no limits)', rule: {} },
+  { id: 's75', label: 'size 7.5% (previous finalist)', rule: { size: 0.075 } },
+  { id: 's9', label: 'size 9%', rule: { size: 0.09 } },
+  { id: 's6', label: 'size 6%', rule: { size: 0.06 } },
+  { id: 's5', label: 'size 5%', rule: { size: 0.05 } },
+  { id: 's75o4', label: 'size 7.5% + max 4 open', rule: { size: 0.075, maxOpen: 4 } },
+  { id: 's75c30', label: 'size 7.5% + a day\'s entries share 30% of the sleeve', rule: { size: 0.075, dayCap: 0.30 } },
+];
+const SETS = { base: BASE_SCENARIOS, batch1: BATCH1 };
+const SCENARIOS = SETS[CFG.set] || BASE_SCENARIOS;
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 const isNum = v => typeof v === 'number' && Number.isFinite(v);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -169,7 +183,7 @@ function buildReport(recs, dates, spy) {
   L.push('RISK-LIMIT RESEARCH: the live Dip plan (3 ATR stop unchanged) with portfolio rules added');
   L.push(`S&P 500 members at the time, $${(CFG.minDollarVol / 1e6).toFixed(0)}M/day floor, ${recs.length} Dip signals bought at the next open (skipped above +2%), +4% target, exit at the close of session 3. Before costs.`);
   L.push('Account: $100,000 start, 10% reserve, 15% of the rest per trade unless the rule changes it, ranked like the live system, marked to market daily.');
-  L.push('Pre-registered pass bar: keeps 70%+ of live CAGR, cuts worst drawdown by 25%+, and CAGR/worst-drawdown is not lower than live in BOTH later periods.');
+  L.push(`Pre-registered pass bar: keeps 70%+ of live CAGR, cuts worst drawdown by ${(CFG.ddCut * 100).toFixed(0)}%+, and CAGR/worst-drawdown is not lower than live in BOTH development periods (2016-19, 2020-22). The 2023-2026 final exam is only shown for rules that pass. Set: ${CFG.set}.`);
   const live = runs[0];
   const stats = runs.map(r => ({ r, all: curveStats(r.acc, '0000', '9999'), per: PERIODS.map(p => curveStats(r.acc, p[1], p[2])) }));
   const base = stats[0];
@@ -195,9 +209,9 @@ function buildReport(recs, dates, spy) {
   L.push(''); L.push('='.repeat(175)); L.push(' PASS / FAIL against the pre-registered bar');
   for (const s of stats.slice(1)) {
     const keep = s.all.cagr / base.all.cagr, cut = 1 - s.all.dd / base.all.dd;
-    const later = [1, 2].every(p => s.per[p] && base.per[p] && s.per[p].calmar >= base.per[p].calmar);
-    const pass = keep >= 0.7 && cut >= 0.25 && later;
-    L.push(`  ${pass ? 'PASS' : 'fail'}  ${s.r.sc.label.padEnd(67)} keeps ${(keep * 100).toFixed(0)}% of CAGR | drawdown cut ${(cut * 100).toFixed(0)}% | return/risk not lower in both later periods: ${later ? 'yes' : 'no'}`);
+    const later = [0, 1].every(p => s.per[p] && base.per[p] && s.per[p].calmar >= base.per[p].calmar);
+    const pass = keep >= 0.7 && cut >= CFG.ddCut && later;
+    L.push(`  ${pass ? 'PASS' : 'fail'}  ${s.r.sc.label.padEnd(67)} keeps ${(keep * 100).toFixed(0)}% of CAGR | drawdown cut ${(cut * 100).toFixed(0)}% | return/risk not lower in BOTH development periods (2016-19, 2020-22): ${later ? 'yes' : 'no'}${pass ? ` | FINAL EXAM 2023-2026: CAGR ${pf(s.per[2] && s.per[2].cagr)}, drawdown ${pf(s.per[2] && s.per[2].dd)}, return/risk ${f2(s.per[2] && s.per[2].calmar)} vs live ${f2(base.per[2].calmar)}` : ''}`);
   }
   L.push(''); L.push('How to read: "return/risk" is CAGR divided by the worst drawdown. A good rule raises it. Smaller size always shrinks drawdown AND profit together; it only counts as an improvement if return/risk goes UP.');
   return L.join('\n');
@@ -213,6 +227,15 @@ async function get(url, attempt = 0) {
   if ((res.status === 429 || res.status >= 500) && attempt < 5) { await sleep(Math.min(3000 * 2 ** attempt, 60000)); return get(url, attempt + 1); }
   if (!res.ok) throw new Error(`Alpaca HTTP ${res.status}: ${(await res.text().catch(() => '')).slice(0, 200)}`);
   return res.json();
+}
+async function fetchDailyCached(chunk) {
+  if (!CFG.cache) return fetchDaily(chunk);
+  const zlib = require('zlib'), key = require('crypto').createHash('sha1').update(chunk.join(',') + CFG.start + CFG.feed).digest('hex').slice(0, 16);
+  const f = path.join(CFG.cache, `${key}.json.gz`);
+  if (fs.existsSync(f)) { try { return new Map(Object.entries(JSON.parse(zlib.gunzipSync(fs.readFileSync(f)).toString()))); } catch (e) { /* re-download */ } }
+  const m = await fetchDaily(chunk);
+  fs.mkdirSync(CFG.cache, { recursive: true }); fs.writeFileSync(f, zlib.gzipSync(JSON.stringify(Object.fromEntries(m))));
+  return m;
 }
 async function fetchDaily(symbols) {
   const out = new Map(symbols.map(s => [s, []]));
@@ -253,7 +276,7 @@ async function main() {
   let symbols = Object.keys(hist).filter(s => /^[A-Z.]{1,6}$/.test(s) && hist[s].some(([, b]) => b === null || b >= CFG.testFrom)).sort();
   if (CFG.maxSymbols) symbols = symbols.slice(0, CFG.maxSymbols);
   log(`Symbols: ${symbols.length}`);
-  const spyBars = (await fetchDaily(['SPY'])).get('SPY') || [];
+  const spyBars = (await fetchDailyCached(['SPY'])).get('SPY') || [];
   if (spyBars.length < 400) throw new Error(`SPY history too short (${spyBars.length} bars); the market-stress rules cannot run.`);
   const spy = spyStates(spyBars);
   log(`SPY bars: ${spyBars.length}`);
@@ -261,7 +284,7 @@ async function main() {
   for (let b = 0; b < symbols.length; b += CFG.batch) {
     const chunk = symbols.slice(b, b + CFG.batch);
     let bars = null;
-    try { bars = await fetchDaily(chunk); } catch (e) { skipped++; log(`  BATCH SKIPPED (${chunk[0]}..${chunk[chunk.length - 1]}): ${e.message}`); }
+    try { bars = await fetchDailyCached(chunk); } catch (e) { skipped++; log(`  BATCH SKIPPED (${chunk[0]}..${chunk[chunk.length - 1]}): ${e.message}`); }
     if (bars) for (const [sym, list] of bars) { if (list.length < 260) continue; withData++; for (const r of signalsFor(sym, list, isSp)) recs.push(r); }
     log(`  ${Math.min(b + CFG.batch, symbols.length)}/${symbols.length} symbols, ${withData} with data, ${recs.length} bought Dip signals so far`);
   }

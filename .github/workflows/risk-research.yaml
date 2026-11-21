@@ -29,6 +29,22 @@ jobs:
         with:
           node-version: 24
 
+      - name: Today's date (price cache key)
+        id: day
+        run: echo "d=$(date -u +%F)" >> "$GITHUB_OUTPUT"
+
+      - name: Pick the experiment set (first line of research-trigger/risk.txt)
+        id: set
+        run: |
+          s=base; [ -f research-trigger/risk.txt ] && s=$(head -1 research-trigger/risk.txt | tr -cd 'a-z0-9'); case "$s" in base|batch1) ;; *) s=base;; esac
+          echo "s=$s" >> "$GITHUB_OUTPUT"
+
+      - name: Restore cached price data (same calendar day)
+        uses: actions/cache@v4
+        with:
+          path: price-cache
+          key: bars-${{ steps.day.outputs.d }}
+
       - name: Run the research
         env:
           ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
@@ -37,6 +53,9 @@ jobs:
           ALPACA_RPM: '190'
           RR_MAX_SYMBOLS: ${{ inputs.max_symbols }}
           RR_OUT: research-out-risk
+          RR_SET: ${{ steps.set.outputs.s }}
+          RR_CACHE: price-cache
+          RR_DD_CUT: ${{ steps.set.outputs.s == 'base' && '0.25' || '0.40' }}
           NODE_OPTIONS: '--max-old-space-size=4096'
         run: node scanner/riskresearch.js
 
@@ -57,7 +76,7 @@ jobs:
           git fetch origin research-results:research-results 2>/dev/null || true
           if git show-ref -q refs/heads/research-results; then git checkout -q research-results
           else git checkout -q --orphan research-results; git rm -rfq . ; fi
-          rm -rf risk
-          mkdir -p risk && cp /tmp/rr/* risk/
+          rm -rf risk/${{ steps.set.outputs.s }}
+          mkdir -p risk/${{ steps.set.outputs.s }} && cp /tmp/rr/* risk/${{ steps.set.outputs.s }}/
           git add risk && git commit -q -m "Risk research results $(date -u +%Y-%m-%dT%H:%M:%SZ)" || echo "nothing to commit"
           for i in 1 2 3 4; do git push -q origin research-results && break || { git pull -q --rebase origin research-results || true; sleep 5; }; done

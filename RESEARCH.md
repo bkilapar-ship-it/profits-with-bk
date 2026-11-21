@@ -17,6 +17,8 @@ Goal: improve the live Uptrend Dip plan's return per unit of drawdown, without f
 | 2026-11-21 | Stop rules: fixed 3-8% vs 3 ATR | None beat live. 4% stop: CAGR 3.1% vs 7.1% |
 | 2026-11-21 | Risk rules (13) | Only 7.5% size passed: CAGR 6.5%, worst drawdown -12.0% (live 7.1%, -17.2%) |
 
+| 2026-11-21 | Batch 1 launched: size 9/7.5/6/5%, 7.5%+max-4-open, 7.5%+30% day cap (6 variants; ledger now 38, so the 40% drawdown-cut bar applies) | running |
+
 ## Queue (pre-registered, not yet run)
 - Batch 1: 7.5% size combined with max-4-open and with 30% day cap; size 5% and 6% to check the curve is smooth.
 - Batch 2: does signal-day relative volume or distance above the 200-day average rank signals better (use as ranking, not as a filter).
