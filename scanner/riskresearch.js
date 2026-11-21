@@ -39,6 +39,8 @@ const CFG = {
   set: env.RR_SET || 'base',
   cache: env.RR_CACHE || '',
   ddCut: num(env.RR_DD_CUT, 0.25),
+  baseId: env.RR_BASE || '',
+  keepMin: num(env.RR_KEEP_MIN, 0.70),
   minDollarVol: num(env.RR_MIN_DOLLAR_VOL, 20e6),
   chase: 0.02, target: 0.04, hold: 3, stopAtr: 3, reserve: 0.10, size: 0.15, startEquity: 100000,
 };
@@ -67,7 +69,15 @@ const BATCH1 = [
   { id: 's75o4', label: 'size 7.5% + max 4 open', rule: { size: 0.075, maxOpen: 4 } },
   { id: 's75c30', label: 'size 7.5% + a day\'s entries share 30% of the sleeve', rule: { size: 0.075, dayCap: 0.30 } },
 ];
-const SETS = { base: BASE_SCENARIOS, batch1: BATCH1 };
+const BATCH3 = [
+  { id: 'live', label: 'LIVE rules before the change (15% flat)', rule: {} },
+  { id: 's6', label: 'CURRENT: 6% flat (baseline for this batch)', rule: { size: 0.06 } },
+  { id: 'v6', label: '6% scaled by volatility (calm stocks bigger, wild stocks smaller; 0.5x-1.5x)', rule: { size: 0.06, volScale: { lo: 0.5, hi: 1.5 } } },
+  { id: 'v6w', label: '6% scaled by volatility, wider range (0.33x-2x)', rule: { size: 0.06, volScale: { lo: 0.33, hi: 2 } } },
+  { id: 'v5', label: '5% scaled by volatility (0.5x-1.5x)', rule: { size: 0.05, volScale: { lo: 0.5, hi: 1.5 } } },
+  { id: 'v75', label: '7.5% scaled by volatility (0.5x-1.5x)', rule: { size: 0.075, volScale: { lo: 0.5, hi: 1.5 } } },
+];
+const SETS = { base: BASE_SCENARIOS, batch1: BATCH1, batch3: BATCH3 };
 const SCENARIOS = SETS[CFG.set] || BASE_SCENARIOS;
 const log = (...a) => console.log(new Date().toISOString().slice(11, 19), ...a);
 const isNum = v => typeof v === 'number' && Number.isFinite(v);
@@ -114,7 +124,8 @@ function account(recs, results, dates, rule, spy) {
     const per = rule.dayCap && list.length ? Math.min(sizePct, rule.dayCap / list.length) : sizePct;
     for (const x of list) {
       if (rule.maxOpen && open.length >= rule.maxOpen) { blocked++; continue; }
-      const size = per * (1 - CFG.reserve) * eqPrev, spendable = cash - CFG.reserve * eqPrev;
+      const vs = rule.volScale ? Math.min(rule.volScale.hi, Math.max(rule.volScale.lo, rule.volRef / (x.r.atr / x.r.entry))) : 1;
+      const size = per * vs * (1 - CFG.reserve) * eqPrev, spendable = cash - CFG.reserve * eqPrev;
       if (size > spendable) { skippedCash++; continue; }
       cash -= size; opened++;
       open.push({ size, x, mtm: 0 });
@@ -178,15 +189,18 @@ function spyStates(bars) {
 }
 function buildReport(recs, dates, spy) {
   const L = [];
+  const atrs = recs.map(r => r.atr / r.entry).sort((a, b) => a - b), volRef = atrs[Math.floor(atrs.length / 2)];
+  for (const sc of SCENARIOS) if (sc.rule.volScale) sc.rule.volRef = volRef;
   const results = recs.map(r => simulate(r));
   const runs = SCENARIOS.map(sc => ({ sc, acc: account(recs, results, dates, sc.rule, spy) }));
   L.push('RISK-LIMIT RESEARCH: the live Dip plan (3 ATR stop unchanged) with portfolio rules added');
   L.push(`S&P 500 members at the time, $${(CFG.minDollarVol / 1e6).toFixed(0)}M/day floor, ${recs.length} Dip signals bought at the next open (skipped above +2%), +4% target, exit at the close of session 3. Before costs.`);
   L.push('Account: $100,000 start, 10% reserve, 15% of the rest per trade unless the rule changes it, ranked like the live system, marked to market daily.');
-  L.push(`Pre-registered pass bar: keeps 70%+ of live CAGR, cuts worst drawdown by ${(CFG.ddCut * 100).toFixed(0)}%+, and CAGR/worst-drawdown is not lower than live in BOTH development periods (2016-19, 2020-22). The 2023-2026 final exam is only shown for rules that pass. Set: ${CFG.set}.`);
+  L.push(CFG.baseId ? `Pre-registered pass bar (batch 3): compared with the CURRENT 6% flat size, keep ${(CFG.keepMin * 100).toFixed(0)}%+ of its CAGR, not make its worst drawdown worse by more than ${(-CFG.ddCut * 100).toFixed(0)}%-equivalent (drawdown cut of at least ${(CFG.ddCut * 100).toFixed(0)}%), raise return/risk overall, and have return/risk not lower than it in BOTH development periods. Set: ${CFG.set}.` : `Pre-registered pass bar: keeps 70%+ of live CAGR, cuts worst drawdown by ${(CFG.ddCut * 100).toFixed(0)}%+, and CAGR/worst-drawdown is not lower than live in BOTH development periods (2016-19, 2020-22). The 2023-2026 final exam is only shown for rules that pass. Set: ${CFG.set}.`);
   const live = runs[0];
   const stats = runs.map(r => ({ r, all: curveStats(r.acc, '0000', '9999'), per: PERIODS.map(p => curveStats(r.acc, p[1], p[2])) }));
-  const base = stats[0];
+  const baseIdx = Math.max(0, SCENARIOS.findIndex(sc => sc.id === CFG.baseId));
+  const base = stats[baseIdx];
   L.push(''); L.push('='.repeat(175));
   L.push(' ALL PERIODS');
   L.push('  rule                                                                | CAGR   | worst drawdown (date)   | return/risk | Sharpe | worst day | worst 5 days | worst month        | entries taken | blocked by rule | skipped (no cash)');
@@ -207,10 +221,10 @@ function buildReport(recs, dates, spy) {
     for (const s of stats) { const cs = curveStats(s.r.acc, a, b); L.push(`      ${s.r.sc.label.padEnd(67)} ${cs ? `return ${pf(cs.total).padStart(7)}   worst drawdown ${pf(cs.dd).padStart(7)}` : 'no data'}`); }
   }
   L.push(''); L.push('='.repeat(175)); L.push(' PASS / FAIL against the pre-registered bar');
-  for (const s of stats.slice(1)) {
+  for (const s of stats.filter((_, i) => i !== baseIdx && (CFG.baseId ? i > baseIdx : true))) {
     const keep = s.all.cagr / base.all.cagr, cut = 1 - s.all.dd / base.all.dd;
     const later = [0, 1].every(p => s.per[p] && base.per[p] && s.per[p].calmar >= base.per[p].calmar);
-    const pass = keep >= 0.7 && cut >= CFG.ddCut && later;
+    const pass = keep >= CFG.keepMin && cut >= CFG.ddCut && later && (!CFG.baseId || (s.all.calmar > base.all.calmar));
     L.push(`  ${pass ? 'PASS' : 'fail'}  ${s.r.sc.label.padEnd(67)} keeps ${(keep * 100).toFixed(0)}% of CAGR | drawdown cut ${(cut * 100).toFixed(0)}% | return/risk not lower in BOTH development periods (2016-19, 2020-22): ${later ? 'yes' : 'no'}${pass ? ` | FINAL EXAM 2023-2026: CAGR ${pf(s.per[2] && s.per[2].cagr)}, drawdown ${pf(s.per[2] && s.per[2].dd)}, return/risk ${f2(s.per[2] && s.per[2].calmar)} vs live ${f2(base.per[2].calmar)}` : ''}`);
   }
   L.push(''); L.push('How to read: "return/risk" is CAGR divided by the worst drawdown. A good rule raises it. Smaller size always shrinks drawdown AND profit together; it only counts as an improvement if return/risk goes UP.');
