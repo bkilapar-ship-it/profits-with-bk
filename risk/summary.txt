@@ -1,0 +1,150 @@
+RUN CHECK: 666 symbols requested, 663 had enough data, 0 download batches skipped, 2625 bought signals, 2635 trading days, 2738 SPY bars.
+
+RISK-LIMIT RESEARCH: the live Dip plan (3 ATR stop unchanged) with portfolio rules added
+S&P 500 members at the time, $20M/day floor, 2625 Dip signals bought at the next open (skipped above +2%), +4% target, exit at the close of session 3. Before costs.
+Account: $100,000 start, 10% reserve, 15% of the rest per trade unless the rule changes it, ranked like the live system, marked to market daily.
+Pre-registered pass bar: keeps 70%+ of live CAGR, cuts worst drawdown by 25%+, and CAGR/worst-drawdown is not lower than live in BOTH later periods.
+
+===============================================================================================================================================================================
+ ALL PERIODS
+  rule                                                                | CAGR   | worst drawdown (date)   | return/risk | Sharpe | worst day | worst 5 days | worst month        | entries taken | blocked by rule | skipped (no cash)
+  LIVE rules (no limits)                                              |   7.1% | -17.2% (2026-11-05)     |        0.41 |   0.63 |     -6.0% |       -11.9% | -8.0% (2026-11)    |          1547 |               0 |              1078
+  max 2 new entries per day                                           |   7.1% | -15.1% (2026-11-05)     |        0.47 |   0.75 |     -6.0% |        -9.9% | -6.8% (2026-11)    |          1335 |            1290 |                 0
+  max 3 new entries per day                                           |   8.2% | -17.1% (2025-03-13)     |        0.48 |   0.77 |     -6.1% |       -10.2% | -6.4% (2026-11)    |          1487 |            1024 |               114
+  a day's new entries share 30% of the sleeve (each trade shrinks)    |   4.7% | -14.7% (2019-08-05)     |        0.32 |   0.53 |     -5.8% |        -7.0% | -5.6% (2025-02)    |          2625 |               0 |                 0
+  max 4 positions open at once                                        |   6.3% | -14.9% (2025-03-13)     |        0.42 |   0.70 |     -6.4% |        -7.6% | -6.8% (2025-02)    |          1259 |            1366 |                 0
+  smaller size: 10% per trade                                         |   7.0% | -15.1% (2026-11-05)     |        0.47 |   0.71 |     -6.0% |       -10.8% | -8.4% (2022-06)    |          1870 |               0 |               755
+  smaller size: 7.5% per trade                                        |   6.5% | -12.0% (2020-02-27)     |        0.54 |   0.77 |     -5.1% |        -8.9% | -6.1% (2022-06)    |          2029 |               0 |               596
+  pause when SPY fell 2%+ on the signal day                           |   5.9% | -17.2% (2026-11-05)     |        0.34 |   0.56 |     -6.0% |       -11.9% | -9.4% (2022-06)    |          1433 |             460 |               732
+  pause when SPY fell 4%+ over 5 days                                 |   6.9% | -17.2% (2026-11-05)     |        0.40 |   0.68 |     -6.0% |       -11.9% | -7.4% (2026-11)    |          1389 |             640 |               596
+  pause when SPY is 10%+ below its 1-year high                        |   5.9% | -17.2% (2026-11-05)     |        0.34 |   0.59 |     -6.0% |       -11.9% | -8.0% (2026-11)    |          1351 |             465 |               809
+  pause when SPY is below its 200-day average                         |   6.0% | -17.2% (2026-11-05)     |        0.35 |   0.61 |     -6.0% |       -11.9% | -8.0% (2026-11)    |          1303 |             513 |               809
+  circuit breaker: 8% account drawdown pauses entries 5 days          |   6.3% | -20.1% (2026-11-05)     |        0.31 |   0.59 |     -6.0% |       -11.9% | -8.4% (2026-11)    |          1509 |             107 |              1009
+  COMBO: max 2 per day + pause when SPY fell 4%+ over 5 days          |   6.5% | -15.2% (2025-03-13)     |        0.42 |   0.75 |     -6.0% |        -9.9% | -7.1% (2026-11)    |          1208 |            1417 |                 0
+
+===============================================================================================================================================================================
+ Oct 2016 to 2019
+  rule                                                                | CAGR   | worst drawdown (date)   | return/risk | worst day | worst 5 days | worst month
+  LIVE rules (no limits)                                              |  -1.8% | -14.0% (2019-08-05)     |       -0.13 |     -3.8% |        -7.4% | -4.2% (2019-08)
+  max 2 new entries per day                                           |  -1.4% | -13.1% (2019-08-05)     |       -0.10 |     -3.2% |        -6.1% | -3.4% (2019-08)
+  max 3 new entries per day                                           |  -1.1% | -13.5% (2019-08-05)     |       -0.08 |     -3.7% |        -7.4% | -4.2% (2019-08)
+  a day's new entries share 30% of the sleeve (each trade shrinks)    |  -2.6% | -14.7% (2019-08-05)     |       -0.17 |     -3.7% |        -6.3% | -4.0% (2019-08)
+  max 4 positions open at once                                        |  -1.7% | -12.8% (2019-08-05)     |       -0.14 |     -2.7% |        -5.3% | -3.6% (2018-12)
+  smaller size: 10% per trade                                         |  -2.2% | -13.4% (2019-08-05)     |       -0.16 |     -4.2% |        -7.3% | -4.3% (2019-08)
+  smaller size: 7.5% per trade                                        |  -1.6% | -10.8% (2019-08-05)     |       -0.15 |     -3.2% |        -6.5% | -4.1% (2019-08)
+  pause when SPY fell 2%+ on the signal day                           |  -2.9% | -16.9% (2019-08-05)     |       -0.17 |     -3.7% |        -7.4% | -5.7% (2019-08)
+  pause when SPY fell 4%+ over 5 days                                 |  -2.5% | -15.9% (2019-08-05)     |       -0.16 |     -3.3% |        -7.4% | -5.7% (2019-08)
+  pause when SPY is 10%+ below its 1-year high                        |  -1.5% | -12.9% (2019-08-05)     |       -0.11 |     -3.8% |        -7.4% | -4.2% (2019-08)
+  pause when SPY is below its 200-day average                         |  -1.0% | -11.5% (2019-08-05)     |       -0.09 |     -3.8% |        -7.4% | -4.2% (2019-08)
+  circuit breaker: 8% account drawdown pauses entries 5 days          |  -2.4% | -14.9% (2019-08-05)     |       -0.16 |     -3.8% |        -7.4% | -5.4% (2019-08)
+  COMBO: max 2 per day + pause when SPY fell 4%+ over 5 days          |  -2.9% | -15.1% (2019-08-05)     |       -0.19 |     -3.2% |        -6.1% | -4.4% (2019-08)
+
+===============================================================================================================================================================================
+ 2020 to 2022
+  rule                                                                | CAGR   | worst drawdown (date)   | return/risk | worst day | worst 5 days | worst month
+  LIVE rules (no limits)                                              |  10.9% | -12.2% (2022-06-24)     |        0.89 |     -6.0% |       -10.6% | -7.9% (2022-06)
+  max 2 new entries per day                                           |  14.1% | -8.1% (2022-06-24)      |        1.73 |     -6.0% |        -7.5% | -4.3% (2022-06)
+  max 3 new entries per day                                           |  14.1% | -10.0% (2022-06-23)     |        1.41 |     -6.1% |        -8.8% | -5.5% (2022-06)
+  a day's new entries share 30% of the sleeve (each trade shrinks)    |   8.9% | -7.8% (2022-06-23)      |        1.14 |     -5.8% |        -7.0% | -4.3% (2021-01)
+  max 4 positions open at once                                        |   8.8% | -8.6% (2022-09-27)      |        1.01 |     -6.4% |        -7.6% | -5.1% (2022-06)
+  smaller size: 10% per trade                                         |  12.5% | -12.2% (2022-06-23)     |        1.02 |     -4.0% |       -10.8% | -8.4% (2022-06)
+  smaller size: 7.5% per trade                                        |  12.0% | -10.2% (2022-06-23)     |        1.17 |     -3.5% |        -8.9% | -6.1% (2022-06)
+  pause when SPY fell 2%+ on the signal day                           |   8.3% | -12.5% (2022-06-24)     |        0.66 |     -6.0% |       -10.7% | -9.4% (2022-06)
+  pause when SPY fell 4%+ over 5 days                                 |  13.4% | -7.2% (2021-03-29)      |        1.87 |     -6.0% |        -6.9% | -2.7% (2021-10)
+  pause when SPY is 10%+ below its 1-year high                        |   6.8% | -7.2% (2021-03-29)      |        0.95 |     -6.0% |        -6.9% | -5.4% (2020-02)
+  pause when SPY is below its 200-day average                         |   6.6% | -7.2% (2021-03-29)      |        0.92 |     -6.0% |        -6.9% | -5.4% (2020-02)
+  circuit breaker: 8% account drawdown pauses entries 5 days          |  11.5% | -10.2% (2022-09-26)     |        1.13 |     -6.0% |        -7.5% | -6.2% (2022-06)
+  COMBO: max 2 per day + pause when SPY fell 4%+ over 5 days          |  14.4% | -6.3% (2021-03-29)      |        2.27 |     -6.0% |        -5.6% | -2.7% (2021-01)
+
+===============================================================================================================================================================================
+ 2023 to 2026
+  rule                                                                | CAGR   | worst drawdown (date)   | return/risk | worst day | worst 5 days | worst month
+  LIVE rules (no limits)                                              |  12.9% | -17.2% (2026-11-05)     |        0.75 |     -5.5% |       -11.9% | -8.0% (2026-11)
+  max 2 new entries per day                                           |  10.1% | -15.1% (2026-11-05)     |        0.67 |     -5.3% |        -9.9% | -6.8% (2026-11)
+  max 3 new entries per day                                           |  12.8% | -17.1% (2025-03-13)     |        0.75 |     -5.5% |       -10.2% | -6.4% (2026-11)
+  a day's new entries share 30% of the sleeve (each trade shrinks)    |   8.5% | -13.8% (2025-03-13)     |        0.62 |     -4.3% |        -7.0% | -5.6% (2025-02)
+  max 4 positions open at once                                        |  12.2% | -14.9% (2025-03-13)     |        0.82 |     -3.7% |        -7.4% | -6.8% (2025-02)
+  smaller size: 10% per trade                                         |  12.0% | -15.1% (2026-11-05)     |        0.80 |     -6.0% |        -9.5% | -4.7% (2026-10)
+  smaller size: 7.5% per trade                                        |  10.3% | -11.5% (2026-11-05)     |        0.90 |     -5.1% |        -7.1% | -3.9% (2025-03)
+  pause when SPY fell 2%+ on the signal day                           |  12.8% | -17.2% (2026-11-05)     |        0.74 |     -5.5% |       -11.9% | -7.4% (2026-11)
+  pause when SPY fell 4%+ over 5 days                                 |  11.2% | -17.2% (2026-11-05)     |        0.65 |     -5.5% |       -11.9% | -7.4% (2026-11)
+  pause when SPY is 10%+ below its 1-year high                        |  12.5% | -17.2% (2026-11-05)     |        0.72 |     -5.5% |       -11.9% | -8.0% (2026-11)
+  pause when SPY is below its 200-day average                         |  12.4% | -17.2% (2026-11-05)     |        0.72 |     -5.5% |       -11.9% | -8.0% (2026-11)
+  circuit breaker: 8% account drawdown pauses entries 5 days          |  11.0% | -20.1% (2026-11-05)     |        0.55 |     -5.5% |       -11.9% | -8.4% (2026-11)
+  COMBO: max 2 per day + pause when SPY fell 4%+ over 5 days          |   9.7% | -15.2% (2025-03-13)     |        0.64 |     -4.6% |        -9.9% | -7.1% (2026-11)
+
+===============================================================================================================================================================================
+ CRASH WINDOWS: account return / worst drawdown inside the window
+  Feb-Mar 2020 (COVID crash)   2020-02-15 to 2020-04-15
+      LIVE rules (no limits)                                              return    2.0%   worst drawdown   -6.4%
+      max 2 new entries per day                                           return    5.1%   worst drawdown   -3.5%
+      max 3 new entries per day                                           return    4.2%   worst drawdown   -4.4%
+      a day's new entries share 30% of the sleeve (each trade shrinks)    return    2.2%   worst drawdown   -3.9%
+      max 4 positions open at once                                        return    2.3%   worst drawdown   -4.6%
+      smaller size: 10% per trade                                         return    3.5%   worst drawdown   -5.4%
+      smaller size: 7.5% per trade                                        return    2.3%   worst drawdown   -5.2%
+      pause when SPY fell 2%+ on the signal day                           return    3.9%   worst drawdown   -2.9%
+      pause when SPY fell 4%+ over 5 days                                 return    2.5%   worst drawdown   -0.6%
+      pause when SPY is 10%+ below its 1-year high                        return   -6.1%   worst drawdown   -6.4%
+      pause when SPY is below its 200-day average                         return   -6.1%   worst drawdown   -6.4%
+      circuit breaker: 8% account drawdown pauses entries 5 days          return    2.0%   worst drawdown   -6.4%
+      COMBO: max 2 per day + pause when SPY fell 4%+ over 5 days          return    1.4%   worst drawdown   -0.6%
+  2022 bear market   2022-01-01 to 2022-10-31
+      LIVE rules (no limits)                                              return   -3.5%   worst drawdown  -12.2%
+      max 2 new entries per day                                           return    3.1%   worst drawdown   -8.1%
+      max 3 new entries per day                                           return    0.6%   worst drawdown  -10.0%
+      a day's new entries share 30% of the sleeve (each trade shrinks)    return   -0.1%   worst drawdown   -7.8%
+      max 4 positions open at once                                        return   -3.7%   worst drawdown   -8.6%
+      smaller size: 10% per trade                                         return   -2.0%   worst drawdown  -12.2%
+      smaller size: 7.5% per trade                                        return    0.3%   worst drawdown  -10.2%
+      pause when SPY fell 2%+ on the signal day                           return   -5.9%   worst drawdown  -12.5%
+      pause when SPY fell 4%+ over 5 days                                 return    6.8%   worst drawdown   -5.1%
+      pause when SPY is 10%+ below its 1-year high                        return   -2.3%   worst drawdown   -6.8%
+      pause when SPY is below its 200-day average                         return   -3.3%   worst drawdown   -4.5%
+      circuit breaker: 8% account drawdown pauses entries 5 days          return   -1.8%   worst drawdown  -10.2%
+      COMBO: max 2 per day + pause when SPY fell 4%+ over 5 days          return   11.6%   worst drawdown   -2.6%
+  Nov 2026 (post-midterm AI sell-off)   2026-10-25 to 2026-11-30
+      LIVE rules (no limits)                                              return   -9.0%   worst drawdown  -11.9%
+      max 2 new entries per day                                           return   -7.8%   worst drawdown   -9.9%
+      max 3 new entries per day                                           return   -7.4%   worst drawdown  -10.2%
+      a day's new entries share 30% of the sleeve (each trade shrinks)    return   -4.1%   worst drawdown   -6.6%
+      max 4 positions open at once                                        return   -5.8%   worst drawdown   -7.5%
+      smaller size: 10% per trade                                         return   -5.2%   worst drawdown   -9.5%
+      smaller size: 7.5% per trade                                        return   -3.1%   worst drawdown   -7.1%
+      pause when SPY fell 2%+ on the signal day                           return   -8.4%   worst drawdown  -11.9%
+      pause when SPY fell 4%+ over 5 days                                 return   -8.4%   worst drawdown  -11.9%
+      pause when SPY is 10%+ below its 1-year high                        return   -9.0%   worst drawdown  -11.9%
+      pause when SPY is below its 200-day average                         return   -9.0%   worst drawdown  -11.9%
+      circuit breaker: 8% account drawdown pauses entries 5 days          return   -9.0%   worst drawdown  -11.9%
+      COMBO: max 2 per day + pause when SPY fell 4%+ over 5 days          return   -8.1%   worst drawdown   -9.9%
+  Last 2 months (Sep 21-Nov 20 2026)   2026-09-21 to 2026-11-20
+      LIVE rules (no limits)                                              return  -14.6%   worst drawdown  -17.2%
+      max 2 new entries per day                                           return  -13.2%   worst drawdown  -15.1%
+      max 3 new entries per day                                           return  -13.5%   worst drawdown  -16.0%
+      a day's new entries share 30% of the sleeve (each trade shrinks)    return   -9.7%   worst drawdown  -11.9%
+      max 4 positions open at once                                        return   -9.5%   worst drawdown  -10.9%
+      smaller size: 10% per trade                                         return  -11.1%   worst drawdown  -15.1%
+      smaller size: 7.5% per trade                                        return   -7.8%   worst drawdown  -11.5%
+      pause when SPY fell 2%+ on the signal day                           return  -14.1%   worst drawdown  -17.2%
+      pause when SPY fell 4%+ over 5 days                                 return  -14.1%   worst drawdown  -17.2%
+      pause when SPY is 10%+ below its 1-year high                        return  -14.6%   worst drawdown  -17.2%
+      pause when SPY is below its 200-day average                         return  -14.6%   worst drawdown  -17.2%
+      circuit breaker: 8% account drawdown pauses entries 5 days          return  -17.9%   worst drawdown  -20.1%
+      COMBO: max 2 per day + pause when SPY fell 4%+ over 5 days          return  -13.5%   worst drawdown  -15.1%
+
+===============================================================================================================================================================================
+ PASS / FAIL against the pre-registered bar
+  fail  max 2 new entries per day                                           keeps 101% of CAGR | drawdown cut 13% | return/risk not lower in both later periods: no
+  fail  max 3 new entries per day                                           keeps 116% of CAGR | drawdown cut 1% | return/risk not lower in both later periods: yes
+  fail  a day's new entries share 30% of the sleeve (each trade shrinks)    keeps 66% of CAGR | drawdown cut 15% | return/risk not lower in both later periods: no
+  fail  max 4 positions open at once                                        keeps 89% of CAGR | drawdown cut 14% | return/risk not lower in both later periods: yes
+  fail  smaller size: 10% per trade                                         keeps 100% of CAGR | drawdown cut 13% | return/risk not lower in both later periods: yes
+  PASS  smaller size: 7.5% per trade                                        keeps 92% of CAGR | drawdown cut 30% | return/risk not lower in both later periods: yes
+  fail  pause when SPY fell 2%+ on the signal day                           keeps 83% of CAGR | drawdown cut -0% | return/risk not lower in both later periods: no
+  fail  pause when SPY fell 4%+ over 5 days                                 keeps 98% of CAGR | drawdown cut 0% | return/risk not lower in both later periods: no
+  fail  pause when SPY is 10%+ below its 1-year high                        keeps 83% of CAGR | drawdown cut -0% | return/risk not lower in both later periods: no
+  fail  pause when SPY is below its 200-day average                         keeps 85% of CAGR | drawdown cut -0% | return/risk not lower in both later periods: no
+  fail  circuit breaker: 8% account drawdown pauses entries 5 days          keeps 90% of CAGR | drawdown cut -17% | return/risk not lower in both later periods: no
+  fail  COMBO: max 2 per day + pause when SPY fell 4%+ over 5 days          keeps 92% of CAGR | drawdown cut 12% | return/risk not lower in both later periods: no
+
+How to read: "return/risk" is CAGR divided by the worst drawdown. A good rule raises it. Smaller size always shrinks drawdown AND profit together; it only counts as an improvement if return/risk goes UP.
