@@ -26,7 +26,7 @@ body.full .pts{display:none}body.full p.full{display:block}
 .blk.now .pts li,.blk.now p.full{color:#fff}.blk:not(.now) .pts li,.blk:not(.now) p.full{color:#8394B8}
 #line{position:fixed;left:0;right:0;top:calc(40px + env(safe-area-inset-top) + var(--ln,22vh));height:0;border-top:2px dashed rgba(91,140,255,.55);pointer-events:none;z-index:3}
 #bar{position:fixed;left:0;right:0;bottom:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#080D18;border-top:1px solid #1E2A44;z-index:5}
-#row0{margin-bottom:8px}#row0 button{width:100%;background:#0E7A4B;border-color:#0E7A4B;font-size:17px;padding:15px}#row1,#row2{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}#row2{margin-top:8px}
+#row0{margin-bottom:8px}#row0 button{width:100%;background:#0E7A4B;border-color:#0E7A4B;font-size:17px;padding:15px}#row1,#row2{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}#row1{grid-template-columns:1.1fr 1fr 1fr 1fr}#row1 button{padding-left:4px;padding-right:4px}#row2{margin-top:8px}
 button{font:inherit;font-size:15px;font-weight:700;padding:13px 6px;border-radius:13px;border:1px solid #2A3B61;background:#121C33;color:#fff;touch-action:manipulation}
 button.go{background:#2563EB;border-color:#2563EB}button.rec{background:#C0213A;border-color:#C0213A}button.on{outline:2px solid #5B8CFF}
 #set{display:none;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px}#set.open{display:grid}
@@ -49,7 +49,7 @@ label{font-size:11px;color:#8FA3C7;display:flex;flex-direction:column;gap:4px;fo
 <div id="hud"><a href="../" class="nav">‹ Studio</a><a href="../combine.html" class="nav">Combine ›</a><span id="clock">00:00</span><span id="ttl">${esc(ep.title)} · aim for ${Math.floor(total / 60)}:${String(Math.round(total % 60)).padStart(2, '0')}</span></div><div id="msg"></div><div id="rvnote">Tap text to edit · move or skip scenes · saved on this phone</div>
 <div id="stage"><div id="scroller">${blocks}</div></div><div id="line"></div>
 <div id="bar">
-  <div id="row1"><button id="play" class="go">▶ Start</button><button id="cambtn">Camera</button><button id="rec">● Record</button></div>
+  <div id="row1"><button id="play" class="go">▶ Start</button><button id="cambtn">Camera</button><button id="rec">● Record</button><button id="rst">↺ Restart</button></div>
   <div id="row0"><button id="next" class="go2">Next visual ▶</button></div>
   <div id="row2"><button id="mode">Full script</button><button id="mir">Mirror</button><button id="gear">Settings</button></div>
   <div id="row3" style="margin-top:8px"><button id="review" style="width:100%">Review scenes and edit</button></div>
@@ -104,6 +104,12 @@ let touchY=null;addEventListener('touchstart',e=>{touchY=e.touches[0].clientY;},
 addEventListener('touchmove',e=>{if(document.body.classList.contains('review'))return;if(touchY===null||e.target.closest('#bar'))return;const d=touchY-e.touches[0].clientY;touchY=e.touches[0].clientY;y=Math.max(0,y+d);apply();},{passive:true});
 async function cam(){if(stream)return true;try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1920},height:{ideal:1080}},audio:{echoCancellation:true,noiseSuppression:true}});$('cam').srcObject=stream;document.body.classList.add('camon');$('cambtn').classList.add('on');return true;}catch(e){$('msg').textContent='Camera or microphone blocked: allow access in Safari settings for this page. ('+e.name+')';return false;}}
 $('cambtn').onclick=async()=>{if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;document.body.classList.remove('camon');$('cambtn').classList.remove('on');}else await cam();};
+$('rst').onclick=()=>{
+  const recording=mr&&mr.state==='recording';
+  if(!confirm(recording?'Restart? This throws away the take so far (nothing is saved) and takes you back to the first page of the script.':'Go back to the first page of the script?'))return;
+  if(recording){mr.onstop=null;mr.ondataavailable=null;try{mr.stop();}catch(e){}chunks=[];rt={};lastMark=0;t0=0;$('rec').textContent='● Record';$('rec').classList.remove('on');}
+  run=false;$('play').textContent='▶ Start';y=0;apply();$('msg').textContent=recording?'Take discarded. Press Record when you are ready to go again.':'';
+};
 $('rec').onclick=async()=>{
   if(mr&&mr.state==='recording'){mr.stop();return;}
   if(!(await cam()))return;
