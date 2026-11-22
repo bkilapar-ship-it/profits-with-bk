@@ -125,25 +125,26 @@ let bmr=null,bchunks=[];let live=false,liveId=null,liveEnd=0,liveRaf=0,lvBlob=nu
 const lvis=$('lvis'),lcv=$('lcv');
 function lvMode(){return ($('lv')&&$('lv').value)||'side';}
 function lvPrefetch(){if(lvMode()==='off'||lvPre)return lvPre;$('msg').textContent='Loading the visuals for live recording…';
-  lvPre=fetch('visuals-720.mp4').then(r=>{if(!r.ok)throw new Error('x');return r;}).catch(()=>fetch('visuals.mp4')).then(r=>{if(!r.ok)throw new Error('visuals');return r.blob();}).then(b=>{lvBlob=URL.createObjectURL(b);lvis.src=lvBlob;lvis.load();$('msg').textContent='Visuals ready ('+(b.size/1048576).toFixed(0)+' MB). Live recording is on.';return true;}).catch(()=>{lvPre=null;$('msg').textContent='Could not load the visuals, so this take will be camera only.';return false;});return lvPre;}
-function showScene(id){liveId=id;const h=H(id);if(!h)return;lvis.currentTime=h.st;lvis.play().catch(()=>{});liveEnd=h.st+h.du-0.1;}
+  lvPre=Promise.all(HEADS.map((h,i)=>new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>rej(new Error('img'));im.src='stills/scene-'+i+'.jpg';}))).then(a=>{lvImgs=a;$('msg').textContent='Visuals ready. Live recording is on.';return true;}).catch(()=>{lvPre=null;$('msg').textContent='Could not load the visuals, so this take will be camera only.';return false;});return lvPre;}
+let lvImgs=[],lvCur=null,lvPrev=null,lvT=0;
+function showScene(id){liveId=id;const i=HEADS.findIndex(x=>x.id===id);if(i<0||!lvImgs[i])return;lvPrev=lvCur;lvCur=lvImgs[i];lvT=performance.now();}
+function drawVis(ctx,x,y,w,h){const k=Math.min(1,(performance.now()-lvT)/300);if(lvPrev&&k<1){ctx.drawImage(lvPrev,x,y,w,h);ctx.globalAlpha=k;ctx.drawImage(lvCur,x,y,w,h);ctx.globalAlpha=1;}else if(lvCur)ctx.drawImage(lvCur,x,y,w,h);}
 function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
 function cover(c,v,x,y,w,h){const vw=v.videoWidth,vh=v.videoHeight;if(!vw)return;const k=Math.max(w/vw,h/vh),sw=w/k,sh=h/k;c.drawImage(v,(vw-sw)/2,(vh-sh)/2,sw,sh,x,y,w,h);}
 function liveDraw(W,H2,ctx,mode){
   if(!live)return;
-  if(liveEnd&&lvis.currentTime>=liveEnd&&!lvis.paused)lvis.pause();
   const cam=$('cam');watch(cam);ctx.fillStyle='#02050A';ctx.fillRect(0,0,W,H2);
   if(mode==='side'){
     if(studioImg&&studioImg.complete&&studioImg.naturalWidth)ctx.drawImage(studioImg,0,0,W,H2);else{const q=ctx.createLinearGradient(0,0,W,H2);q.addColorStop(0,'#0A1426');q.addColorStop(1,'#02050A');ctx.fillStyle=q;ctx.fillRect(0,0,W,H2);}
     const m=Math.round(W*.012),vw=Math.round(W*.72),vh=Math.round(vw*9/16),vy=Math.round((H2-vh)/2),vx=W-vw-m;
     ctx.save();ctx.shadowColor='rgba(38,208,255,.35)';ctx.shadowBlur=H2*.02;rr(ctx,vx,vy,vw,vh,H2*.012);ctx.fillStyle='#000';ctx.fill();ctx.restore();
-    ctx.save();rr(ctx,vx,vy,vw,vh,H2*.012);ctx.clip();ctx.drawImage(lvis,vx,vy,vw,vh);ctx.restore();
+    ctx.save();rr(ctx,vx,vy,vw,vh,H2*.012);ctx.clip();drawVis(ctx,vx,vy,vw,vh);ctx.restore();
     const fx=m,fw=vx-m*2,fh=Math.min(Math.round(fw*1.25),vh),fy=Math.round((H2-fh)/2);
     ctx.save();ctx.shadowColor='rgba(38,208,255,.55)';ctx.shadowBlur=H2*.025;rr(ctx,fx,fy,fw,fh,H2*.02);ctx.fillStyle='#000';ctx.fill();ctx.restore();
     ctx.save();rr(ctx,fx,fy,fw,fh,H2*.02);ctx.clip();cover(ctx,cam,fx,fy,fw,fh);ctx.restore();
     ctx.strokeStyle='#26D0FF';ctx.lineWidth=Math.max(2,H2*.003);rr(ctx,fx,fy,fw,fh,H2*.02);ctx.stroke();
   }else{
-    ctx.drawImage(lvis,0,0,W,H2);
+    drawVis(ctx,0,0,W,H2);
     const d=Math.round(H2*.30),m=Math.round(H2*.05),x=W-d-m,y=H2-d-Math.round(H2*.1);
     ctx.save();ctx.beginPath();ctx.arc(x+d/2,y+d/2,d/2,0,Math.PI*2);ctx.clip();cover(ctx,cam,x,y,d,d);ctx.restore();
     ctx.strokeStyle='#5B8CFF';ctx.lineWidth=Math.max(3,H2*.006);ctx.beginPath();ctx.arc(x+d/2,y+d/2,d/2,0,Math.PI*2);ctx.stroke();
@@ -168,9 +169,9 @@ $('rst').onclick=()=>{
 };
 $('rec').onclick=async()=>{
   if(mr&&mr.state==='recording'){stopLive();$('msg').textContent='Finishing your video… please wait, keep this page open.';const f=window._fin;try{mr.requestData();}catch(e){}try{mr.stop();}catch(e){}setTimeout(()=>{if(f)f();},5000);return;}
-  const wantLive=lvMode()!=='off';if(wantLive){lvis.play().then(()=>lvis.pause()).catch(()=>{});}
+  const wantLive=lvMode()!=='off';
   if(!(await cam()))return;
-  let useLive=false;if(wantLive){$('msg').textContent='Getting ready…';useLive=!!(await lvPrefetch());if(useLive){await new Promise(r=>{if(lvis.readyState>=2)return r();lvis.addEventListener('loadeddata',()=>r(),{once:true});setTimeout(r,5000);});studioImg=new Image();studioImg.src='studio-bg.png?'+Date.now();await new Promise(r=>{studioImg.onload=studioImg.onerror=r;setTimeout(r,2500);});}}
+  let useLive=false;if(wantLive){$('msg').textContent='Getting ready…';useLive=!!(await lvPrefetch());if(useLive){studioImg=new Image();studioImg.src='studio-bg.png?'+Date.now();await new Promise(r=>{studioImg.onload=studioImg.onerror=r;setTimeout(r,2500);});}}
   const opts=['video/mp4;codecs=avc1,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm'];mime=opts.find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t))||'';
   if(!window.MediaRecorder){$('msg').textContent='This browser cannot record in the page. Use your Camera app and read from this page on another screen.';return;}
   let rstream=stream,lH=parseInt($('lq').value,10)||720;
