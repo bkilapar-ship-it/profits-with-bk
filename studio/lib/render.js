@@ -7,7 +7,7 @@ const { sma } = require('./data');
 const { NEON, logoSvg, bgCandles } = require('./brand');
 let TAPE = '';
 
-const W = 1920, H = 1080, FPS = 30, ANIM = 2.4;
+const W = 1920, H = 1080, FPS = 30, ANIM = 2.4, FRAME_FPS = 12, FRAME_N = Math.round(ANIM * FRAME_FPS) + 1;
 const isNum = v => typeof v === 'number' && Number.isFinite(v);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const money = x => `$${x.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -341,6 +341,14 @@ async function renderStills(ep, outDir, { chromium }) {
       await page.evaluate(() => window.setP(1)); await page.waitForTimeout(60);
       await page.screenshot({ path: path.join(dirOut, `scene-${i}.jpg`), type: 'jpeg', quality: 72 });
     }
+    // entrance animation as small image sequences (used by live recording; 12 fps, half size)
+    const ctx2 = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 0.5 }), pg = await ctx2.newPage();
+    for (let i = 0; i < ep.scenes.length; i++) {
+      const dir = path.join(work, `s${i}`), html = path.join(dir, 'scene.html'), fd = path.join(outDir, 'frames', `s${i}`); fs.mkdirSync(fd, { recursive: true });
+      await pg.goto('file://' + html); await pg.evaluate(() => document.fonts.ready);
+      for (let k = 0; k < FRAME_N; k++) { await pg.evaluate(p => window.setP(p), k / (FRAME_N - 1)); await pg.screenshot({ path: path.join(fd, `${k}.jpg`), type: 'jpeg', quality: 62 }); }
+    }
+    await ctx2.close();
   } finally { await browser.close(); fs.rmSync(work, { recursive: true, force: true }); }
 }
 
@@ -401,4 +409,4 @@ async function renderBrandAssets(ep, outDir, { chromium }) {
   } finally { await browser.close(); fs.rmSync(work, { recursive: true, force: true }); }
 }
 
-module.exports = { renderBrandAssets, chartSvg2, renderStills, prepareCharts, renderEpisode, sceneHtml, chartSvg, FPS, ANIM };
+module.exports = { FRAME_N, FRAME_FPS, renderBrandAssets, chartSvg2, renderStills, prepareCharts, renderEpisode, sceneHtml, chartSvg, FPS, ANIM };

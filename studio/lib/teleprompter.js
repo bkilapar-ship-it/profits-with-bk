@@ -4,6 +4,7 @@ const sigOf=(sc)=>{let h=5381;const t=sc.map(x=>x.id).join('|');for(let i=0;i<t.
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 const { pointsOf } = require('./script');
+const { FRAME_N, FRAME_FPS } = require('./render');
 function teleprompterHtml(ep) {
   const total = ep.scenes.reduce((s, x) => s + x.dur, 0);
   const blocks = ep.scenes.map((s, i) => `<section class="blk" data-id="${esc(s.id)}" data-i="${i}"><img class="thumb" src="stills/scene-${i}.jpg" alt="" loading="lazy" onerror="this.style.display='none'"><div class="rvc"><button data-a="up">▲ Up</button><button data-a="down">▼ Down</button><button data-a="skip" class="skipbtn">Skip this scene</button></div><div class="cue"></div><ul class="pts">${pointsOf(s).map(x => `<li>${esc(x)}</li>`).join('')}</ul><p class="full">${esc(s.narration)}</p></section>`).join('');
@@ -126,9 +127,13 @@ const lvis=$('lvis'),lcv=$('lcv');
 function lvMode(){return ($('lv')&&$('lv').value)||'side';}
 function lvPrefetch(){if(lvMode()==='off'||lvPre)return lvPre;$('msg').textContent='Loading the visuals for live recording…';
   lvPre=Promise.all(HEADS.map((h,i)=>new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>rej(new Error('img'));im.src='stills/scene-'+i+'.jpg';}))).then(a=>{lvImgs=a;$('msg').textContent='Visuals ready. Live recording is on.';return true;}).catch(()=>{lvPre=null;$('msg').textContent='Could not load the visuals, so this take will be camera only.';return false;});return lvPre;}
-let lvImgs=[],lvCur=null,lvPrev=null,lvT=0;
-function showScene(id){liveId=id;const i=HEADS.findIndex(x=>x.id===id);if(i<0||!lvImgs[i])return;lvPrev=lvCur;lvCur=lvImgs[i];lvT=performance.now();}
-function drawVis(ctx,x,y,w,h){const k=Math.min(1,(performance.now()-lvT)/300);if(lvPrev&&k<1){ctx.drawImage(lvPrev,x,y,w,h);ctx.globalAlpha=k;ctx.drawImage(lvCur,x,y,w,h);ctx.globalAlpha=1;}else if(lvCur)ctx.drawImage(lvCur,x,y,w,h);}
+const FN=${FRAME_N},FF=${FRAME_FPS};let lvImgs=[],lvCur=null,lvPrev=null,lvT=0,lvIdx=-1,lvFr={};
+function frLoad(i){if(i<0||i>=HEADS.length||lvFr[i])return;const a=[];for(let k=0;k<FN;k++){const im=new Image();im.src='frames/s'+i+'/'+k+'.jpg';a.push(im);}lvFr[i]=a;}
+function frKeep(keep){Object.keys(lvFr).forEach(k=>{if(!keep.includes(+k))delete lvFr[k];});}
+function showScene(id){liveId=id;const i=HEADS.findIndex(x=>x.id===id);if(i<0||!lvImgs[i])return;lvPrev=lvCur;lvCur=lvImgs[i];lvIdx=i;lvT=performance.now();const nx=[];vis().forEach((b,n,arr)=>{if(b.dataset.id===id){for(let q=1;q<=2;q++)if(arr[n+q])nx.push(HEADS.findIndex(x=>x.id===arr[n+q].dataset.id));}});frLoad(i);nx.forEach(frLoad);frKeep([i].concat(nx));}
+function drawVis(ctx,x,y,w,h){const now=performance.now(),dt=(now-lvT)/1000,fr=lvFr[lvIdx];const ready=fr&&fr.every(im=>im.complete&&im.naturalWidth);
+  if(ready&&dt<FN/FF){const f=dt*FF,a=Math.min(FN-1,Math.floor(f)),b=Math.min(FN-1,a+1),fa=f-a;if(lvPrev&&dt<0.15){ctx.drawImage(lvPrev,x,y,w,h);ctx.globalAlpha=dt/0.15;}ctx.drawImage(fr[a],x,y,w,h);if(b!==a){ctx.globalAlpha=fa*(lvPrev&&dt<0.15?dt/0.15:1);ctx.drawImage(fr[b],x,y,w,h);}ctx.globalAlpha=1;return;}
+  const k=Math.min(1,(now-lvT)/300);if(lvPrev&&k<1){ctx.drawImage(lvPrev,x,y,w,h);ctx.globalAlpha=k;ctx.drawImage(lvCur,x,y,w,h);ctx.globalAlpha=1;}else if(lvCur)ctx.drawImage(lvCur,x,y,w,h);}
 function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
 function cover(c,v,x,y,w,h){const vw=v.videoWidth,vh=v.videoHeight;if(!vw)return;const k=Math.max(w/vw,h/vh),sw=w/k,sh=h/k;c.drawImage(v,(vw-sw)/2,(vh-sh)/2,sw,sh,x,y,w,h);}
 function liveDraw(W,H2,ctx,mode){
