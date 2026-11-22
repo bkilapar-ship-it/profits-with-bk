@@ -7,7 +7,7 @@ const { pointsOf } = require('./script');
 function teleprompterHtml(ep) {
   const total = ep.scenes.reduce((s, x) => s + x.dur, 0);
   const blocks = ep.scenes.map((s, i) => `<section class="blk" data-id="${esc(s.id)}" data-i="${i}"><img class="thumb" src="stills/scene-${i}.jpg" alt="" loading="lazy" onerror="this.style.display='none'"><div class="rvc"><button data-a="up">▲ Up</button><button data-a="down">▼ Down</button><button data-a="skip" class="skipbtn">Skip this scene</button></div><div class="cue"></div><ul class="pts">${pointsOf(s).map(x => `<li>${esc(x)}</li>`).join('')}</ul><p class="full">${esc(s.narration)}</p></section>`).join('');
-  const heads = JSON.stringify(ep.scenes.map(s => ({ id: s.id, h: s.heading, d: Math.round(s.dur) })));
+  let acc = 0; const heads = JSON.stringify(ep.scenes.map(s => { const o = { id: s.id, h: s.heading, d: Math.round(s.dur), st: acc, du: s.dur }; acc += s.dur; return o; }));
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Teleprompter: ${esc(ep.title)}</title>
 <style>
 :root{color-scheme:dark;--bar:128px}*{box-sizing:border-box}html,body{margin:0;height:100%;background:#05080F;color:#F2F6FF;font-family:-apple-system,BlinkMacSystemFont,'Inter',system-ui,sans-serif;-webkit-text-size-adjust:100%}
@@ -29,7 +29,7 @@ body.full .pts{display:none}body.full p.full{display:block}
 #row0{margin-bottom:8px}#row0 button{width:100%;background:#0E7A4B;border-color:#0E7A4B;font-size:17px;padding:15px}#row1,#row2{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}#row1{grid-template-columns:1.1fr 1fr 1fr 1fr}#row1 button{padding-left:4px;padding-right:4px}#row2{margin-top:8px}
 button{font:inherit;font-size:15px;font-weight:700;padding:13px 6px;border-radius:13px;border:1px solid #2A3B61;background:#121C33;color:#fff;touch-action:manipulation}
 button.go{background:#2563EB;border-color:#2563EB}button.rec{background:#C0213A;border-color:#C0213A}button.on{outline:2px solid #5B8CFF}
-#set{display:none;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px}#set.open{display:grid}
+select{background:#0E1626;color:#fff;border:1px solid #2A3B61;border-radius:10px;padding:10px;font-size:14px}#set{display:none;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px}#set.open{display:grid}
 body:not(.review) .blk.skip{display:none}
 .thumb,.rvc,#rvbar,#rvnote{display:none}
 body.review #stage{overflow-y:auto;-webkit-overflow-scrolling:touch}body.review #scroller{position:static;transform:none!important;padding:8px 14px 40px}body.review #line,body.review #row3,body.review #row0,body.review #row1,body.review #row2,body.review #set,body.review #cam{display:none}
@@ -46,6 +46,7 @@ body.review #stage{top:calc(74px + env(safe-area-inset-top))}
 label{font-size:11px;color:#8FA3C7;display:flex;flex-direction:column;gap:4px;font-weight:700;letter-spacing:.08em}input[type=range]{width:100%}
 </style></head><body>
 <video id="cam" playsinline muted autoplay></video>
+<video id="lvis" playsinline muted preload="auto" style="position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none"></video><canvas id="lcv" style="position:fixed;left:-9999px;top:0"></canvas>
 <div id="hud"><a href="../" class="nav">‹ Studio</a><a href="../combine.html" class="nav">Combine ›</a><span id="clock">00:00</span><span id="ttl">${esc(ep.title)} · aim for ${Math.floor(total / 60)}:${String(Math.round(total % 60)).padStart(2, '0')}</span></div><div id="msg"></div><div id="rvnote">Tap text to edit · move or skip scenes · saved on this phone</div>
 <div id="stage"><div id="scroller">${blocks}</div></div><div id="line"></div>
 <div id="bar">
@@ -54,7 +55,7 @@ label{font-size:11px;color:#8FA3C7;display:flex;flex-direction:column;gap:4px;fo
   <div id="row2"><button id="mode">Full script</button><button id="mir">Mirror</button><button id="gear">Settings</button></div>
   <div id="row3" style="margin-top:8px"><button id="review" style="width:100%">Review scenes and edit</button></div>
   <div id="rvbar"><button id="rvdone" class="go">▶ Done: back to the teleprompter</button><button id="rvreset">Reset</button></div>
-  <div id="set"><label>SPEED <b id="wpmv">110</b> words/min<input id="spd" type="range" min="50" max="200" step="5" value="110"></label><label>TEXT SIZE<input id="fs" type="range" min="20" max="60" value="26"></label></div>
+  <div id="set"><label>SPEED <b id="wpmv">110</b> words/min<input id="spd" type="range" min="50" max="200" step="5" value="110"></label><label>TEXT SIZE<input id="fs" type="range" min="20" max="60" value="26"></label><label>LIVE VIDEO<select id="lv"><option value="side">Combine live: side by side</option><option value="pip">Combine live: face in a corner</option><option value="off">Camera only (combine later)</option></select></label><label>QUALITY<select id="lq"><option value="720">720p</option><option value="1080">1080p</option></select></label></div>
 </div>
 <script>
 const HEADS=${heads},KEY='${ep.mode}-${ep.asOf}-${sigOf(ep.scenes)}';
@@ -86,6 +87,7 @@ $('rvreset').onclick=()=>{if(!confirm('Undo all your edits to this episode?'))re
 function apply(){if(document.body.classList.contains('review'))return;sc.style.transform='translateY('+(-y)+'px)'+(document.body.classList.contains('mirror')?' scaleX(-1)':'');
   const mid=$('line').getBoundingClientRect().top;let cur=0;const v=vis();v.forEach((b,i)=>{const r=b.getBoundingClientRect();if(r.top<=mid+10)cur=i;});
   blks().forEach(b=>b.classList.remove('now'));if(v[cur])v[cur].classList.add('now');
+  if(live&&v[cur]&&liveId!==v[cur].dataset.id)showScene(v[cur].dataset.id);
   if(t0&&cur>lastMark){for(let j=lastMark+1;j<=cur;j++)rt[v[j].dataset.id]=(Date.now()-t0)/1000;lastMark=cur;}}
 let ppw=14;function calcPpw(){try{const w=sc.innerText.trim().split(/\\s+/).length;if(w>20)ppw=sc.scrollHeight/w;}catch(e){}}setInterval(calcPpw,1500);
 function tick(ts){if(run){const dt=(ts-last)/1000;y+=parseFloat($('spd').value)/60*ppw*dt;const max=sc.scrollHeight-$('stage').clientHeight*.8;if(y>=max){y=max;run=false;$('play').textContent='▶ Start';}apply();}last=ts;if(t0)$('clock').textContent=fmt((Date.now()-t0)/1000);requestAnimationFrame(tick);}
@@ -105,21 +107,60 @@ addEventListener('touchmove',e=>{if(document.body.classList.contains('review'))r
 async function cam(){if(stream)return true;try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1920},height:{ideal:1080}},audio:{echoCancellation:true,noiseSuppression:true}});$('cam').srcObject=stream;document.body.classList.add('camon');$('cambtn').classList.add('on');return true;}catch(e){$('msg').textContent='Camera or microphone blocked: allow access in Safari settings for this page. ('+e.name+')';return false;}}
 $('cam').onclick=()=>$('cam').classList.toggle('hid');
 $('cambtn').onclick=async()=>{if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;document.body.classList.remove('camon');$('cambtn').classList.remove('on');}else await cam();};
+
+/* ---- live combine: camera + visuals composed while recording ---- */
+let live=false,liveId=null,liveEnd=0,liveRaf=0,lvBlob=null,lvPre=null,studioImg=null;
+const lvis=$('lvis'),lcv=$('lcv');
+function lvMode(){return ($('lv')&&$('lv').value)||'side';}
+function lvPrefetch(){if(lvMode()==='off'||lvPre)return lvPre;$('msg').textContent='Loading the visuals for live recording…';
+  lvPre=fetch('visuals.mp4').then(r=>{if(!r.ok)throw new Error('visuals');return r.blob();}).then(b=>{lvBlob=URL.createObjectURL(b);lvis.src=lvBlob;lvis.load();$('msg').textContent='Visuals ready ('+(b.size/1048576).toFixed(0)+' MB). Live recording is on.';return true;}).catch(()=>{lvPre=null;$('msg').textContent='Could not load the visuals, so this take will be camera only.';return false;});return lvPre;}
+function showScene(id){liveId=id;const h=H(id);if(!h)return;lvis.currentTime=h.st;lvis.play().catch(()=>{});liveEnd=h.st+h.du-0.1;}
+function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
+function cover(c,v,x,y,w,h){const vw=v.videoWidth,vh=v.videoHeight;if(!vw)return;const k=Math.max(w/vw,h/vh),sw=w/k,sh=h/k;c.drawImage(v,(vw-sw)/2,(vh-sh)/2,sw,sh,x,y,w,h);}
+function liveDraw(W,H2,ctx,mode){
+  if(!live)return;
+  if(liveEnd&&lvis.currentTime>=liveEnd&&!lvis.paused)lvis.pause();
+  const cam=$('cam');ctx.fillStyle='#02050A';ctx.fillRect(0,0,W,H2);
+  if(mode==='side'){
+    if(studioImg&&studioImg.complete&&studioImg.naturalWidth)ctx.drawImage(studioImg,0,0,W,H2);else{const q=ctx.createLinearGradient(0,0,W,H2);q.addColorStop(0,'#0A1426');q.addColorStop(1,'#02050A');ctx.fillStyle=q;ctx.fillRect(0,0,W,H2);}
+    const m=Math.round(W*.012),vw=Math.round(W*.72),vh=Math.round(vw*9/16),vy=Math.round((H2-vh)/2),vx=W-vw-m;
+    ctx.save();ctx.shadowColor='rgba(38,208,255,.35)';ctx.shadowBlur=H2*.02;rr(ctx,vx,vy,vw,vh,H2*.012);ctx.fillStyle='#000';ctx.fill();ctx.restore();
+    ctx.save();rr(ctx,vx,vy,vw,vh,H2*.012);ctx.clip();ctx.drawImage(lvis,vx,vy,vw,vh);ctx.restore();
+    const fx=m,fw=vx-m*2,fh=Math.min(Math.round(fw*1.25),vh),fy=Math.round((H2-fh)/2);
+    ctx.save();ctx.shadowColor='rgba(38,208,255,.55)';ctx.shadowBlur=H2*.025;rr(ctx,fx,fy,fw,fh,H2*.02);ctx.fillStyle='#000';ctx.fill();ctx.restore();
+    ctx.save();rr(ctx,fx,fy,fw,fh,H2*.02);ctx.clip();cover(ctx,cam,fx,fy,fw,fh);ctx.restore();
+    ctx.strokeStyle='#26D0FF';ctx.lineWidth=Math.max(2,H2*.003);rr(ctx,fx,fy,fw,fh,H2*.02);ctx.stroke();
+  }else{
+    ctx.drawImage(lvis,0,0,W,H2);
+    const d=Math.round(H2*.30),m=Math.round(H2*.05),x=W-d-m,y=H2-d-Math.round(H2*.1);
+    ctx.save();ctx.beginPath();ctx.arc(x+d/2,y+d/2,d/2,0,Math.PI*2);ctx.clip();cover(ctx,cam,x,y,d,d);ctx.restore();
+    ctx.strokeStyle='#5B8CFF';ctx.lineWidth=Math.max(3,H2*.006);ctx.beginPath();ctx.arc(x+d/2,y+d/2,d/2,0,Math.PI*2);ctx.stroke();
+  }
+  liveRaf=requestAnimationFrame(()=>liveDraw(W,H2,ctx,mode));
+}
+function stopLive(){live=false;cancelAnimationFrame(liveRaf);try{lvis.pause();}catch(e){}}
+try{const sv=store.get('bkstudio-live');if(sv){if(sv.m)$('lv').value=sv.m;if(sv.q)$('lq').value=sv.q;}}catch(e){}
+$('lv').onchange=$('lq').onchange=()=>{store.set('bkstudio-live',{m:$('lv').value,q:$('lq').value});if(lvMode()!=='off')lvPrefetch();else $('msg').textContent='Camera only: you will combine the video later on the Combine page.';};
+if(lvMode()!=='off')setTimeout(lvPrefetch,1500);
 $('rst').onclick=()=>{
   const recording=mr&&mr.state==='recording';
   if(!confirm(recording?'Restart? This throws away the take so far (nothing is saved) and takes you back to the first page of the script.':'Go back to the first page of the script?'))return;
-  if(recording){mr.onstop=null;mr.ondataavailable=null;try{mr.stop();}catch(e){}chunks=[];rt={};lastMark=0;t0=0;$('rec').textContent='● Record';$('rec').classList.remove('on');}
+  if(recording){stopLive();mr.onstop=null;mr.ondataavailable=null;try{mr.stop();}catch(e){}chunks=[];rt={};lastMark=0;t0=0;$('rec').textContent='● Record';$('rec').classList.remove('on');}
   run=false;$('play').textContent='▶ Start';y=0;apply();$('msg').textContent=recording?'Take discarded. Press Record when you are ready to go again.':'';
 };
 $('rec').onclick=async()=>{
-  if(mr&&mr.state==='recording'){mr.stop();return;}
+  if(mr&&mr.state==='recording'){stopLive();mr.stop();return;}
+  const wantLive=lvMode()!=='off';if(wantLive){lvis.play().then(()=>lvis.pause()).catch(()=>{});}
   if(!(await cam()))return;
+  let useLive=false;if(wantLive){$('msg').textContent='Getting ready…';useLive=!!(await lvPrefetch());if(useLive){await new Promise(r=>{if(lvis.readyState>=2)return r();lvis.addEventListener('loadeddata',()=>r(),{once:true});setTimeout(r,5000);});studioImg=new Image();studioImg.src='studio-bg.png?'+Date.now();await new Promise(r=>{studioImg.onload=studioImg.onerror=r;setTimeout(r,2500);});}}
   const opts=['video/mp4;codecs=avc1,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm'];mime=opts.find(t=>window.MediaRecorder&&MediaRecorder.isTypeSupported(t))||'';
   if(!window.MediaRecorder){$('msg').textContent='This browser cannot record in the page. Use your Camera app and read from this page on another screen.';return;}
-  chunks=[];mr=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:8e6}:undefined);
+  let rstream=stream,lH=parseInt($('lq').value,10)||720;
+  if(useLive){const LW=Math.round(lH*16/9);lcv.width=LW;lcv.height=lH;const lc=lcv.getContext('2d');rstream=lcv.captureStream(30);stream.getAudioTracks().forEach(t=>rstream.addTrack(t));window._lg={W:LW,H:lH,c:lc,used:true};}else window._lg=null;
+  chunks=[];mr=new MediaRecorder(rstream,mime?{mimeType:mime,videoBitsPerSecond:useLive?(lH>=1080?8e6:4e6):8e6,audioBitsPerSecond:128e3}:undefined);
   mr.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
-  mr.onstop=()=>{t0=0;store.set('bkstudio-marks2-'+KEY,{order:vis().map(b=>b.dataset.id),t:rt});$('rec').textContent='● Record';$('rec').classList.remove('on');const type=mr.mimeType||mime||'video/mp4';const blob=new Blob(chunks,{type});const ext=/mp4/.test(type)?'mp4':'webm';const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='recording-${esc(ep.asOf)}.'+ext;document.body.appendChild(a);a.click();a.remove();$('msg').textContent='Saved. If nothing downloaded, long-press the video that opened and choose Save.';};
-  rt={};{const v0=vis();if(v0[0])rt[v0[0].dataset.id]=0;}lastMark=0;mr.start(1000);t0=Date.now();$('rec').textContent='■ Stop and save';$('rec').classList.add('on');y=0;apply();
+  mr.onstop=()=>{t0=0;store.set('bkstudio-marks2-'+KEY,{order:vis().map(b=>b.dataset.id),t:rt});$('rec').textContent='● Record';$('rec').classList.remove('on');const type=mr.mimeType||mime||'video/mp4';const blob=new Blob(chunks,{type});const ext=/mp4/.test(type)?'mp4':'webm';const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(window._lg&&window._lg.used?'trade-with-bk-':'recording-')+'${esc(ep.asOf)}.'+ext;document.body.appendChild(a);a.click();a.remove();stopLive();$('msg').textContent=(window._lg&&window._lg.used?'Your finished video is saved (camera and visuals together). ':'Saved. ')+'If nothing downloaded, long-press the video that opened and choose Save.';};
+  rt={};{const v0=vis();if(v0[0])rt[v0[0].dataset.id]=0;}lastMark=0;mr.start(1000);t0=Date.now();if(useLive){live=true;liveId=null;const v1=vis();if(v1[0])showScene(v1[0].dataset.id);liveDraw(window._lg.W,window._lg.H,window._lg.c,lvMode());}$('rec').textContent='■ Stop and save';$('rec').classList.add('on');y=0;apply();
 };
 try{const sv=store.get('bkstudio-wpm');if(sv)$('spd').value=sv;}catch(e){}
 $('wpmv').textContent=$('spd').value;$('spd').addEventListener('input',()=>{$('wpmv').textContent=$('spd').value;try{store.set('bkstudio-wpm',$('spd').value);}catch(e){}});
