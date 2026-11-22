@@ -54,7 +54,7 @@ label{font-size:11px;color:#8FA3C7;display:flex;flex-direction:column;gap:4px;fo
   <div id="row2"><button id="mode">Full script</button><button id="mir">Mirror</button><button id="gear">Settings</button></div>
   <div id="row3" style="margin-top:8px"><button id="review" style="width:100%">Review scenes and edit</button></div>
   <div id="rvbar"><button id="rvdone" class="go">▶ Done: back to the teleprompter</button><button id="rvreset">Reset</button></div>
-  <div id="set"><label>SPEED<input id="spd" type="range" min="8" max="140" value="40"></label><label>TEXT SIZE<input id="fs" type="range" min="20" max="60" value="26"></label></div>
+  <div id="set"><label>SPEED <b id="wpmv">110</b> words/min<input id="spd" type="range" min="50" max="200" step="5" value="110"></label><label>TEXT SIZE<input id="fs" type="range" min="20" max="60" value="26"></label></div>
 </div>
 <script>
 const HEADS=${heads},KEY='${ep.mode}-${ep.asOf}-${sigOf(ep.scenes)}';
@@ -87,7 +87,8 @@ function apply(){if(document.body.classList.contains('review'))return;sc.style.t
   const mid=$('line').getBoundingClientRect().top;let cur=0;const v=vis();v.forEach((b,i)=>{const r=b.getBoundingClientRect();if(r.top<=mid+10)cur=i;});
   blks().forEach(b=>b.classList.remove('now'));if(v[cur])v[cur].classList.add('now');
   if(t0&&cur>lastMark){for(let j=lastMark+1;j<=cur;j++)rt[v[j].dataset.id]=(Date.now()-t0)/1000;lastMark=cur;}}
-function tick(ts){if(run){const dt=(ts-last)/1000;y+=parseFloat($('spd').value)*dt;const max=sc.scrollHeight-$('stage').clientHeight*.8;if(y>=max){y=max;run=false;$('play').textContent='▶ Start';}apply();}last=ts;if(t0)$('clock').textContent=fmt((Date.now()-t0)/1000);requestAnimationFrame(tick);}
+let ppw=14;function calcPpw(){try{const w=sc.innerText.trim().split(/\\s+/).length;if(w>20)ppw=sc.scrollHeight/w;}catch(e){}}setInterval(calcPpw,1500);
+function tick(ts){if(run){const dt=(ts-last)/1000;y+=parseFloat($('spd').value)/60*ppw*dt;const max=sc.scrollHeight-$('stage').clientHeight*.8;if(y>=max){y=max;run=false;$('play').textContent='▶ Start';}apply();}last=ts;if(t0)$('clock').textContent=fmt((Date.now()-t0)/1000);requestAnimationFrame(tick);}
 const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0');
 $('play').onclick=()=>{run=!run;$('play').textContent=run?'❚❚ Pause':'▶ Start';};
 $('next').onclick=()=>{const bl=vis();let cur=0;bl.forEach((b,i)=>{if(b.classList.contains('now'))cur=i;});const j=Math.min(bl.length-1,cur+1);if(j===cur)return;const lineRel=$('line').getBoundingClientRect().top-$('stage').getBoundingClientRect().top;y=Math.max(0,bl[j].offsetTop-lineRel+4);apply();};
@@ -113,7 +114,9 @@ $('rec').onclick=async()=>{
   mr.onstop=()=>{t0=0;store.set('bkstudio-marks2-'+KEY,{order:vis().map(b=>b.dataset.id),t:rt});$('rec').textContent='● Record';$('rec').classList.remove('on');const type=mr.mimeType||mime||'video/mp4';const blob=new Blob(chunks,{type});const ext=/mp4/.test(type)?'mp4':'webm';const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='recording-${esc(ep.asOf)}.'+ext;document.body.appendChild(a);a.click();a.remove();$('msg').textContent='Saved. If nothing downloaded, long-press the video that opened and choose Save.';};
   rt={};{const v0=vis();if(v0[0])rt[v0[0].dataset.id]=0;}lastMark=0;mr.start(1000);t0=Date.now();$('rec').textContent='■ Stop and save';$('rec').classList.add('on');y=0;apply();
 };
-loadPlan();requestAnimationFrame(tick);fit();if(location.hash==='#review')$('review').click();
+try{const sv=store.get('bkstudio-wpm');if(sv)$('spd').value=sv;}catch(e){}
+$('wpmv').textContent=$('spd').value;$('spd').addEventListener('input',()=>{$('wpmv').textContent=$('spd').value;try{store.set('bkstudio-wpm',$('spd').value);}catch(e){}});
+loadPlan();calcPpw();requestAnimationFrame(tick);fit();if(location.hash==='#review')$('review').click();
 </script></body></html>`;
 }
 module.exports = { teleprompterHtml };
