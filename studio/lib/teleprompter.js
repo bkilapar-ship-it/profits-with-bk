@@ -55,7 +55,7 @@ label{font-size:11px;color:#8FA3C7;display:flex;flex-direction:column;gap:4px;fo
   <div id="row2"><button id="mode">Full script</button><button id="mir">Mirror</button><button id="gear">Settings</button></div>
   <div id="row3" style="margin-top:8px"><button id="review" style="width:100%">Review scenes and edit</button></div>
   <div id="rvbar"><button id="rvdone" class="go">▶ Done: back to the teleprompter</button><button id="rvreset">Reset</button></div>
-  <div id="set"><label>SPEED <b id="wpmv">110</b> words/min<input id="spd" type="range" min="50" max="200" step="5" value="110"></label><label>TEXT SIZE<input id="fs" type="range" min="20" max="60" value="26"></label><label>LIVE VIDEO<select id="lv"><option value="side">Combine live: side by side</option><option value="pip">Combine live: face in a corner</option><option value="off">Camera only (combine later)</option></select></label><label>QUALITY<select id="lq"><option value="720">720p</option><option value="1080">1080p</option></select></label></div>
+  <div id="set"><label>SPEED <b id="wpmv">110</b> words/min<input id="spd" type="range" min="50" max="200" step="5" value="110"></label><label>TEXT SIZE<input id="fs" type="range" min="20" max="60" value="26"></label><label>LIVE VIDEO<select id="lv"><option value="side">Combine live: side by side</option><option value="pip">Combine live: face in a corner</option><option value="off">Camera only (combine later)</option></select></label><label>BACKUP COPY<select id="lb"><option value="on">Also save the plain camera file</option><option value="off">No backup</option></select></label><label>QUALITY<select id="lq"><option value="720">720p</option><option value="1080">1080p</option></select></label></div>
 </div>
 <script>
 const HEADS=${heads},KEY='${ep.mode}-${ep.asOf}-${sigOf(ep.scenes)}';
@@ -105,22 +105,22 @@ addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();$('play')
 let touchY=null;addEventListener('touchstart',e=>{touchY=e.touches[0].clientY;},{passive:true});
 addEventListener('touchmove',e=>{if(document.body.classList.contains('review'))return;if(touchY===null||e.target.closest('#bar'))return;const d=touchY-e.touches[0].clientY;touchY=e.touches[0].clientY;y=Math.max(0,y+d);apply();},{passive:true});
 async function cam(){if(stream)return true;try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1920},height:{ideal:1080}},audio:{echoCancellation:true,noiseSuppression:true}});$('cam').srcObject=stream;document.body.classList.add('camon');$('cambtn').classList.add('on');return true;}catch(e){$('msg').textContent='Camera or microphone blocked: allow access in Safari settings for this page. ('+e.name+')';return false;}}
-$('cam').onclick=()=>$('cam').classList.toggle('hid');
+$('cam').onclick=()=>{if(live)return;$('cam').classList.toggle('hid');};
 $('cambtn').onclick=async()=>{if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;document.body.classList.remove('camon');$('cambtn').classList.remove('on');}else await cam();};
 
 /* ---- live combine: camera + visuals composed while recording ---- */
-let live=false,liveId=null,liveEnd=0,liveRaf=0,lvBlob=null,lvPre=null,studioImg=null;
+let bmr=null,bchunks=[];let live=false,liveId=null,liveEnd=0,liveRaf=0,lvBlob=null,lvPre=null,studioImg=null;
 const lvis=$('lvis'),lcv=$('lcv');
 function lvMode(){return ($('lv')&&$('lv').value)||'side';}
 function lvPrefetch(){if(lvMode()==='off'||lvPre)return lvPre;$('msg').textContent='Loading the visuals for live recording…';
-  lvPre=fetch('visuals.mp4').then(r=>{if(!r.ok)throw new Error('visuals');return r.blob();}).then(b=>{lvBlob=URL.createObjectURL(b);lvis.src=lvBlob;lvis.load();$('msg').textContent='Visuals ready ('+(b.size/1048576).toFixed(0)+' MB). Live recording is on.';return true;}).catch(()=>{lvPre=null;$('msg').textContent='Could not load the visuals, so this take will be camera only.';return false;});return lvPre;}
+  lvPre=fetch('visuals-720.mp4').then(r=>{if(!r.ok)throw new Error('x');return r;}).catch(()=>fetch('visuals.mp4')).then(r=>{if(!r.ok)throw new Error('visuals');return r.blob();}).then(b=>{lvBlob=URL.createObjectURL(b);lvis.src=lvBlob;lvis.load();$('msg').textContent='Visuals ready ('+(b.size/1048576).toFixed(0)+' MB). Live recording is on.';return true;}).catch(()=>{lvPre=null;$('msg').textContent='Could not load the visuals, so this take will be camera only.';return false;});return lvPre;}
 function showScene(id){liveId=id;const h=H(id);if(!h)return;lvis.currentTime=h.st;lvis.play().catch(()=>{});liveEnd=h.st+h.du-0.1;}
 function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
 function cover(c,v,x,y,w,h){const vw=v.videoWidth,vh=v.videoHeight;if(!vw)return;const k=Math.max(w/vw,h/vh),sw=w/k,sh=h/k;c.drawImage(v,(vw-sw)/2,(vh-sh)/2,sw,sh,x,y,w,h);}
 function liveDraw(W,H2,ctx,mode){
   if(!live)return;
   if(liveEnd&&lvis.currentTime>=liveEnd&&!lvis.paused)lvis.pause();
-  const cam=$('cam');ctx.fillStyle='#02050A';ctx.fillRect(0,0,W,H2);
+  const cam=$('cam');watch(cam);ctx.fillStyle='#02050A';ctx.fillRect(0,0,W,H2);
   if(mode==='side'){
     if(studioImg&&studioImg.complete&&studioImg.naturalWidth)ctx.drawImage(studioImg,0,0,W,H2);else{const q=ctx.createLinearGradient(0,0,W,H2);q.addColorStop(0,'#0A1426');q.addColorStop(1,'#02050A');ctx.fillStyle=q;ctx.fillRect(0,0,W,H2);}
     const m=Math.round(W*.012),vw=Math.round(W*.72),vh=Math.round(vw*9/16),vy=Math.round((H2-vh)/2),vx=W-vw-m;
@@ -138,14 +138,20 @@ function liveDraw(W,H2,ctx,mode){
   }
   liveRaf=requestAnimationFrame(()=>liveDraw(W,H2,ctx,mode));
 }
-function stopLive(){live=false;cancelAnimationFrame(liveRaf);try{lvis.pause();}catch(e){}}
-try{const sv=store.get('bkstudio-live');if(sv){if(sv.m)$('lv').value=sv.m;if(sv.q)$('lq').value=sv.q;}}catch(e){}
-$('lv').onchange=$('lq').onchange=()=>{store.set('bkstudio-live',{m:$('lv').value,q:$('lq').value});if(lvMode()!=='off')lvPrefetch();else $('msg').textContent='Camera only: you will combine the video later on the Combine page.';};
+let wCt=-1,wAt=0,wFix=0,hiccups=0,wl=null;
+function watch(cam){const now=performance.now();if(cam.currentTime!==wCt){wCt=cam.currentTime;wAt=now;return;}
+  if(now-wAt>1500&&now-wFix>1500){wFix=now;cam.play().catch(()=>{});}
+  if(now-wAt>4000){hiccups++;$('msg').textContent='Camera froze for a moment, recovering…';try{cam.srcObject=null;cam.srcObject=stream;cam.play().catch(()=>{});}catch(e){}wAt=now;}}
+async function getWake(){try{if(navigator.wakeLock)wl=await navigator.wakeLock.request('screen');}catch(e){}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&mr&&mr.state==='recording')getWake();});
+function stopLive(){try{if(wl){wl.release();wl=null;}}catch(e){}live=false;cancelAnimationFrame(liveRaf);try{lvis.pause();}catch(e){}}
+try{const sv=store.get('bkstudio-live');if(sv){if(sv.m)$('lv').value=sv.m;if(sv.q)$('lq').value=sv.q;if(sv.b)$('lb').value=sv.b;}}catch(e){}
+$('lv').onchange=$('lq').onchange=$('lb').onchange=()=>{store.set('bkstudio-live',{m:$('lv').value,q:$('lq').value,b:$('lb').value});if(lvMode()!=='off')lvPrefetch();else $('msg').textContent='Camera only: you will combine the video later on the Combine page.';};
 if(lvMode()!=='off')setTimeout(lvPrefetch,1500);
 $('rst').onclick=()=>{
   const recording=mr&&mr.state==='recording';
   if(!confirm(recording?'Restart? This throws away the take so far (nothing is saved) and takes you back to the first page of the script.':'Go back to the first page of the script?'))return;
-  if(recording){stopLive();mr.onstop=null;mr.ondataavailable=null;try{mr.stop();}catch(e){}chunks=[];rt={};lastMark=0;t0=0;$('rec').textContent='● Record';$('rec').classList.remove('on');}
+  if(recording){stopLive();if(bmr){try{bmr.onstop=null;bmr.ondataavailable=null;bmr.stop();}catch(e){}bmr=null;}mr.onstop=null;mr.ondataavailable=null;try{mr.stop();}catch(e){}chunks=[];rt={};lastMark=0;t0=0;$('rec').textContent='● Record';$('rec').classList.remove('on');}
   run=false;$('play').textContent='▶ Start';y=0;apply();$('msg').textContent=recording?'Take discarded. Press Record when you are ready to go again.':'';
 };
 $('rec').onclick=async()=>{
@@ -159,8 +165,10 @@ $('rec').onclick=async()=>{
   if(useLive){const LW=Math.round(lH*16/9);lcv.width=LW;lcv.height=lH;const lc=lcv.getContext('2d');rstream=lcv.captureStream(30);stream.getAudioTracks().forEach(t=>rstream.addTrack(t));window._lg={W:LW,H:lH,c:lc,used:true};}else window._lg=null;
   chunks=[];mr=new MediaRecorder(rstream,mime?{mimeType:mime,videoBitsPerSecond:useLive?(lH>=1080?8e6:4e6):8e6,audioBitsPerSecond:128e3}:undefined);
   mr.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
-  mr.onstop=()=>{t0=0;store.set('bkstudio-marks2-'+KEY,{order:vis().map(b=>b.dataset.id),t:rt});$('rec').textContent='● Record';$('rec').classList.remove('on');const type=mr.mimeType||mime||'video/mp4';const blob=new Blob(chunks,{type});const ext=/mp4/.test(type)?'mp4':'webm';const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(window._lg&&window._lg.used?'trade-with-bk-':'recording-')+'${esc(ep.asOf)}.'+ext;document.body.appendChild(a);a.click();a.remove();stopLive();$('msg').textContent=(window._lg&&window._lg.used?'Your finished video is saved (camera and visuals together). ':'Saved. ')+'If nothing downloaded, long-press the video that opened and choose Save.';};
-  rt={};{const v0=vis();if(v0[0])rt[v0[0].dataset.id]=0;}lastMark=0;mr.start(1000);t0=Date.now();if(useLive){live=true;liveId=null;const v1=vis();if(v1[0])showScene(v1[0].dataset.id);liveDraw(window._lg.W,window._lg.H,window._lg.c,lvMode());}$('rec').textContent='■ Stop and save';$('rec').classList.add('on');y=0;apply();
+  bmr=null;bchunks=[];if(useLive&&$('lb').value==='on'){try{bmr=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:3e6,audioBitsPerSecond:96e3}:undefined);bmr.ondataavailable=e=>{if(e.data&&e.data.size)bchunks.push(e.data);};}catch(e){bmr=null;}}
+  mr.onstop=()=>{t0=0;store.set('bkstudio-marks2-'+KEY,{order:vis().map(b=>b.dataset.id),t:rt});$('rec').textContent='● Record';$('rec').classList.remove('on');const type=mr.mimeType||mime||'video/mp4';const blob=new Blob(chunks,{type});const ext=/mp4/.test(type)?'mp4':'webm';const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(window._lg&&window._lg.used?'trade-with-bk-':'recording-')+'${esc(ep.asOf)}.'+ext;document.body.appendChild(a);a.click();a.remove();if(bmr&&bmr.state!=='inactive'){const bm=bmr;bm.onstop=()=>{const bb=new Blob(bchunks,{type:bm.mimeType||type});const a2=document.createElement('a');a2.href=URL.createObjectURL(bb);a2.download='camera-backup-${esc(ep.asOf)}.'+ext;document.body.appendChild(a2);setTimeout(()=>{a2.click();a2.remove();},1500);};try{bm.stop();}catch(e){}}
+  stopLive();$('msg').textContent=(hiccups?'The camera stalled '+hiccups+' time(s) during this take, so check your video. ':'')+(window._lg&&window._lg.used?'Your finished video is saved (camera and visuals together). ':'Saved. ')+'If nothing downloaded, long-press the video that opened and choose Save.';};
+  rt={};{const v0=vis();if(v0[0])rt[v0[0].dataset.id]=0;}lastMark=0;mr.start(1000);if(bmr)try{bmr.start(2000);}catch(e){}t0=Date.now();hiccups=0;getWake();wCt=-1;wAt=performance.now();if(useLive){live=true;liveId=null;const v1=vis();if(v1[0])showScene(v1[0].dataset.id);liveDraw(window._lg.W,window._lg.H,window._lg.c,lvMode());}$('rec').textContent='■ Stop and save';$('rec').classList.add('on');y=0;apply();
 };
 try{const sv=store.get('bkstudio-wpm');if(sv)$('spd').value=sv;}catch(e){}
 $('wpmv').textContent=$('spd').value;$('spd').addEventListener('input',()=>{$('wpmv').textContent=$('spd').value;try{store.set('bkstudio-wpm',$('spd').value);}catch(e){}});

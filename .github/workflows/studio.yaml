@@ -80,7 +80,7 @@ jobs:
           if git fetch -q --depth=1 origin studio-latest 2>/dev/null; then git archive FETCH_HEAD | tar -x -C /tmp/pub; fi
           m="${{ steps.mode.outputs.m }}"
           rm -rf "/tmp/pub/$m"; mkdir -p "/tmp/pub/$m"
-          cp studio-out/$m/{visuals.mp4,thumbnail.png,thumbnail-bg.png,studio-bg.png,script.txt,metadata.txt,teleprompter.html,meta.json,scenes.json} "/tmp/pub/$m/"
+          cp studio-out/$m/{visuals.mp4,visuals-720.mp4,thumbnail.png,thumbnail-bg.png,studio-bg.png,script.txt,metadata.txt,teleprompter.html,meta.json,scenes.json} "/tmp/pub/$m/"
           [ -d studio-out/$m/stills ] && cp -r studio-out/$m/stills "/tmp/pub/$m/stills"
           cp studio/combine.html /tmp/pub/combine.html
           node studio/publish-index.js /tmp/pub
