@@ -103,7 +103,7 @@ function buildWelcome({ setups, config, news }) {
   add('intro', 'intro', 'Welcome to Trade With BK',
     `Hi everyone, I'm Bharat, and welcome to ${ch}. This is episode one, so let me tell you what we're doing here, how the strategy works, and how to use it safely. Then we'll look at what the market did this week, and the five best signals the screener found for ${nx}.`,
     ["Hi, I'm Bharat", `Welcome to ${ch}: episode one`, 'What the channel is, how it works, how to use it safely', `This week's market, and ${nx}'s top five`],
-    { date: `Episode 1 · ${dayShort(asOf)}`, kicker: 'Episode 1', chips: ['Hosted by Bharat', 'S&P 500 signals every weekday', 'Weekly review on Fridays'], market: m });
+    { date: `Episode 1 · ${dayShort(asOf)}`, kicker: 'Episode 1', chips: ['S&P 500 signals every weekday', 'Weekly review on Fridays'], market: m });
 
   add('channel', 'bullets', 'WHAT THIS CHANNEL IS FOR',
     `So, what is this channel? Every weekday after the US market closes, I run one screen across the S&P 500, and I show you exactly what it found, with the reasons behind every pick. On Fridays, I'll also do a weekly review: what the market did, and what I'm watching next. It's one strategy, one process, the same every day. I won't hype stocks, and I won't predict prices. The goal is simple: show you a clear, tested way to look at pullbacks in strong stocks, and let you decide what to do with it.`,

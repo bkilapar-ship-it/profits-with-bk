@@ -66,12 +66,14 @@ async function loadEpisodes(){
   if(!found){$('epinfo').innerHTML='<span class="err">No episode found yet. Build one first.</span>';return;}
   sel.onchange=pick;pick();
 }
-function planKey(){return 'bkstudio-plan-'+ep.j.mode+'-'+ep.j.asOf;}
+function sigOf(sc){let h=5381;const t=sc.map(x=>x.id).join('|');for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))>>>0;return h.toString(36);}
+function mkey(){return ep.j.mode+'-'+ep.j.asOf+'-'+sigOf(ep.j.scenes);}
+function planKey(){return 'bkstudio-plan-'+mkey();}
 function pick(){
   const o=$('ep').selectedOptions[0];if(!o)return;const j=JSON.parse(o.dataset.j);ep={m:o.value,j};let t=0;all=j.scenes.map(s=>{const a={...s,start:t};t+=s.dur;return a;});
   const p=store.get(planKey())||{};planOrder=(p.order&&p.order.length?p.order.filter(id=>all.some(s=>s.id===id)):[]);all.forEach(s=>{if(!planOrder.includes(s.id))planOrder.push(s.id);});skipSet=new Set(p.skip||[]);markById={};
   visUrl=null;prefetch();$('navtp').href=ep.m+'/teleprompter.html';$('epinfo').textContent=all.length+' scenes · '+fmt(t)+' of visuals';
-  const a=store.get('bkstudio-marks2-'+ep.j.mode+'-'+ep.j.asOf);$('auto').style.display=(a&&a.t)?'':'none';
+  const a=store.get('bkstudio-marks2-'+mkey());$('auto').style.display=(a&&a.t)?'':'none';
   rebuild();
 }
 function savePlan(){const p=store.get(planKey())||{};p.order=planOrder;p.skip=[...skipSet];store.set(planKey(),p);}
@@ -93,7 +95,7 @@ $('rec').onchange=e=>{
   v.onerror=()=>{$('recinfo').innerHTML='<span class="err">This browser cannot play that file. Try an .mp4 or .mov recording.</span>';};
 };
 function loadAuto(){}
-$('auto').onclick=()=>{const a=store.get('bkstudio-marks2-'+ep.j.mode+'-'+ep.j.asOf);if(!a||!a.t)return;if(a.order){const rest=planOrder.filter(id=>!a.order.includes(id));planOrder=a.order.filter(id=>all.some(s=>s.id===id)).concat(rest);skipSet=new Set(rest.filter(id=>skipSet.has(id)||true));savePlan();}markById={};Object.entries(a.t).forEach(([id,t])=>{markById[id]=t;});rebuild();};
+$('auto').onclick=()=>{const a=store.get('bkstudio-marks2-'+mkey());if(!a||!a.t)return;if(a.order){const rest=planOrder.filter(id=>!a.order.includes(id));planOrder=a.order.filter(id=>all.some(s=>s.id===id)).concat(rest);skipSet=new Set(rest.filter(id=>skipSet.has(id)||true));savePlan();}markById={};Object.entries(a.t).forEach(([id,t])=>{markById[id]=t;});rebuild();};
 function renderMarks(){
   const n=scenes.length,nxt=marks.findIndex((m,k)=>k>0&&m==null);
   $('tap').textContent=nxt<0?'All scenes marked':'Scene '+(nxt+1)+' starts now';$('tap').disabled=nxt<0;

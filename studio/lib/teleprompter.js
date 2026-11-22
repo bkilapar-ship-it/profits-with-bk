@@ -1,4 +1,5 @@
 'use strict';
+const sigOf=(sc)=>{let h=5381;const t=sc.map(x=>x.id).join('|');for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))>>>0;return h.toString(36);};
 /* One self-contained HTML page: the script as a teleprompter, with an optional front-camera recorder (works offline, nothing is uploaded). */
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
@@ -36,6 +37,7 @@ body.review .thumb{display:block;width:100%;border-radius:12px;border:1px solid 
 body.review .rvc{display:flex;gap:8px;margin-bottom:8px}body.review .rvc button{flex:1;padding:9px 6px;font-size:13px}
 body.review .blk{background:#0B1222;border:1px solid #1E2A44;border-radius:16px;padding:12px;margin:0 0 14px}
 body.review .blk.skip{opacity:.45}body.review .blk .pts li,body.review .blk p.full{color:#fff}
+body.review p.full{display:block;font-size:17px;font-weight:500;line-height:1.5;color:#B8C6E0;margin-top:10px;border-top:1px solid #243049;padding-top:8px}body.review p.full::before{content:'FULL SCRIPT';display:block;font-size:11px;letter-spacing:.14em;color:#6F86B3;margin-bottom:4px}
 body.review .pts{outline:none;border-radius:10px;padding:6px 4px;border:1px dashed #2A3B61;min-height:2em}
 body.review .pts li{font-size:18px;font-weight:700}
 body.review #rvbar{display:grid;grid-template-columns:2fr 1fr;gap:8px}body.review #rvnote{display:block;position:fixed;left:14px;right:14px;top:calc(46px + env(safe-area-inset-top));font-size:12px;color:#9DB8FF;z-index:4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -54,7 +56,7 @@ label{font-size:11px;color:#8FA3C7;display:flex;flex-direction:column;gap:4px;fo
   <div id="set"><label>SPEED<input id="spd" type="range" min="8" max="140" value="40"></label><label>TEXT SIZE<input id="fs" type="range" min="20" max="60" value="26"></label></div>
 </div>
 <script>
-const HEADS=${heads},KEY='${ep.mode}-${ep.asOf}';
+const HEADS=${heads},KEY='${ep.mode}-${ep.asOf}-${sigOf(ep.scenes)}';
 const $=id=>document.getElementById(id);let rt={},lastMark=0;let y=0,run=false,last=0,stream=null,mr=null,chunks=[],t0=0,mime='';
 const sc=$('scroller');
 const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
