@@ -37,6 +37,7 @@ body.review .thumb{display:block;width:100%;border-radius:12px;border:1px solid 
 body.review .rvc{display:flex;gap:8px;margin-bottom:8px}body.review .rvc button{flex:1;padding:9px 6px;font-size:13px}
 body.review .blk{background:#0B1222;border:1px solid #1E2A44;border-radius:16px;padding:12px;margin:0 0 14px}
 body.review .blk.skip{opacity:.45}body.review .blk .pts li,body.review .blk p.full{color:#fff}
+body.review p.full[contenteditable]{outline:1px dashed #3D5A99;border-radius:8px;padding:10px;color:#fff;background:#0E1626}
 body.review p.full{display:block;font-size:17px;font-weight:500;line-height:1.5;color:#B8C6E0;margin-top:10px;border-top:1px solid #243049;padding-top:8px}body.review p.full::before{content:'FULL SCRIPT';display:block;font-size:11px;letter-spacing:.14em;color:#6F86B3;margin-bottom:4px}
 body.review .pts{outline:none;border-radius:10px;padding:6px 4px;border:1px dashed #2A3B61;min-height:2em}
 body.review .pts li{font-size:18px;font-weight:700}
@@ -64,23 +65,23 @@ const blks=()=>[...document.querySelectorAll('.blk')];
 const vis=()=>blks().filter(b=>!b.classList.contains('skip'));
 const H=id=>HEADS.find(x=>x.id===id);
 /* ---- plan: order, skipped scenes, edited points (shared with the combiner) ---- */
-function savePlan(){const order=blks().map(b=>b.dataset.id),skip=blks().filter(b=>b.classList.contains('skip')).map(b=>b.dataset.id),pts={};
-  blks().forEach(b=>{if(b.dataset.edited){pts[b.dataset.id]=b.dataset.edited==="1"?readPts(b):JSON.parse(b.dataset.edited);}});store.set('bkstudio-plan-'+KEY,{order,skip,pts});}
+function savePlan(){const full={};blks().forEach(b=>{if(b.dataset.fed)full[b.dataset.id]=JSON.parse(b.dataset.fed);});const order=blks().map(b=>b.dataset.id),skip=blks().filter(b=>b.classList.contains('skip')).map(b=>b.dataset.id),pts={};
+  blks().forEach(b=>{if(b.dataset.edited){pts[b.dataset.id]=b.dataset.edited==="1"?readPts(b):JSON.parse(b.dataset.edited);}});store.set('bkstudio-plan-'+KEY,{order,skip,pts,full});}
 function readPts(b){return b.querySelector('.pts').innerText.split('\\n').map(s=>s.trim()).filter(Boolean);}
 function drawPts(b,list){b.querySelector('.pts').innerHTML=list.map(x=>'<li>'+x.replace(/&/g,'&amp;').replace(/</g,'&lt;')+'</li>').join('');}
 function renumber(){const v=vis();blks().forEach(b=>{const h=H(b.dataset.id),k=v.indexOf(b);b.querySelector('.cue').textContent=(k>=0?'SCENE '+(k+1)+' OF '+v.length:'SKIPPED')+' · '+h.h+' · ~'+h.d+'s on screen';const sb=b.querySelector('.skipbtn');sb.textContent=b.classList.contains('skip')?'Add it back':'Skip this scene';});}
 function loadPlan(){const p=store.get('bkstudio-plan-'+KEY);if(p){if(p.order){const m=Object.fromEntries(blks().map(b=>[b.dataset.id,b]));p.order.forEach(id=>{if(m[id])sc.appendChild(m[id]);});}
   (p.skip||[]).forEach(id=>{const b=sc.querySelector('[data-id="'+id+'"]');if(b)b.classList.add('skip');});
-  Object.entries(p.pts||{}).forEach(([id,l])=>{const b=sc.querySelector('[data-id="'+id+'"]');if(b){drawPts(b,l);b.dataset.edited=JSON.stringify(l);}});}renumber();}
+  Object.entries(p.full||{}).forEach(([id,t])=>{const b=sc.querySelector('[data-id="'+id+'"]');if(b){b.querySelector('.full').textContent=t;b.dataset.fed=JSON.stringify(t);}});}renumber();}
 sc.addEventListener('click',e=>{const bt=e.target.closest('.rvc button');if(!bt)return;const b=bt.closest('.blk'),a=bt.dataset.a;
   if(a==='up'&&b.previousElementSibling)sc.insertBefore(b,b.previousElementSibling);
   else if(a==='down'&&b.nextElementSibling)sc.insertBefore(b.nextElementSibling,b);
   else if(a==='skip')b.classList.toggle('skip');
   renumber();savePlan();});
-sc.addEventListener('input',e=>{const b=e.target.closest('.blk');if(b){b.dataset.edited='1';}});
-sc.addEventListener('focusout',e=>{const b=e.target.closest&&e.target.closest('.blk');if(b&&b.dataset.edited==='1'){b.dataset.edited=JSON.stringify(readPts(b));savePlan();}});
-$('review').onclick=()=>{if(mr&&mr.state==='recording')return;run=false;$('play').textContent='▶ Start';document.body.classList.add('review');document.querySelectorAll('.pts').forEach(u=>u.setAttribute('contenteditable','true'));$('stage').scrollTop=0;fit();};
-$('rvdone').onclick=()=>{document.activeElement&&document.activeElement.blur();document.body.classList.remove('review');document.querySelectorAll('.pts').forEach(u=>u.removeAttribute('contenteditable'));blks().forEach(b=>{if(b.dataset.edited&&b.dataset.edited!=='1')drawPts(b,JSON.parse(b.dataset.edited));});renumber();y=0;fit();};
+sc.addEventListener('input',e=>{const b=e.target.closest('.blk');if(b&&e.target.closest('.full')){b.dataset.fed=JSON.stringify(e.target.closest('.full').innerText.replace(/\\n{2,}/g,'\\n').trim());clearTimeout(window._sv);window._sv=setTimeout(savePlan,400);}});
+sc.addEventListener('focusout',e=>{const b=e.target.closest&&e.target.closest('.blk');if(b&&b.dataset.fedit==='1'){b.dataset.fedit='';b.dataset.fed=JSON.stringify(b.querySelector('.full').innerText.replace(/\\n{2,}/g,'\\n').trim());savePlan();}});
+$('review').onclick=()=>{if(mr&&mr.state==='recording')return;run=false;$('play').textContent='▶ Start';document.body.classList.add('review');document.querySelectorAll('.full').forEach(u=>u.setAttribute('contenteditable','true'));$('stage').scrollTop=0;fit();};
+$('rvdone').onclick=()=>{document.activeElement&&document.activeElement.blur();document.body.classList.remove('review');document.querySelectorAll('.full').forEach(u=>u.removeAttribute('contenteditable'));renumber();y=0;fit();};
 $('rvreset').onclick=()=>{if(!confirm('Undo all your edits to this episode?'))return;try{localStorage.removeItem('bkstudio-plan-'+KEY);}catch(e){}location.reload();};
 function apply(){if(document.body.classList.contains('review'))return;sc.style.transform='translateY('+(-y)+'px)'+(document.body.classList.contains('mirror')?' scaleX(-1)':'');
   const mid=$('line').getBoundingClientRect().top;let cur=0;const v=vis();v.forEach((b,i)=>{const r=b.getBoundingClientRect();if(r.top<=mid+10)cur=i;});
