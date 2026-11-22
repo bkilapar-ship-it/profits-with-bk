@@ -49,13 +49,19 @@ a.btn.dl{display:block;background:#2563EB;border-color:#2563EB;margin-top:10px}
   <div id="bar" style="display:none"><i></i></div><div id="status" class="mut" style="margin-top:8px"></div>
   <canvas id="cv"></canvas><div id="out"></div></div>
 
+<div class="card"><h2>7. Thumbnail</h2>
+  <p class="mut">The picture people see before they press play. Drag to a frame where you look good (open, eyes to camera), then save it and upload it with the video.</p>
+  <input type="range" id="thS" min="0" max="100" step="0.1" value="3" style="width:100%">
+  <canvas id="thC" width="1280" height="720" style="display:block;width:100%;border-radius:12px;margin-top:10px;background:#000"></canvas>
+  <div class="row"><button id="thSave" class="go">Save thumbnail</button></div><div id="thOut"></div></div>
+
 <video id="vis" playsinline muted preload="auto" style="position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none"></video>
 <video id="rv" playsinline preload="auto" style="position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none"></video>
 
 <script>
 const $=id=>document.getElementById(id);
 const EPS=(new URLSearchParams(location.search).get('eps')||'welcome,daily,weekly').split(',');
-let ep=null,all=[],planOrder=[],skipSet=new Set(),markById={},scenes=[],starts=[],visUrl=null,recUrl=null,recDur=0,marks=[],layout='side',pos='br';
+let studioImg=null,thImg=null;let ep=null,all=[],planOrder=[],skipSet=new Set(),markById={},scenes=[],starts=[],visUrl=null,recUrl=null,recDur=0,marks=[],layout='side',pos='br';
 const label={welcome:'Welcome video',daily:'Daily video',weekly:'Weekly review'};
 const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0');
 const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
@@ -72,6 +78,7 @@ function planKey(){return 'bkstudio-plan-'+mkey();}
 function pick(){
   const o=$('ep').selectedOptions[0];if(!o)return;const j=JSON.parse(o.dataset.j);ep={m:o.value,j};let t=0;all=j.scenes.map(s=>{const a={...s,start:t};t+=s.dur;return a;});
   const p=store.get(planKey())||{};planOrder=(p.order&&p.order.length?p.order.filter(id=>all.some(s=>s.id===id)):[]);all.forEach(s=>{if(!planOrder.includes(s.id))planOrder.push(s.id);});skipSet=new Set(p.skip||[]);markById={};
+  studioImg=new Image();studioImg.src=ep.m+'/studio-bg.png?'+Date.now();thImg=new Image();thImg.onload=()=>thDraw();thImg.src=ep.m+'/thumbnail-bg.png?'+Date.now();
   visUrl=null;prefetch();$('navtp').href=ep.m+'/teleprompter.html';$('epinfo').textContent=all.length+' scenes · '+fmt(t)+' of visuals';
   const a=store.get('bkstudio-marks2-'+mkey());$('auto').style.display=(a&&a.t)?'':'none';
   rebuild();if(a&&a.t)$('auto').onclick();
@@ -161,7 +168,7 @@ $('make').onclick=async()=>{
       const end=starts[i]+scenes[i].dur-0.1;if(vis.currentTime>=end&&!vis.paused)vis.pause();
       ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
       if(layout==='side'&&hasFace){
-        ctx.drawImage(studio,0,0);
+        const useImg=studioImg&&studioImg.complete&&studioImg.naturalWidth>0;ctx.drawImage(useImg?studioImg:studio,0,0,W,H);
         const m=Math.round(W*.012),vw=Math.round(W*.72),vh=Math.round(vw*9/16),vy=Math.round((H-vh)/2),vx=W-vw-m;
         ctx.save();ctx.shadowColor='rgba(38,208,255,.35)';ctx.shadowBlur=H*.02;rr(ctx,vx,vy,vw,vh,H*.012);ctx.fillStyle='#000';ctx.fill();ctx.restore();
         ctx.save();rr(ctx,vx,vy,vw,vh,H*.012);ctx.clip();ctx.drawImage(vis,vx,vy,vw,vh);ctx.restore();
@@ -169,8 +176,8 @@ $('make').onclick=async()=>{
         ctx.save();ctx.shadowColor='rgba(38,208,255,.55)';ctx.shadowBlur=H*.025;rr(ctx,fx,fy,fw,fh,H*.02);ctx.fillStyle='#000';ctx.fill();ctx.restore();
         ctx.save();rr(ctx,fx,fy,fw,fh,H*.02);ctx.clip();cover(ctx,rv,fx,fy,fw,fh);ctx.restore();
         ctx.strokeStyle='#26D0FF';ctx.lineWidth=Math.max(2,H*.003);rr(ctx,fx,fy,fw,fh,H*.02);ctx.stroke();
-        const cx=fx+fw/2;ctx.textAlign='center';ctx.fillStyle='#fff';ctx.shadowColor='#26D0FF';ctx.shadowBlur=H*.02;ctx.font='800 '+Math.round(H*.036)+'px Poppins,Arial,sans-serif';ctx.fillText('TRADE WITH BK',cx,fy-H*.04);ctx.shadowBlur=0;
-        ctx.fillStyle='#FFC21A';ctx.font='700 '+Math.round(H*.02)+'px Poppins,Arial,sans-serif';ctx.fillText('S&P 500 DIP SIGNALS',cx,fy+fh+H*.05);ctx.textAlign='left';
+        if(!useImg){const cx=fx+fw/2;ctx.textAlign='center';ctx.fillStyle='#fff';ctx.shadowColor='#26D0FF';ctx.shadowBlur=H*.02;ctx.font='800 '+Math.round(H*.036)+'px Poppins,Arial,sans-serif';ctx.fillText('TRADE WITH BK',cx,fy-H*.04);ctx.shadowBlur=0;
+        ctx.fillStyle='#FFC21A';ctx.font='700 '+Math.round(H*.02)+'px Poppins,Arial,sans-serif';ctx.fillText('S&P 500 DIP SIGNALS',cx,fy+fh+H*.05);ctx.textAlign='left';}
       }else{
         ctx.drawImage(vis,0,0,W,H);
         if(layout==='pip'&&hasFace){
@@ -192,5 +199,13 @@ $('make').onclick=async()=>{
   }catch(e){$('status').innerHTML='<span class="err">'+(e&&e.message?e.message:e)+'</span>';}
   btn.disabled=false;
 };
-loadEpisodes();
+function thDraw(){const cv=$('thC'),g=cv.getContext('2d');g.fillStyle='#02050A';g.fillRect(0,0,1280,720);
+  if(thImg&&thImg.complete&&thImg.naturalWidth)g.drawImage(thImg,0,0,1280,720);
+  const x=770,y=34,w=480,h=652;g.save();g.shadowColor='rgba(38,208,255,.7)';g.shadowBlur=30;rr(g,x,y,w,h,26);g.fillStyle='#000';g.fill();g.restore();
+  g.save();rr(g,x,y,w,h,26);g.clip();if($('rv').videoWidth)cover(g,$('rv'),x,y,w,h);else{g.fillStyle='#0E1A2E';g.fillRect(x,y,w,h);g.fillStyle='#8FA6C8';g.font='28px sans-serif';g.textAlign='center';g.fillText('Load your recording (step 3)',x+w/2,y+h/2);}g.restore();
+  g.strokeStyle='#26D0FF';g.lineWidth=5;rr(g,x,y,w,h,26);g.stroke();}
+let thT=0;$('thS').oninput=()=>{const v=$('rv');if(!v.videoWidth)return;v.currentTime=Math.min(parseFloat($('thS').value),(v.duration||1)-.1);};
+$('rv').addEventListener('seeked',thDraw);$('rv').addEventListener('loadeddata',()=>{$('thS').max=Math.floor($('rv').duration||100);thDraw();});
+$('thSave').onclick=()=>{thDraw();$('thC').toBlob(b=>{const u=URL.createObjectURL(b);$('thOut').innerHTML='<a class="btn dl" href="'+u+'" download="trade-with-bk-thumbnail-'+(ep?ep.j.asOf:'')+'.jpg">Download thumbnail</a><p class="mut">If it does not download, press and hold the picture above and choose Save image.</p>';},'image/jpeg',.92);};
+loadEpisodes();thDraw();
 </script></body></html>

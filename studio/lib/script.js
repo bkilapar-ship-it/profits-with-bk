@@ -253,6 +253,6 @@ function tapeFor(ep, setups) {
   parts.push('Never use leverage');
   return parts.join('  //  ');
 }
-function buildEpisode(args) { const ep = buildEpisodeInner(args); ep.tape = tapeFor(ep, args.setups); return ep; }
+function buildEpisode(args) { const ep = buildEpisodeInner(args); if (!ep.nxd && ep.mode !== 'weekly' && args.setups && args.setups.asOf) ep.nxd = nextSessionFull(args.setups.asOf); ep.tape = tapeFor(ep, args.setups); return ep; }
 function pointsOf(sc) { return (sc.points && sc.points.length) ? sc.points : sentences(sc.narration).slice(0, 7); }
 module.exports = { pointsOf, buildEpisode, metadata, spell, money, pct, nearTrigger };

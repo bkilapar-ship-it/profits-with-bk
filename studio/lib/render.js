@@ -321,10 +321,6 @@ async function renderEpisode(ep, outDir, { chromium, keepFrames = false } = {}) 
       clips.push(clip);
       if (!keepFrames) for (const f of fs.readdirSync(dir)) if (f.endsWith('.png')) fs.unlinkSync(path.join(dir, f));
     }
-    // thumbnail (1280x720)
-    const th = path.join(work, 'thumb.html'); fs.writeFileSync(th, thumbHtml(ep, work));
-    await page.setViewportSize({ width: 1280, height: 720 }); await page.goto('file://' + th); await page.evaluate(() => document.fonts.ready);
-    await page.screenshot({ path: path.join(outDir, 'thumbnail.png') });
   } finally { await browser.close(); }
   const list = path.join(work, 'list.txt'); fs.writeFileSync(list, clips.map(c => `file '${c}'`).join('\n'));
   const out = path.join(outDir, 'visuals.mp4');
@@ -348,16 +344,49 @@ async function renderStills(ep, outDir, { chromium }) {
   } finally { await browser.close(); fs.rmSync(work, { recursive: true, force: true }); }
 }
 
-function thumbHtml(ep, dir) {
-  const t = ep.tickers.slice(0, 3);
-  const first = ep.scenes.find(x => x.view), art = first ? miniCandles(first.view.slice(-34), 600, 520) : (ep.spyCloses ? areaSvg(ep.spyCloses, 600, 400, ep.spyCloses[ep.spyCloses.length - 1] >= ep.spyCloses[0]) : '');
+function thumbHtml(ep, dir, art) {
+  const n = ep.scenes.filter(x => x.type === 'setup').length, t = ep.scenes.filter(x => x.type === 'setup').map(x => x.heading).slice(0, 5);
+  const first = ep.scenes.find(x => x.view), spark = first ? miniCandles(first.view.slice(-34), 560, 500) : '';
+  const weekly = ep.mode === 'weekly', kick = weekly ? 'WEEKLY REVIEW' : ep.nxd ? 'SIGNALS FOR ' + ep.nxd.toUpperCase() : 'DAILY SCREEN';
+  const head = weekly ? 'WEEK IN<br><span style="color:var(--acc)">REVIEW</span>' : n ? `TOP ${n}<br><span style="color:var(--acc)">DIP SIGNALS</span>` : 'DIP<br><span style="color:var(--acc)">SIGNALS</span>';
   return `<!doctype html><html><head><meta charset="utf-8"><style>${fontCss(dir)}${CSS.replace(/html,body\{width:1920px;height:1080px/, 'html,body{width:1280px;height:720px')}</style></head><body>
-    <div class="grid"></div>
-    <div class="abs" style="left:64px;top:70px"><div class="kick" style="font-size:30px">${esc(ep.mode === 'weekly' ? 'WEEKLY REVIEW' : ep.mode === 'welcome' ? 'START HERE' : 'DAILY SCREEN')}</div></div>
-    <div class="abs" style="left:64px;top:130px;width:1150px"><div class="h1" style="font-size:150px;width:620px">${ep.mode === 'weekly' ? 'WEEK IN<br><span style="color:var(--acc)">REVIEW</span>' : ep.mode === 'welcome' ? 'TRADE<br><span style="color:var(--acc)">WITH BK</span>' : 'DIP<br><span style="color:var(--acc)">SIGNALS</span>'}</div></div>
-    <div class="abs" style="left:64px;top:520px;display:flex;gap:16px">${t.map(x => `<span class="chip g" style="font-size:44px;padding:16px 30px">${esc(x)}</span>`).join('')}</div>
-    <div class="abs" style="left:64px;bottom:44px;font-size:34px;font-weight:700;color:var(--mut)">${esc(ep.date)}</div>
-    ${art ? `<div class="abs" style="left:640px;top:70px;width:600px;height:560px;opacity:.95">${art}</div>` : ''}</body></html>`;
+    ${bgCandles(1280, 720, 9)}
+    <div class="abs" style="left:56px;top:40px;display:flex;align-items:center;gap:14px">${logoSvg(64, { id: 'th' })}<span style="font-weight:800;letter-spacing:.14em;font-size:26px">TRADE WITH BK</span></div>
+    <div class="abs" style="left:56px;top:140px"><div class="kick" style="font-size:26px;color:var(--amb);text-shadow:0 0 18px rgba(255,194,26,.6)">${esc(kick)}</div></div>
+    <div class="abs" style="left:56px;top:190px;width:720px"><div class="h1" style="font-size:96px;line-height:1.04">${head}</div></div>
+    ${t.length ? `<div class="abs" style="left:56px;top:540px;width:900px;display:flex;gap:10px">${t.map(x => `<span class="chip g" style="font-size:28px;padding:8px 18px">${esc(x)}</span>`).join('')}</div>` : ''}
+    <div class="abs" style="left:56px;bottom:36px;font-size:26px;font-weight:700;color:var(--mut)">Educational only · Not financial advice</div>
+    ${art ? `<div class="abs" style="left:780px;top:170px;width:470px;height:450px;opacity:.95">${spark}</div>` : ''}</body></html>`;
 }
 
-module.exports = { chartSvg2, renderStills, prepareCharts, renderEpisode, sceneHtml, chartSvg, FPS, ANIM };
+function studioBgHtml(ep, dir) {
+  const kick = ep.nxd ? 'SIGNALS FOR ' + ep.nxd.toUpperCase() : ep.mode === 'weekly' ? 'WEEKLY REVIEW' : 'DAILY SIGNALS';
+  return `<!doctype html><html><head><meta charset="utf-8"><style>${fontCss(dir)}${CSS}</style></head><body>
+    <div class="abs" style="inset:0;background:radial-gradient(ellipse at 18% 45%,#10213D 0%,#07101E 55%,#02050A 100%)"></div>
+    <div class="abs" style="left:-100px;top:600px;width:700px;height:600px;background:radial-gradient(circle,rgba(255,59,107,.22),transparent 65%)"></div>
+    <div class="abs" style="left:60px;top:-120px;width:600px;height:500px;background:radial-gradient(circle,rgba(38,208,255,.22),transparent 65%)"></div>
+    <div class="abs" style="left:1400px;top:760px;width:700px;height:500px;background:radial-gradient(circle,rgba(31,229,165,.14),transparent 65%)"></div>
+    ${bgCandles(1920, 1080, 4).replace('opacity:.075', 'opacity:.16')}
+    <div class="abs" style="left:23px;width:469px;top:44px;display:flex;justify-content:center">${logoSvg(128, { id: 'sb' })}</div>
+    <div class="abs" style="left:23px;width:469px;top:186px;text-align:center;font-weight:800;font-size:38px;letter-spacing:.06em;text-shadow:0 0 22px rgba(38,208,255,.8)">TRADE <span style="color:var(--acc)">WITH BK</span></div>
+    <div class="abs" style="left:23px;width:469px;top:868px;text-align:center;font-weight:700;font-size:24px;letter-spacing:.16em;color:var(--amb);text-shadow:0 0 16px rgba(255,194,26,.6)">S&amp;P 500 DIP SIGNALS</div>
+    <div class="abs" style="left:23px;width:469px;top:910px;text-align:center;font-weight:600;font-size:19px;letter-spacing:.1em;color:var(--mut)">EVERY WEEKDAY AFTER THE CLOSE</div>
+    <div class="abs" style="left:515px;width:1382px;top:52px;font-weight:800;font-size:44px;letter-spacing:.08em;color:var(--amb);text-shadow:0 0 24px rgba(255,194,26,.65)">${esc(kick)}</div>
+    <div class="abs" style="left:515px;width:1382px;top:1004px;font-weight:600;font-size:20px;color:var(--mut)">Educational only. Not financial advice or a personal recommendation. Backtested results are not a guide to future performance.</div>
+    <div class="abs" style="left:23px;top:1044px;width:469px;height:5px;border-radius:4px;background:var(--acc);box-shadow:0 0 18px var(--acc)"></div>
+    </body></html>`;
+}
+
+async function renderBrandAssets(ep, outDir, { chromium }) {
+  fs.mkdirSync(outDir, { recursive: true });
+  const work = fs.mkdtempSync(path.join(outDir, '_brand')), browser = await chromium.launch();
+  try {
+    const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+    const shot = async (html, w, h, file) => { const f = path.join(work, file + '.html'); fs.writeFileSync(f, html); await page.setViewportSize({ width: w, height: h }); await page.goto('file://' + f); await page.evaluate(() => document.fonts.ready); await page.waitForTimeout(80); await page.screenshot({ path: path.join(outDir, file + '.png') }); };
+    await shot(thumbHtml(ep, work, true), 1280, 720, 'thumbnail');
+    await shot(thumbHtml(ep, work, false), 1280, 720, 'thumbnail-bg');
+    await shot(studioBgHtml(ep, work), 1920, 1080, 'studio-bg');
+  } finally { await browser.close(); fs.rmSync(work, { recursive: true, force: true }); }
+}
+
+module.exports = { renderBrandAssets, chartSvg2, renderStills, prepareCharts, renderEpisode, sceneHtml, chartSvg, FPS, ANIM };

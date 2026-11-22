@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const { loadJson, fetchBars } = require('./lib/data');
 const { buildEpisode, metadata, pointsOf } = require('./lib/script');
-const { prepareCharts, renderEpisode, renderStills } = require('./lib/render');
+const { prepareCharts, renderEpisode, renderStills, renderBrandAssets } = require('./lib/render');
 const { teleprompterHtml } = require('./lib/teleprompter');
 
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > -1 ? (process.argv[i + 1] && !process.argv[i + 1].startsWith('--') ? process.argv[i + 1] : true) : d; };
@@ -59,6 +59,7 @@ async function main() {
   prepareCharts(ep, bars);
   let chromium; try { ({ chromium } = require('playwright')); } catch (e) { throw new Error('playwright is not installed (run: npm install && npx playwright install chromium)'); }
   await renderStills(ep, out, { chromium });
+  await renderBrandAssets(ep, out, { chromium });
   console.log('Scene previews done');
   if (arg('no-video', false)) return;
   const video = await renderEpisode(ep, out, { chromium });
