@@ -50,8 +50,9 @@ a.btn.dl{display:block;background:#2563EB;border-color:#2563EB;margin-top:10px}
   <canvas id="cv"></canvas><div id="out"></div></div>
 
 <div class="card"><h2>7. Thumbnail</h2>
-  <p class="mut">The picture people see before they press play. Use your photo, or pick a frame from your recording (drag to where you look good), then save it and upload it with the video.</p>
-  <div class="row"><button id="thM1" class="on">My photo</button><button id="thM2">A frame from my video</button></div>
+  <p class="mut">The picture people see before they press play. Use your photo, take a selfie with an expression that fits the hook (serious, surprised, pointing), or pick a frame from your recording. Then save it and upload it with the video.</p>
+  <div class="row"><button id="thM1" class="on">My photo</button><button id="thM2">A frame from my video</button><button id="thM3">Take a selfie with an expression</button></div>
+  <input type="file" id="thF" accept="image/*" capture="user" style="display:none">
   <input type="range" id="thS" style="display:none" min="0" max="100" step="0.1" value="3" style="width:100%">
   <canvas id="thC" width="1280" height="720" style="display:block;width:100%;border-radius:12px;margin-top:10px;background:#000"></canvas>
   <div class="row"><button id="thSave" class="go">Save thumbnail</button></div><div id="thOut"></div></div>
@@ -62,7 +63,7 @@ a.btn.dl{display:block;background:#2563EB;border-color:#2563EB;margin-top:10px}
 <script>
 const $=id=>document.getElementById(id);
 const EPS=(new URLSearchParams(location.search).get('eps')||'welcome,daily,weekly').split(',');
-let studioImg=null,thImg=null,thPh=null,thMode='photo';let ep=null,all=[],planOrder=[],skipSet=new Set(),markById={},scenes=[],starts=[],visUrl=null,recUrl=null,recDur=0,marks=[],layout='side',pos='br';
+let studioImg=null,thImg=null,thPh=null,thMode='photo',thSelf=null;let ep=null,all=[],planOrder=[],skipSet=new Set(),markById={},scenes=[],starts=[],visUrl=null,recUrl=null,recDur=0,marks=[],layout='side',pos='br';
 const label={welcome:'Welcome video',daily:'Daily video',weekly:'Weekly review'};
 const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0');
 const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
@@ -204,12 +205,21 @@ $('make').onclick=async()=>{
 function thDraw(){const cv=$('thC'),g=cv.getContext('2d');g.fillStyle='#02050A';g.fillRect(0,0,1280,720);
   if(thMode==='photo'){if(thPh&&thPh.complete&&thPh.naturalWidth)g.drawImage(thPh,0,0,1280,720);return;}
   if(thImg&&thImg.complete&&thImg.naturalWidth)g.drawImage(thImg,0,0,1280,720);
-  const x=770,y=34,w=480,h=652;g.save();g.shadowColor='rgba(38,208,255,.7)';g.shadowBlur=30;rr(g,x,y,w,h,26);g.fillStyle='#000';g.fill();g.restore();
-  g.save();rr(g,x,y,w,h,26);g.clip();if($('rv').videoWidth)cover(g,$('rv'),x,y,w,h);else{g.fillStyle='#0E1A2E';g.fillRect(x,y,w,h);g.fillStyle='#8FA6C8';g.font='28px sans-serif';g.textAlign='center';g.fillText('Load your recording (step 3)',x+w/2,y+h/2);}g.restore();
-  g.strokeStyle='#26D0FF';g.lineWidth=5;rr(g,x,y,w,h,26);g.stroke();}
+  const cx=1010,cy=320,R=250;g.save();g.shadowColor='rgba(38,208,255,.7)';g.shadowBlur=60;g.beginPath();g.arc(cx,cy,R,0,Math.PI*2);g.fillStyle='#000';g.fill();g.restore();
+  g.save();g.beginPath();g.arc(cx,cy,R,0,Math.PI*2);g.clip();
+  const srcEl=thMode==='pick'?thSelf:$('rv');
+  if(srcEl&&(thMode==='pick'?srcEl.naturalWidth:srcEl.videoWidth)){const vw=thMode==='pick'?srcEl.naturalWidth:srcEl.videoWidth,vh=thMode==='pick'?srcEl.naturalHeight:srcEl.videoHeight,k=Math.max(2*R/vw,2*R/vh),sw=2*R/k,sh=2*R/k,sx=(vw-sw)/2,sy=Math.max(0,Math.min(vh-sh,(vh-sh)*0.25));g.drawImage(srcEl,sx,sy,sw,sh,cx-R,cy-R,2*R,2*R);}
+  else{g.fillStyle='#0E1A2E';g.fillRect(cx-R,cy-R,2*R,2*R);g.fillStyle='#8FA6C8';g.font='26px sans-serif';g.textAlign='center';g.fillText(thMode==='pick'?'Take a selfie':'Load your recording (step 3)',cx,cy);}
+  g.restore();g.strokeStyle='#26D0FF';g.lineWidth=7;g.beginPath();g.arc(cx,cy,R+3,0,Math.PI*2);g.stroke();
+  const bx=840,by=565,br=110;g.save();g.shadowColor='rgba(31,229,165,.7)';g.shadowBlur=40;g.beginPath();g.arc(bx,by,br,0,Math.PI*2);g.fillStyle='#031A12';g.fill();g.restore();
+  g.strokeStyle='#1FE5A5';g.lineWidth=6;g.beginPath();g.arc(bx,by,br,0,Math.PI*2);g.stroke();
+  g.textAlign='center';g.fillStyle='#1FE5A5';g.shadowColor='rgba(31,229,165,.8)';g.shadowBlur=22;g.font='800 80px Poppins,Arial,sans-serif';g.fillText('+4%',bx,by+28);g.shadowBlur=0;
+  g.fillStyle='#FFC21A';g.font='800 24px Poppins,Arial,sans-serif';g.fillText('TARGET, NOT A PROMISE',1085,675);g.textAlign='left';}
 let thT=0;$('thS').oninput=()=>{const v=$('rv');if(!v.videoWidth)return;v.currentTime=Math.min(parseFloat($('thS').value),(v.duration||1)-.1);};
 $('rv').addEventListener('seeked',thDraw);$('rv').addEventListener('loadeddata',()=>{$('thS').max=Math.floor($('rv').duration||100);thDraw();});
-$('thM1').onclick=()=>{thMode='photo';$('thM1').classList.add('on');$('thM2').classList.remove('on');$('thS').style.display='none';thDraw();};$('thM2').onclick=()=>{thMode='video';$('thM2').classList.add('on');$('thM1').classList.remove('on');$('thS').style.display='block';thDraw();};
+const thSet=m=>{thMode=m;['thM1','thM2','thM3'].forEach(i=>$(i).classList.remove('on'));$({photo:'thM1',video:'thM2',pick:'thM3'}[m]).classList.add('on');$('thS').style.display=m==='video'?'block':'none';thDraw();};
+$('thM1').onclick=()=>thSet('photo');$('thM2').onclick=()=>thSet('video');$('thM3').onclick=()=>$('thF').click();
+$('thF').onchange=()=>{const f=$('thF').files[0];if(!f)return;const im=new Image();im.onload=()=>{thSelf=im;thSet('pick');};im.src=URL.createObjectURL(f);};
 $('thSave').onclick=()=>{thDraw();$('thC').toBlob(b=>{const u=URL.createObjectURL(b);$('thOut').innerHTML='<a class="btn dl" href="'+u+'" download="trade-with-bk-thumbnail-'+(ep?ep.j.asOf:'')+'.jpg">Download thumbnail</a><p class="mut">If it does not download, press and hold the picture above and choose Save image.</p>';},'image/jpeg',.92);};
 loadEpisodes();thDraw();
 </script></body></html>
