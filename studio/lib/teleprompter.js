@@ -39,11 +39,12 @@ label{font-size:11px;color:#8FA3C7;display:flex;flex-direction:column;gap:4px;fo
   <div id="set"><label>SPEED<input id="spd" type="range" min="8" max="140" value="40"></label><label>TEXT SIZE<input id="fs" type="range" min="20" max="60" value="26"></label></div>
 </div>
 <script>
-const $=id=>document.getElementById(id);let y=0,run=false,last=0,stream=null,mr=null,chunks=[],t0=0,mime='';
+const $=id=>document.getElementById(id);let rt=[0],lastMark=0;let y=0,run=false,last=0,stream=null,mr=null,chunks=[],t0=0,mime='';
 const sc=$('scroller');
 function apply(){sc.style.transform='translateY('+(-y)+'px)'+(document.body.classList.contains('mirror')?' scaleX(-1)':'');
   const mid=$('line').getBoundingClientRect().top;let cur=0;document.querySelectorAll('.blk').forEach((b,i)=>{const r=b.getBoundingClientRect();if(r.top<=mid+10)cur=i;});
-  document.querySelectorAll('.blk').forEach((b,i)=>b.classList.toggle('now',i===cur));}
+  document.querySelectorAll('.blk').forEach((b,i)=>b.classList.toggle('now',i===cur));
+  if(t0&&cur>lastMark){for(let j=lastMark+1;j<=cur;j++)rt[j]=(Date.now()-t0)/1000;lastMark=cur;}}
 function tick(ts){if(run){const dt=(ts-last)/1000;y+=parseFloat($('spd').value)*dt;const max=sc.scrollHeight-$('stage').clientHeight*.8;if(y>=max){y=max;run=false;$('play').textContent='▶ Start';}apply();}last=ts;if(t0)$('clock').textContent=fmt((Date.now()-t0)/1000);requestAnimationFrame(tick);}
 const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0');
 $('play').onclick=()=>{run=!run;$('play').textContent=run?'❚❚ Pause':'▶ Start';};
@@ -65,8 +66,8 @@ $('rec').onclick=async()=>{
   if(!window.MediaRecorder){$('msg').textContent='This browser cannot record in the page. Use your Camera app and read from this page on another screen.';return;}
   chunks=[];mr=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:8e6}:undefined);
   mr.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};
-  mr.onstop=()=>{t0=0;$('rec').textContent='● Record';$('rec').classList.remove('on');const type=mr.mimeType||mime||'video/mp4';const blob=new Blob(chunks,{type});const ext=/mp4/.test(type)?'mp4':'webm';const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='recording-${esc(ep.asOf)}.'+ext;document.body.appendChild(a);a.click();a.remove();$('msg').textContent='Saved. If nothing downloaded, long-press the video that opened and choose Save.';};
-  mr.start(1000);t0=Date.now();$('rec').textContent='■ Stop and save';$('rec').classList.add('on');y=0;apply();
+  mr.onstop=()=>{t0=0;try{localStorage.setItem('bkstudio-marks-${ep.mode}-${ep.asOf}',JSON.stringify(rt));}catch(e){}$('rec').textContent='● Record';$('rec').classList.remove('on');const type=mr.mimeType||mime||'video/mp4';const blob=new Blob(chunks,{type});const ext=/mp4/.test(type)?'mp4':'webm';const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='recording-${esc(ep.asOf)}.'+ext;document.body.appendChild(a);a.click();a.remove();$('msg').textContent='Saved. If nothing downloaded, long-press the video that opened and choose Save.';};
+  rt=[0];lastMark=0;mr.start(1000);t0=Date.now();$('rec').textContent='■ Stop and save';$('rec').classList.add('on');y=0;apply();
 };
 requestAnimationFrame(tick);fit();
 </script></body></html>`;
