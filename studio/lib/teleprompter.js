@@ -50,7 +50,7 @@ label{font-size:11px;color:#8FA3C7;display:flex;flex-direction:column;gap:4px;fo
 </style></head><body>
 <video id="cam" playsinline muted autoplay></video>
 <video id="lvis" playsinline muted preload="auto" style="position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none"></video><canvas id="lcv" style="position:fixed;left:-9999px;top:0"></canvas>
-<div id="hud"><a href="../" class="nav">‹ Studio</a><a href="../combine.html" class="nav">Combine ›</a><span id="clock">00:00</span><span id="ttl">${esc(ep.title)} · aim for ${Math.floor(total / 60)}:${String(Math.round(total % 60)).padStart(2, '0')}</span></div><div id="msg"></div><div id="rvnote">Tap text to edit · move or skip scenes · saved on this phone</div>
+<div id="hud"><a href="../" class="nav">‹ Studio</a><a href="../combine.html" class="nav">Combine ›</a><span id="clock">00:00</span><span id="ttl">${esc(ep.title)} · aim for ${Math.floor(total / 60)}:${String(Math.round(total) % 60).padStart(2, '0')}</span></div><div id="msg"></div><div id="rvnote">Tap text to edit · move or skip scenes · saved on this phone</div>
 <div id="res"></div>
 <div id="stage"><div id="scroller">${blocks}</div></div><div id="line"></div>
 <div id="bar">
@@ -116,7 +116,7 @@ $('cambtn').onclick=async()=>{if(stream){stream.getTracks().forEach(t=>t.stop())
 
 
 
-function mm(sec){return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(Math.round(sec%60)).padStart(2,'0');}
+function mm(sec){const t=Math.round(sec);return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');}
 function ytDetails(){
   const order=vis().map(b=>b.dataset.id),have=order.filter(id=>rt[id]!==undefined);let last=-99;const lines=[];
   (have.length?have:order).forEach(id=>{const c=MD.chap.find(x=>x.id===id);if(!c)return;const sec=have.length?rt[id]:0;if(!lines.length||sec-last>=10){lines.push((lines.length?mm(sec):'00:00')+' '+c.name);last=sec;}});

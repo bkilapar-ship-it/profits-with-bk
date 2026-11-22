@@ -244,7 +244,7 @@ function chapName(s) {
 function metaParts(ep) {
   const t0 = []; let t = 0;
   for (const s of ep.scenes) { t0.push(t); t += s.dur; }
-  const mmss = sec => `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(Math.round(sec % 60)).padStart(2, '0')}`;
+  const mmss = sec => { const t = Math.round(sec); return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`; };
   const chap = ep.scenes.map((s, i) => ({ id: s.id, name: chapName(s), planned: mmss(t0[i]) }));
   const setupsSc = ep.scenes.filter(x => x.type === 'setup'), tick = setupsSc.map(x => x.heading);
   const named = tick.map(x => NAMES[x] ? `${x} (${NAMES[x]})` : x).join(', ');
