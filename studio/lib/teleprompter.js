@@ -4,7 +4,7 @@ const sigOf=(sc)=>{let h=5381;const t=sc.map(x=>x.id).join('|');for(let i=0;i<t.
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 const { pointsOf, metaParts } = require('./script');
-const { FRAME_N, FRAME_FPS } = require('./render');
+const { FRAME_N } = require('./render');
 function teleprompterHtml(ep) {
   const total = ep.scenes.reduce((s, x) => s + x.dur, 0);
   const blocks = ep.scenes.map((s, i) => `<section class="blk" data-id="${esc(s.id)}" data-i="${i}"><img class="thumb" src="stills/scene-${i}.jpg" alt="" loading="lazy" onerror="this.style.display='none'"><div class="rvc"><button data-a="up">▲ Up</button><button data-a="down">▼ Down</button><button data-a="skip" class="skipbtn">Skip this scene</button></div><div class="cue"></div><ul class="pts">${pointsOf(s).map(x => `<li>${esc(x)}</li>`).join('')}</ul><p class="full">${esc(s.narration)}</p></section>`).join('');
@@ -91,6 +91,7 @@ function apply(){if(document.body.classList.contains('review'))return;sc.style.t
   const mid=$('line').getBoundingClientRect().top;let cur=0;const v=vis();v.forEach((b,i)=>{const r=b.getBoundingClientRect();if(r.top<=mid+10)cur=i;});
   blks().forEach(b=>b.classList.remove('now'));if(v[cur])v[cur].classList.add('now');
   if(live&&v[cur]&&liveId!==v[cur].dataset.id)showScene(v[cur].dataset.id);
+  if(live)setTarget(cur,v,mid);
   if(t0&&cur>lastMark){for(let j=lastMark+1;j<=cur;j++)rt[v[j].dataset.id]=(Date.now()-t0)/1000;lastMark=cur;}}
 let ppw=14;function calcPpw(){try{const w=sc.innerText.trim().split(/\\s+/).length;if(w>20)ppw=sc.scrollHeight/w;}catch(e){}}setInterval(calcPpw,1500);
 function tick(ts){if(run){const dt=(ts-last)/1000;y+=parseFloat($('spd').value)/60*ppw*dt;const max=sc.scrollHeight-$('stage').clientHeight*.8;if(y>=max){y=max;run=false;$('play').textContent='▶ Start';}apply();}last=ts;if(t0)$('clock').textContent=fmt((Date.now()-t0)/1000);requestAnimationFrame(tick);}
@@ -137,14 +138,25 @@ let bmr=null,bchunks=[];let live=false,liveId=null,liveEnd=0,liveRaf=0,lvBlob=nu
 const lvis=$('lvis'),lcv=$('lcv');
 function lvMode(){return ($('lv')&&$('lv').value)||'side';}
 function lvPrefetch(){if(lvMode()==='off'||lvPre)return lvPre;$('msg').textContent='Loading the visuals for live recording…';
-  lvPre=Promise.all(HEADS.map((h,i)=>new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>rej(new Error('img'));im.src='stills/scene-'+i+'.jpg';}))).then(a=>{lvImgs=a;$('msg').textContent='Visuals ready. Live recording is on.';return true;}).catch(()=>{lvPre=null;$('msg').textContent='Could not load the visuals, so this take will be camera only.';return false;});return lvPre;}
-const FN=${FRAME_N},FF=${FRAME_FPS};let lvImgs=[],lvCur=null,lvPrev=null,lvT=0,lvIdx=-1,lvFr={};
-function frLoad(i){if(i<0||i>=HEADS.length||lvFr[i])return;const a=[];for(let k=0;k<FN;k++){const im=new Image();im.src='frames/s'+i+'/'+k+'.jpg';a.push(im);}lvFr[i]=a;}
-function frKeep(keep){Object.keys(lvFr).forEach(k=>{if(!keep.includes(+k))delete lvFr[k];});}
-function showScene(id){liveId=id;const i=HEADS.findIndex(x=>x.id===id);if(i<0||!lvImgs[i])return;lvPrev=lvCur;lvCur=lvImgs[i];lvIdx=i;lvT=performance.now();const nx=[];vis().forEach((b,n,arr)=>{if(b.dataset.id===id){for(let q=1;q<=2;q++)if(arr[n+q])nx.push(HEADS.findIndex(x=>x.id===arr[n+q].dataset.id));}});frLoad(i);nx.forEach(frLoad);frKeep([i].concat(nx));}
-function drawVis(ctx,x,y,w,h){const now=performance.now(),dt=(now-lvT)/1000,fr=lvFr[lvIdx];const ready=fr&&fr.every(im=>im.complete&&im.naturalWidth);
-  if(ready&&dt<FN/FF){const f=dt*FF,a=Math.min(FN-1,Math.floor(f)),b=Math.min(FN-1,a+1),fa=f-a;if(lvPrev&&dt<0.15){ctx.drawImage(lvPrev,x,y,w,h);ctx.globalAlpha=dt/0.15;}ctx.drawImage(fr[a],x,y,w,h);if(b!==a){ctx.globalAlpha=fa*(lvPrev&&dt<0.15?dt/0.15:1);ctx.drawImage(fr[b],x,y,w,h);}ctx.globalAlpha=1;return;}
-  const k=Math.min(1,(now-lvT)/300);if(lvPrev&&k<1){ctx.drawImage(lvPrev,x,y,w,h);ctx.globalAlpha=k;ctx.drawImage(lvCur,x,y,w,h);ctx.globalAlpha=1;}else if(lvCur)ctx.drawImage(lvCur,x,y,w,h);}
+  lvPre=Promise.all(HEADS.map((h,i)=>new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>rej(new Error('img'));im.src='stills/scene-'+i+'.jpg';})).concat([fetch('frames/beats.json').then(r=>r.ok?r.json():{}).catch(()=>({}))])).then(a=>{lvB=a.pop();lvImgs=a;$('msg').textContent='Visuals ready. Live recording is on.';return true;}).catch(()=>{lvPre=null;$('msg').textContent='Could not load the visuals, so this take will be camera only.';return false;});return lvPre;}
+const FN=${FRAME_N},ANIMMS=650;let lvImgs=[],lvB={},lvIdx=-1,lvBs=-1,lvAnimK=-1,lvAnimT=0,lvTgt=0,lvFr={},lvLast=null,lvPrevScene=null,lvSceneT=0;
+function frLoad(i,k){if(i<0||i>=HEADS.length||k<0||k>(lvB[i]||0))return;lvFr[i]=lvFr[i]||{};if(lvFr[i][k])return;const a=[];for(let j=0;j<FN;j++){const im=new Image();im.src='frames/s'+i+'/'+k+'-'+j+'.jpg';a.push(im);}lvFr[i][k]=a;}
+function frDrop(i,below){const o=lvFr[i];if(!o)return;Object.keys(o).forEach(k=>{if(+k<below)delete o[k];});}
+function frOk(a){return a&&a.every(im=>im.complete&&im.naturalWidth);}
+function showScene(id){liveId=id;const i=HEADS.findIndex(x=>x.id===id);if(i<0||!lvImgs[i])return;lvPrevScene=lvLast;lvSceneT=performance.now();lvIdx=i;lvBs=-1;lvAnimK=0;lvAnimT=lvSceneT;lvTgt=0;Object.keys(lvFr).forEach(k=>{if(+k!==i)delete lvFr[k];});frLoad(i,0);frLoad(i,1);frLoad(i,2);}
+function drawVis(ctx,x,y,w,h){const now=performance.now(),i=lvIdx;if(i<0){return;}
+  const B=lvB[i];
+  if(B===undefined){const k=Math.min(1,(now-lvSceneT)/300);if(lvPrevScene&&k<1){ctx.drawImage(lvPrevScene,x,y,w,h);ctx.globalAlpha=k;ctx.drawImage(lvImgs[i],x,y,w,h);ctx.globalAlpha=1;}else ctx.drawImage(lvImgs[i],x,y,w,h);lvLast=lvImgs[i];return;}
+  if(lvAnimK>=0&&(now-lvAnimT)/ANIMMS>=1){lvBs=lvAnimK;lvAnimK=-1;frDrop(i,lvBs-0);}
+  if(lvAnimK<0&&lvBs<Math.min(lvTgt,B)){if(lvTgt-lvBs>2)lvBs=lvTgt-2;lvAnimK=lvBs+1;lvAnimT=now;frLoad(i,lvAnimK+1);frLoad(i,lvAnimK+2);}
+  let img=null,img2=null,fa=0;
+  if(lvAnimK>=0){const a=lvFr[i]&&lvFr[i][lvAnimK];if(frOk(a)){const q=Math.min(1,(now-lvAnimT)/ANIMMS),f=q*(FN-1),ia=Math.floor(f);img=a[ia];img2=a[Math.min(FN-1,ia+1)];fa=f-ia;}}
+  else{const a=lvFr[i]&&lvFr[i][lvBs];if(frOk(a))img=a[FN-1];else if(lvBs>=B)img=lvImgs[i];}
+  if(!img)img=lvLast||lvImgs[i];
+  const k=Math.min(1,(now-lvSceneT)/250),pv=lvPrevScene&&k<1;
+  if(pv){ctx.drawImage(lvPrevScene,x,y,w,h);ctx.globalAlpha=k;}
+  ctx.drawImage(img,x,y,w,h);if(img2&&fa>0.02){ctx.globalAlpha=(pv?k:1)*fa;ctx.drawImage(img2,x,y,w,h);}ctx.globalAlpha=1;lvLast=img2&&fa>0.5?img2:img;}
+function setTarget(cur,v,mid){if(!live||lvIdx<0)return;const b=v[cur];if(!b||b.dataset.id!==liveId)return;const r=b.getBoundingClientRect(),f=Math.max(0,Math.min(1,(mid-r.top)/Math.max(1,r.height))),B=lvB[lvIdx]||0;const t=Math.min(B,Math.floor(Math.min(1,f/0.85)*(B+1)));if(t>lvTgt)lvTgt=t;}
 function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
 function cover(c,v,x,y,w,h){const vw=v.videoWidth,vh=v.videoHeight;if(!vw)return;const k=Math.max(w/vw,h/vh),sw=w/k,sh=h/k;c.drawImage(v,(vw-sw)/2,(vh-sh)/2,sw,sh,x,y,w,h);}
 function liveDraw(W,H2,ctx,mode){

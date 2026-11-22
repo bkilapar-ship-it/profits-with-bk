@@ -7,7 +7,7 @@ const { sma } = require('./data');
 const { NEON, logoSvg, bgCandles } = require('./brand');
 let TAPE = '';
 
-const W = 1920, H = 1080, FPS = 30, ANIM = 2.4, FRAME_FPS = 12, FRAME_N = Math.round(ANIM * FRAME_FPS) + 1;
+const W = 1920, H = 1080, FPS = 30, ANIM = 2.4, FRAME_FPS = 8, FRAME_N = 4;
 const isNum = v => typeof v === 'number' && Number.isFinite(v);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const money = x => `$${x.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -50,12 +50,23 @@ table{border-collapse:collapse;width:100%}th{font-size:19px;letter-spacing:.12em
 const ANIM_JS = `
 const ease=t=>t<=0?0:t>=1?1:1-Math.pow(1-t,3);
 const fmt=(v,d,pre,suf)=>pre+(v<0?'−':'')+Math.abs(v).toFixed(d)+suf;
-window.setP=function(p){
-  document.querySelectorAll('[data-a]').forEach(el=>{const [s,e]=el.dataset.a.split(',').map(Number);const t=ease((p-s)/(e-s));el.style.opacity=t;el.style.transform='translateY('+((1-t)*26)+'px)';});
-  document.querySelectorAll('[data-w]').forEach(el=>{const [s,e]=el.dataset.w.split(',').map(Number);const t=ease((p-s)/(e-s));el.style.width=(t*parseFloat(el.dataset.max))+'px';});
-  document.querySelectorAll('[data-count]').forEach(el=>{const [from,to,d,pre,suf,s,e]=el.dataset.count.split('|');const t=ease((p-parseFloat(s))/(parseFloat(e)-parseFloat(s)));el.textContent=fmt(parseFloat(from)+(parseFloat(to)-parseFloat(from))*t,parseInt(d),pre,suf);});
-  const rv=document.getElementById('rv');if(rv){rv.setAttribute('width',ease(p/0.55)*parseFloat(rv.dataset.max));}
-};
+function items(){const L=[];
+  document.querySelectorAll('[data-a]').forEach(el=>{const [s,e]=el.dataset.a.split(',').map(Number);L.push({el,s,e,k:'a'});});
+  document.querySelectorAll('[data-w]').forEach(el=>{const [s,e]=el.dataset.w.split(',').map(Number);L.push({el,s,e,k:'w'});});
+  document.querySelectorAll('[data-count]').forEach(el=>{const q=el.dataset.count.split('|');L.push({el,s:parseFloat(q[5]),e:parseFloat(q[6]),k:'c',q});});
+  const rv=document.getElementById('rv');if(rv)L.push({el:rv,s:0,e:0.55,k:'r'});
+  return L;}
+function paint(it,t){const el=it.el;
+  if(it.k==='a'){el.style.opacity=t;el.style.transform='translateY('+((1-t)*26)+'px)';}
+  else if(it.k==='w'){el.style.width=(t*parseFloat(el.dataset.max))+'px';}
+  else if(it.k==='c'){const [from,to,d,pre,suf]=it.q;el.textContent=fmt(parseFloat(from)+(parseFloat(to)-parseFloat(from))*t,parseInt(d),pre,suf);}
+  else if(it.k==='r'){el.setAttribute('width',t*parseFloat(el.dataset.max));}}
+window.setP=function(p){items().forEach(it=>paint(it,it.k==='r'?ease(p/0.55):ease((p-it.s)/(it.e-it.s))));};
+/* beats: header = beat 0, then one beat per distinct start time, so items can appear one by one */
+window.beatInfo=function(){const st=[...new Set(items().filter(i=>i.s>=0.12).map(i=>Math.round(i.s*100)/100))].sort((a,b)=>a-b),M=8,n=st.length,B=Math.min(M,n);
+  return {B,starts:st,of:s=>1+Math.min(B-1,Math.floor(st.indexOf(Math.round(s*100)/100)*B/Math.max(1,n)))};};
+window.setB=function(k,q){const info=window.beatInfo();items().forEach(it=>{const g=it.s<0.12?0:info.of(it.s);
+  const t=g===0?(k===0?ease(q):1):(g<k?1:(g===k?ease(q):0));paint(it,t);});};
 `;
 
 /* ------------------------------------------------------------------ chart */
@@ -341,13 +352,15 @@ async function renderStills(ep, outDir, { chromium }) {
       await page.evaluate(() => window.setP(1)); await page.waitForTimeout(60);
       await page.screenshot({ path: path.join(dirOut, `scene-${i}.jpg`), type: 'jpeg', quality: 72 });
     }
-    // entrance animation as small image sequences (used by live recording; 12 fps, half size)
-    const ctx2 = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 0.5 }), pg = await ctx2.newPage();
+    // beat image sequences for live recording: beat 0 = header, then one beat per group of items (items appear while you talk)
+    const ctx2 = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 0.5 }), pg = await ctx2.newPage(), beats = {};
     for (let i = 0; i < ep.scenes.length; i++) {
       const dir = path.join(work, `s${i}`), html = path.join(dir, 'scene.html'), fd = path.join(outDir, 'frames', `s${i}`); fs.mkdirSync(fd, { recursive: true });
       await pg.goto('file://' + html); await pg.evaluate(() => document.fonts.ready);
-      for (let k = 0; k < FRAME_N; k++) { await pg.evaluate(p => window.setP(p), k / (FRAME_N - 1)); await pg.screenshot({ path: path.join(fd, `${k}.jpg`), type: 'jpeg', quality: 62 }); }
+      const B = (await pg.evaluate(() => window.beatInfo())).B; beats[i] = B;
+      for (let k = 0; k <= B; k++) for (let j = 0; j < FRAME_N; j++) { await pg.evaluate(([kk, q]) => window.setB(kk, q), [k, j / (FRAME_N - 1)]); await pg.screenshot({ path: path.join(fd, `${k}-${j}.jpg`), type: 'jpeg', quality: 52 }); }
     }
+    fs.writeFileSync(path.join(outDir, 'frames', 'beats.json'), JSON.stringify(beats));
     await ctx2.close();
   } finally { await browser.close(); fs.rmSync(work, { recursive: true, force: true }); }
 }
