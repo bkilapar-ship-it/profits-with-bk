@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const { loadJson, fetchBars } = require('./lib/data');
 const { buildEpisode, metadata, pointsOf } = require('./lib/script');
-const { prepareCharts, renderEpisode } = require('./lib/render');
+const { prepareCharts, renderEpisode, renderStills } = require('./lib/render');
 const { teleprompterHtml } = require('./lib/teleprompter');
 
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > -1 ? (process.argv[i + 1] && !process.argv[i + 1].startsWith('--') ? process.argv[i + 1] : true) : d; };
@@ -41,12 +41,15 @@ async function main() {
   fs.writeFileSync(path.join(out, 'teleprompter.html'), teleprompterHtml(ep));
   fs.writeFileSync(path.join(out, 'scenes.json'), JSON.stringify({ title: ep.title, asOf: ep.asOf, mode: ep.mode, video: 'visuals.mp4', scenes: ep.scenes.map(s => ({ id: s.id, type: s.type, heading: s.heading, dur: s.dur })) }, null, 2));
   console.log(`Episode: ${ep.title} (${ep.scenes.length} scenes, ~${Math.round(ep.scenes.reduce((a, s) => a + s.dur, 0))}s)`);
-  if (arg('no-video', false)) return;
+  if (arg('no-video', false) && !arg('stills', false)) return;
 
   const tickers = ep.scenes.filter(s => s.type === 'setup').map(s => s.data.setup.ticker);
   if (!barsFile && tickers.length) bars = { ...bars, ...(await fetchBars(tickers, { keyId: process.env.ALPACA_KEY_ID, secret: process.env.ALPACA_SECRET_KEY })) };
   prepareCharts(ep, bars);
   let chromium; try { ({ chromium } = require('playwright')); } catch (e) { throw new Error('playwright is not installed (run: npm install && npx playwright install chromium)'); }
+  await renderStills(ep, out, { chromium });
+  console.log('Scene previews done');
+  if (arg('no-video', false)) return;
   const video = await renderEpisode(ep, out, { chromium });
   fs.rmSync(path.join(out, '_work'), { recursive: true, force: true });
   fs.writeFileSync(path.join(out, 'meta.json'), JSON.stringify({ title: ep.title, asOf: ep.asOf, mode: ep.mode, scenes: ep.scenes.length, seconds: ep.scenes.reduce((a, s) => a + s.dur, 0), tickers: ep.tickers }, null, 2));

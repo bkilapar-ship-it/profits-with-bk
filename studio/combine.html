@@ -28,20 +28,22 @@ a.btn.dl{display:block;background:#2563EB;border-color:#2563EB;margin-top:10px}
   <input id="rec" type="file" accept="video/*,audio/*">
   <div id="recinfo" class="mut" style="margin-top:8px"></div></div>
 
-<div class="card"><h2>3. Match your recording to the scenes</h2>
+<div class="card"><h2>3. Scenes in this video</h2><div class="mut">Untick a scene to leave it out, or move it up or down. These are the same choices as in the teleprompter review.</div><div id="plan" style="margin-top:8px"></div></div>
+
+<div class="card"><h2>4. Match your recording to the scenes</h2>
   <div class="mut" id="markhelp">Pick your recording first.</div>
   <video id="prev" playsinline controls style="display:none"></video>
   <div class="row" id="markbtns" style="display:none"><button id="tap" class="go">Scene 2 starts now</button></div>
   <div class="row" id="markbtns2" style="display:none"><button id="undo">Undo last</button><button id="reset">Start over</button><button id="auto">Use automatic marks</button></div>
   <div id="marks"></div></div>
 
-<div class="card"><h2>4. Layout</h2>
+<div class="card"><h2>5. Layout</h2>
   <div class="row" id="lay"><button data-l="side" class="on">Side by side</button><button data-l="pip">Face in a corner</button><button data-l="voice">Voice only</button></div>
   <div class="row" id="pos" style="display:none"><button data-p="br" class="on">Bottom right</button><button data-p="bl">Bottom left</button><button data-p="tr">Top right</button><button data-p="tl">Top left</button></div>
   <div class="row"><select id="q"><option value="720">720p (smaller file)</option><option value="1080">1080p (bigger file)</option></select></div>
   <p class="mut" id="layhelp">Side by side keeps the charts fully visible and puts you in a column next to them.</p></div>
 
-<div class="card"><h2>5. Create</h2>
+<div class="card"><h2>6. Create</h2>
   <button id="make" class="go" disabled>Create my video</button>
   <p class="warn">It plays your recording in real time while it builds the video, so a 5 minute video takes about 5 minutes. Keep this page open and the screen on, and don't switch apps.</p>
   <div id="bar" style="display:none"><i></i></div><div id="status" class="mut" style="margin-top:8px"></div>
@@ -53,7 +55,7 @@ a.btn.dl{display:block;background:#2563EB;border-color:#2563EB;margin-top:10px}
 <script>
 const $=id=>document.getElementById(id);
 const EPS=(new URLSearchParams(location.search).get('eps')||'welcome,daily,weekly').split(',');
-let ep=null,scenes=[],starts=[],visUrl=null,recUrl=null,recDur=0,marks=[],layout='side',pos='br';
+let ep=null,all=[],planOrder=[],skipSet=new Set(),markById={},scenes=[],starts=[],visUrl=null,recUrl=null,recDur=0,marks=[],layout='side',pos='br';
 const label={welcome:'Episode 1: welcome video',daily:'Daily video',weekly:'Weekly review'};
 const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0');
 const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
@@ -64,39 +66,52 @@ async function loadEpisodes(){
   if(!found){$('epinfo').innerHTML='<span class="err">No episode found yet. Build one first.</span>';return;}
   sel.onchange=pick;pick();
 }
+function planKey(){return 'bkstudio-plan-'+ep.j.mode+'-'+ep.j.asOf;}
 function pick(){
-  const o=$('ep').selectedOptions[0];if(!o)return;const j=JSON.parse(o.dataset.j);ep={m:o.value,j};scenes=j.scenes;let t=0;starts=scenes.map(s=>{const a=t;t+=s.dur;return a;});
-  visUrl=null;prefetch();$('navtp').href=ep.m+'/teleprompter.html';$('epinfo').textContent=scenes.length+' scenes · '+fmt(t)+' of visuals';marks=[];renderMarks();ready();
+  const o=$('ep').selectedOptions[0];if(!o)return;const j=JSON.parse(o.dataset.j);ep={m:o.value,j};let t=0;all=j.scenes.map(s=>{const a={...s,start:t};t+=s.dur;return a;});
+  const p=store.get(planKey())||{};planOrder=(p.order&&p.order.length?p.order.filter(id=>all.some(s=>s.id===id)):[]);all.forEach(s=>{if(!planOrder.includes(s.id))planOrder.push(s.id);});skipSet=new Set(p.skip||[]);markById={};
+  visUrl=null;prefetch();$('navtp').href=ep.m+'/teleprompter.html';$('epinfo').textContent=all.length+' scenes · '+fmt(t)+' of visuals';
+  const a=store.get('bkstudio-marks2-'+ep.j.mode+'-'+ep.j.asOf);$('auto').style.display=(a&&a.t)?'':'none';
+  rebuild();
 }
+function savePlan(){const p=store.get(planKey())||{};p.order=planOrder;p.skip=[...skipSet];store.set(planKey(),p);}
+function rebuild(){ // plan order -> scenes/starts/marks
+  scenes=planOrder.filter(id=>!skipSet.has(id)).map(id=>all.find(s=>s.id===id));starts=scenes.map(s=>s.start);
+  marks=scenes.map((s,k)=>k===0?0:(markById[s.id]!=null?markById[s.id]:null));
+  renderPlan();renderMarks();ready();
+}
+function syncMarks(){scenes.forEach((s,k)=>{if(k>0)markById[s.id]=marks[k];});}
+function renderPlan(){
+  $('plan').innerHTML=planOrder.map((id,i)=>{const s=all.find(x=>x.id===id),on=!skipSet.has(id);return '<div class="mrow"><label class="mn" style="display:flex;gap:10px;align-items:center;letter-spacing:0;font-size:14px;color:#EAF0FB"><input type="checkbox" data-id="'+id+'" '+(on?'checked':'')+' style="width:22px;height:22px"> <span>'+s.heading.charAt(0)+s.heading.slice(1).toLowerCase()+'</span></label><span class="mb"><button data-a="u" data-i="'+i+'">▲</button><button data-a="d" data-i="'+i+'">▼</button></span></div>';}).join('');
+}
+$('plan').onclick=e=>{const b=e.target.closest('button');if(!b)return;const i=+b.dataset.i;if(b.dataset.a==='u'&&i>0)[planOrder[i-1],planOrder[i]]=[planOrder[i],planOrder[i-1]];else if(b.dataset.a==='d'&&i<planOrder.length-1)[planOrder[i+1],planOrder[i]]=[planOrder[i],planOrder[i+1]];else return;syncMarks();savePlan();rebuild();};
+$('plan').onchange=e=>{const cb=e.target.closest('input[type=checkbox]');if(!cb)return;if(cb.checked)skipSet.delete(cb.dataset.id);else skipSet.add(cb.dataset.id);syncMarks();savePlan();rebuild();};
 $('rec').onchange=e=>{
   const f=e.target.files[0];if(!f)return;if(recUrl)URL.revokeObjectURL(recUrl);recUrl=URL.createObjectURL(f);
   const v=$('prev');v.src=recUrl;v.style.display='block';$('rv').src=recUrl;
-  v.onloadedmetadata=()=>{recDur=v.duration;$('recinfo').innerHTML='<span class="ok">Loaded: '+fmt(recDur)+'</span>';$('markhelp').textContent='You decide exactly when each visual appears. Play your recording below and tap the blue button each time you want the next visual. Then fine-tune any scene: Go jumps there, −0.5 and +0.5 nudge it, Here sets it to the moment the player is at. Every visual stays on screen until the next one starts.';$('markbtns').style.display='flex';$('markbtns2').style.display='flex';loadAuto();renderMarks();ready();};
+  v.onloadedmetadata=()=>{recDur=v.duration;$('recinfo').innerHTML='<span class="ok">Loaded: '+fmt(recDur)+'</span>';$('markhelp').textContent='You decide exactly when each visual appears. Play your recording below and tap the blue button each time you want the next visual. Then fine-tune any scene: Go jumps there, −0.5 and +0.5 nudge it, Here sets it to the moment the player is at. Every visual stays on screen until the next one starts.';$('markbtns').style.display='flex';$('markbtns2').style.display='flex';renderMarks();ready();};
   v.onerror=()=>{$('recinfo').innerHTML='<span class="err">This browser cannot play that file. Try an .mp4 or .mov recording.</span>';};
 };
-function autoKey(){return 'bkstudio-marks-'+(ep?ep.j.mode+'-'+ep.j.asOf:'');}
-function loadAuto(){const a=store.get(autoKey());$('auto').style.display=(a&&a.length)?'':'none';if(a&&a.length&&!marks.length){marks=a.slice(0,scenes.length);}}
-$('auto').onclick=()=>{const a=store.get(autoKey());if(a){marks=a.slice(0,scenes.length);renderMarks();ready();}};
-function nextIdx(){return marks.length;}
+function loadAuto(){}
+$('auto').onclick=()=>{const a=store.get('bkstudio-marks2-'+ep.j.mode+'-'+ep.j.asOf);if(!a||!a.t)return;if(a.order){const rest=planOrder.filter(id=>!a.order.includes(id));planOrder=a.order.filter(id=>all.some(s=>s.id===id)).concat(rest);skipSet=new Set(rest.filter(id=>skipSet.has(id)||true));savePlan();}markById={};Object.entries(a.t).forEach(([id,t])=>{markById[id]=t;});rebuild();};
 function renderMarks(){
-  const n=scenes.length;
-  $('tap').textContent=marks.length>=n?'All scenes marked':'Scene '+(Math.max(marks.length,1)+1)+' starts now';
-  $('tap').disabled=marks.length>=n;
-  $('marks').innerHTML=scenes.map((s,i)=>{const done=i===0||marks[i]!=null;const t=i===0?0:marks[i];
+  const n=scenes.length,nxt=marks.findIndex((m,k)=>k>0&&m==null);
+  $('tap').textContent=nxt<0?'All scenes marked':'Scene '+(nxt+1)+' starts now';$('tap').disabled=nxt<0;
+  $('marks').innerHTML=scenes.map((s,i)=>{const done=marks[i]!=null;const t=marks[i];
     return '<div class="mrow"><span class="mn"><b>'+(i+1)+'</b> '+s.heading.charAt(0)+s.heading.slice(1).toLowerCase()+'</span>'+(done?'<span class="mt">'+fmt(t||0)+'.'+String(Math.floor(((t||0)%1)*10))+'</span>':'<span class="mt mut">not set</span>')+(i===0?'':'<span class="mb"><button data-a="seek" data-i="'+i+'"'+(done?'':' disabled')+'>Go</button><button data-a="m" data-i="'+i+'"'+(done?'':' disabled')+'>−0.5</button><button data-a="p" data-i="'+i+'"'+(done?'':' disabled')+'>+0.5</button><button data-a="here" data-i="'+i+'">Here</button></span>')+'</div>';}).join('');
 }
 $('marks').onclick=e=>{const b=e.target.closest('button');if(!b)return;const i=+b.dataset.i,a=b.dataset.a,v=$('prev');
   if(a==='seek'){v.currentTime=Math.max(0,marks[i]-0.3);v.play().catch(()=>{});}
-  else if(a==='here'){if(marks.length===0)marks=[0];while(marks.length<i)marks.push(null);marks[i]=v.currentTime;}
+  else if(a==='here'){marks[i]=v.currentTime;}
   else if(a==='m'){marks[i]=Math.max(0,marks[i]-0.5);}
   else if(a==='p'){marks[i]=Math.min(recDur,marks[i]+0.5);}
-  renderMarks();ready();};
-$('tap').onclick=()=>{if(marks.length===0)marks=[0];if(marks.length>=scenes.length)return;marks.push($('prev').currentTime);renderMarks();ready();};
-$('undo').onclick=()=>{if(marks.length>1)marks.pop();else marks=[];renderMarks();ready();};
-$('reset').onclick=()=>{marks=[];renderMarks();ready();};
+  syncMarks();renderMarks();ready();};
+$('tap').onclick=()=>{const k=marks.findIndex((m,i)=>i>0&&m==null);if(k<0)return;marks[k]=$('prev').currentTime;syncMarks();renderMarks();ready();};
+$('undo').onclick=()=>{for(let k=marks.length-1;k>0;k--){if(marks[k]!=null){marks[k]=null;delete markById[scenes[k].id];break;}}renderMarks();ready();};
+$('reset').onclick=()=>{markById={};rebuild();};
 $('lay').onclick=e=>{const b=e.target.closest('button');if(!b)return;layout=b.dataset.l;[...$('lay').children].forEach(x=>x.classList.toggle('on',x===b));$('pos').style.display=layout==='pip'?'flex':'none';$('layhelp').textContent=layout==='side'?'Side by side keeps the charts fully visible and puts you in a column next to them.':layout==='pip'?'Your face sits in a small circle over the visuals. Pick a corner that covers the least.':'Only your voice over the visuals, nothing covering the charts.';};
 $('pos').onclick=e=>{const b=e.target.closest('button');if(!b)return;pos=b.dataset.p;[...$('pos').children].forEach(x=>x.classList.toggle('on',x===b));};
-function ready(){$('make').disabled=!(ep&&recUrl&&recDur&&marks.length>=1);}
+function ready(){$('make').disabled=!(ep&&recUrl&&recDur&&scenes.length>=1);}
 
 let pre=null;function prefetch(){const m=ep.m,f=ep.j.video||'visuals.mp4';$('status').textContent='Loading the visuals in the background…';pre=fetch(m+'/'+f).then(r=>{if(!r.ok)throw new Error('Could not load the visuals video.');return r.blob();}).then(b=>{visUrl=URL.createObjectURL(b);$('status').innerHTML='<span class="ok">Visuals ready ('+(b.size/1048576).toFixed(0)+' MB)</span>';return visUrl;}).catch(e=>{$('status').innerHTML='<span class="err">'+e.message+'</span>';pre=null;throw e;});pre.catch(()=>{});}
 async function getVisuals(){

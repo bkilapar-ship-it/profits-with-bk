@@ -237,6 +237,22 @@ async function renderEpisode(ep, outDir, { chromium, keepFrames = false } = {}) 
   return out;
 }
 
+
+async function renderStills(ep, outDir, { chromium }) {
+  const work = path.join(outDir, '_work_stills'), dirOut = path.join(outDir, 'stills'); fs.mkdirSync(work, { recursive: true }); fs.mkdirSync(dirOut, { recursive: true });
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
+    for (let i = 0; i < ep.scenes.length; i++) {
+      const dir = path.join(work, `s${i}`); fs.mkdirSync(dir, { recursive: true });
+      const html = path.join(dir, 'scene.html'); fs.writeFileSync(html, sceneHtml(ep.scenes[i], ep, dir));
+      await page.goto('file://' + html); await page.evaluate(() => document.fonts.ready);
+      await page.evaluate(() => window.setP(1)); await page.waitForTimeout(60);
+      await page.screenshot({ path: path.join(dirOut, `scene-${i}.jpg`), type: 'jpeg', quality: 72 });
+    }
+  } finally { await browser.close(); fs.rmSync(work, { recursive: true, force: true }); }
+}
+
 function thumbHtml(ep, dir) {
   const t = ep.tickers.slice(0, 3);
   const first = ep.scenes.find(x => x.view), art = first ? miniCandles(first.view.slice(-34), 600, 520) : (ep.spyCloses ? areaSvg(ep.spyCloses, 600, 400, ep.spyCloses[ep.spyCloses.length - 1] >= ep.spyCloses[0]) : '');
@@ -249,4 +265,4 @@ function thumbHtml(ep, dir) {
     ${art ? `<div class="abs" style="left:640px;top:70px;width:600px;height:560px;opacity:.95">${art}</div>` : ''}</body></html>`;
 }
 
-module.exports = { prepareCharts, renderEpisode, sceneHtml, chartSvg, FPS, ANIM };
+module.exports = { renderStills, prepareCharts, renderEpisode, sceneHtml, chartSvg, FPS, ANIM };

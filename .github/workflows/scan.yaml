@@ -13,6 +13,11 @@ on:
         default: false
   push:
     branches: [main]
+    paths-ignore:                # studio-only changes don't need a new market scan
+      - 'studio/**'
+      - 'research-trigger/**'
+      - '.github/workflows/studio.yaml'
+      - 'RESEARCH.md'
 
 permissions:
   contents: read
