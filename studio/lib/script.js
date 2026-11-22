@@ -180,7 +180,7 @@ function buildWelcome({ setups, config, news }) {
 
   add('outro', 'outro', 'THANKS FOR WATCHING', `Thanks for watching. ${cfg.disclaimer} Subscribe to ${ch}, and see you after the next close.`, ['Thanks for watching', 'Subscribe so you catch the next one', 'See you after the next close'], { disclaimer: cfg.disclaimer });
 
-  return { mode: 'welcome', title: `${ch}: S&P 500 dip signals for ${nxd} (top ${top.length || ''} picks)`.replace('  ', ' '), nxd, date: dayShort(asOf), asOf, scenes, tickers: top.map(x => x.ticker).slice(0, 3), cfg, news };
+  return { mode: 'welcome', title: ((setups.market && setups.market.chg5d <= -3 && top.length) ? `${top.length} S&P 500 Survivors: 4% Swing Trade Signals for ${nxd}` : `S&P 500 Dip Signals for ${nxd}: ${top.length || ''} Swing Trade Picks`).replace('  ', ' '), nxd, date: dayShort(asOf), asOf, scenes, tickers: top.map(x => x.ticker).slice(0, 3), cfg, news };
 }
 
 function buildEpisodeInner({ mode, setups, config }) {
@@ -253,6 +253,6 @@ function tapeFor(ep, setups) {
   parts.push('Never use leverage');
   return parts.join('  //  ');
 }
-function buildEpisode(args) { const ep = buildEpisodeInner(args); if (!ep.nxd && ep.mode !== 'weekly' && args.setups && args.setups.asOf) ep.nxd = nextSessionFull(args.setups.asOf); ep.tape = tapeFor(ep, args.setups); return ep; }
+function buildEpisode(args) { const ep = buildEpisodeInner(args); if (args.setups && args.setups.market && typeof args.setups.market.chg5d === 'number') ep.chg5d = args.setups.market.chg5d; if (!ep.nxd && ep.mode !== 'weekly' && args.setups && args.setups.asOf) ep.nxd = nextSessionFull(args.setups.asOf); ep.tape = tapeFor(ep, args.setups); return ep; }
 function pointsOf(sc) { return (sc.points && sc.points.length) ? sc.points : sentences(sc.narration).slice(0, 7); }
 module.exports = { pointsOf, buildEpisode, metadata, spell, money, pct, nearTrigger };

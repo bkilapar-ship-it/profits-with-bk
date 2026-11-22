@@ -344,27 +344,31 @@ async function renderStills(ep, outDir, { chromium }) {
   } finally { await browser.close(); fs.rmSync(work, { recursive: true, force: true }); }
 }
 
-function photoHtml(dir, spark) {
+function photoHtml(dir) {
   const src = path.join(__dirname, '..', 'assets', 'bk.png');
-  if (!fs.existsSync(src)) return `<div class="abs" style="left:780px;top:170px;width:470px;height:450px;opacity:.95">${spark}</div>`;
+  if (!fs.existsSync(src)) return '';
   fs.copyFileSync(src, path.join(dir, 'bk.png'));
-  return `<div class="abs" style="left:770px;top:100px;width:480px;height:480px;border-radius:50%;box-shadow:0 0 0 6px #26D0FF,0 0 50px 8px rgba(38,208,255,.55),0 0 120px rgba(38,208,255,.25)"><img src="bk.png" style="width:480px;height:480px;border-radius:50%;display:block"></div>
-    <div class="abs" style="left:770px;top:610px;width:480px;text-align:center;font-weight:800;font-size:30px;letter-spacing:.12em;color:var(--amb);text-shadow:0 0 16px rgba(255,194,26,.6)">BK</div>`;
+  return `<div class="abs" style="left:760px;top:70px;width:500px;height:500px;border-radius:50%;box-shadow:0 0 0 7px #26D0FF,0 0 60px 10px rgba(38,208,255,.55),0 0 140px rgba(38,208,255,.25)"><img src="bk.png" style="width:500px;height:500px;border-radius:50%;display:block"></div>
+    <div class="abs" style="left:730px;top:455px;width:220px;height:220px;border-radius:50%;background:#031A12;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 6px #1FE5A5,0 0 50px rgba(31,229,165,.7);font-weight:800;font-size:80px;color:#1FE5A5;text-shadow:0 0 24px rgba(31,229,165,.8)">+4%</div>
+    <div class="abs" style="left:900px;top:640px;width:370px;text-align:center;font-weight:800;font-size:24px;letter-spacing:.1em;color:var(--amb);text-shadow:0 0 16px rgba(255,194,26,.6)">TARGET, NOT A PROMISE</div>`;
 }
 
 function thumbHtml(ep, dir, art) {
-  const n = ep.scenes.filter(x => x.type === 'setup').length, t = ep.scenes.filter(x => x.type === 'setup').map(x => x.heading).slice(0, 5);
-  const first = ep.scenes.find(x => x.view), spark = first ? miniCandles(first.view.slice(-34), 560, 500) : '';
-  const weekly = ep.mode === 'weekly', kick = weekly ? 'WEEKLY REVIEW' : ep.nxd ? 'SIGNALS FOR ' + ep.nxd.toUpperCase() : 'DAILY SCREEN';
-  const head = weekly ? 'WEEK IN<br><span style="color:var(--acc)">REVIEW</span>' : n ? `TOP ${n}<br><span style="color:var(--acc)">DIP SIGNALS</span>` : 'DIP<br><span style="color:var(--acc)">SIGNALS</span>';
+  const setupsSc = ep.scenes.filter(x => x.type === 'setup'), n = setupsSc.length, t = setupsSc.map(x => x.heading).slice(0, 5);
+  const weekly = ep.mode === 'weekly', surv = typeof ep.chg5d === 'number' && ep.chg5d <= -3 && n > 0;
+  const kick = weekly ? 'WEEKLY REVIEW' : ep.nxd ? 'SIGNALS FOR ' + ep.nxd.toUpperCase() : 'DAILY SCREEN';
+  const head = weekly ? 'WEEK IN<br><span style="color:var(--acc)">REVIEW</span>' : surv ? `TOP ${n}<br><span style="color:var(--acc)">SURVIVORS</span>` : n ? `TOP ${n}<br><span style="color:var(--acc)">SIGNALS</span>` : 'DIP<br><span style="color:var(--acc)">SIGNALS</span>';
+  const sub = weekly ? '' : '4% TARGET SWING TRADES';
+  const mk = surv ? `<div class="abs" style="left:56px;top:150px"><span class="chip r" style="font-size:26px;padding:8px 20px">S&amp;P 500 −${Math.abs(ep.chg5d).toFixed(1)}% THIS WEEK</span></div>` : '';
   return `<!doctype html><html><head><meta charset="utf-8"><style>${fontCss(dir)}${CSS.replace(/html,body\{width:1920px;height:1080px/, 'html,body{width:1280px;height:720px')}</style></head><body>
     ${bgCandles(1280, 720, 9)}
-    <div class="abs" style="left:56px;top:40px;display:flex;align-items:center;gap:14px">${logoSvg(64, { id: 'th' })}<span style="font-weight:800;letter-spacing:.14em;font-size:26px">TRADE WITH BK</span></div>
-    <div class="abs" style="left:56px;top:140px"><div class="kick" style="font-size:26px;color:var(--amb);text-shadow:0 0 18px rgba(255,194,26,.6)">${esc(kick)}</div></div>
-    <div class="abs" style="left:56px;top:190px;width:720px"><div class="h1" style="font-size:96px;line-height:1.04">${head}</div></div>
-    ${t.length ? `<div class="abs" style="left:56px;top:540px;width:900px;display:flex;gap:10px">${t.map(x => `<span class="chip g" style="font-size:28px;padding:8px 18px">${esc(x)}</span>`).join('')}</div>` : ''}
-    <div class="abs" style="left:56px;bottom:36px;font-size:26px;font-weight:700;color:var(--mut)">Educational only · Not financial advice</div>
-    ${art ? photoHtml(dir, spark) : ''}</body></html>`;
+    <div class="abs" style="left:56px;top:40px;display:flex;align-items:center;gap:14px">${logoSvg(60, { id: 'th' })}<span style="font-weight:800;letter-spacing:.14em;font-size:24px">TRADE WITH BK</span></div>
+    ${mk}
+    <div class="abs" style="left:56px;top:${surv ? 214 : 160}px"><div class="kick" style="font-size:26px;color:var(--amb);text-shadow:0 0 18px rgba(255,194,26,.6)">${esc(kick)}</div></div>
+    <div class="abs" style="left:56px;top:${surv ? 258 : 205}px;width:740px"><div class="h1" style="font-size:112px;line-height:1.04">${head}</div></div>
+    ${sub ? `<div class="abs" style="left:56px;top:${surv ? 520 : 480}px"><span class="chip g" style="font-size:36px;padding:12px 28px;border-width:3px;box-shadow:0 0 28px rgba(31,229,165,.55)">${esc(sub)}</span></div>` : ''}
+    ${t.length ? `<div class="abs" style="left:56px;top:625px;display:flex;gap:10px">${t.map(x => `<span class="chip" style="font-size:22px;padding:5px 14px;opacity:.85">${esc(x)}</span>`).join('')}</div>` : ''}
+    ${art ? photoHtml(dir) : ''}</body></html>`;
 }
 
 function studioBgHtml(ep, dir) {
