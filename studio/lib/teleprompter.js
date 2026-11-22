@@ -138,11 +138,11 @@ let bmr=null,bchunks=[];let live=false,liveId=null,liveEnd=0,liveRaf=0,lvBlob=nu
 const lvis=$('lvis'),lcv=$('lcv');
 function lvMode(){return ($('lv')&&$('lv').value)||'side';}
 function lvPrefetch(){if(lvMode()==='off'||lvPre)return lvPre;$('msg').textContent='Loading the visuals for live recording…';
-  lvPre=Promise.all(HEADS.map((h,i)=>new Promise((res,rej)=>{const im=new Image();im.onload=()=>res(im);im.onerror=()=>rej(new Error('img'));im.src='stills/scene-'+i+'.jpg';})).concat([fetch('frames/beats.json').then(r=>r.ok?r.json():{}).catch(()=>({}))])).then(a=>{lvB=a.pop();lvImgs=a;$('msg').textContent='Visuals ready. Live recording is on.';return true;}).catch(()=>{lvPre=null;$('msg').textContent='Could not load the visuals, so this take will be camera only.';return false;});return lvPre;}
+  lvPre=Promise.all(HEADS.map((h,i)=>new Promise((res,rej)=>{const im=new Image();im.onload=()=>{(window.createImageBitmap?createImageBitmap(im).catch(()=>im):Promise.resolve(im)).then(res);};im.onerror=()=>rej(new Error('img'));im.src='stills/scene-'+i+'.jpg';})).concat([fetch('frames/beats.json').then(r=>r.ok?r.json():{}).catch(()=>({}))])).then(a=>{lvB=a.pop();lvImgs=a;$('msg').textContent='Visuals ready. Live recording is on.';return true;}).catch(()=>{lvPre=null;$('msg').textContent='Could not load the visuals, so this take will be camera only.';return false;});return lvPre;}
 const FN=${FRAME_N},ANIMMS=650;let lvImgs=[],lvB={},lvIdx=-1,lvBs=-1,lvAnimK=-1,lvAnimT=0,lvTgt=0,lvFr={},lvLast=null,lvPrevScene=null,lvSceneT=0;
-function frLoad(i,k){if(i<0||i>=HEADS.length||k<0||k>(lvB[i]||0))return;lvFr[i]=lvFr[i]||{};if(lvFr[i][k])return;const a=[];for(let j=0;j<FN;j++){const im=new Image();im.src='frames/s'+i+'/'+k+'-'+j+'.jpg';a.push(im);}lvFr[i][k]=a;}
+function frLoad(i,k){if(i<0||i>=HEADS.length||k<0||k>(lvB[i]||0))return;lvFr[i]=lvFr[i]||{};if(lvFr[i][k])return;const a=new Array(FN).fill(null);lvFr[i][k]=a;for(let j=0;j<FN;j++){fetch('frames/s'+i+'/'+k+'-'+j+'.jpg').then(r=>r.blob()).then(bl=>createImageBitmap(bl)).then(bm=>{a[j]=bm;}).catch(()=>{});}}
 function frDrop(i,below){const o=lvFr[i];if(!o)return;Object.keys(o).forEach(k=>{if(+k<below)delete o[k];});}
-function frOk(a){return a&&a.every(im=>im.complete&&im.naturalWidth);}
+function frOk(a){return a&&a.every(Boolean);}
 function showScene(id){liveId=id;const i=HEADS.findIndex(x=>x.id===id);if(i<0||!lvImgs[i])return;lvPrevScene=lvLast;lvSceneT=performance.now();lvIdx=i;lvBs=-1;lvAnimK=0;lvAnimT=lvSceneT;lvTgt=0;Object.keys(lvFr).forEach(k=>{if(+k!==i)delete lvFr[k];});frLoad(i,0);frLoad(i,1);frLoad(i,2);}
 function drawVis(ctx,x,y,w,h){const now=performance.now(),i=lvIdx;if(i<0){return;}
   const B=lvB[i];
