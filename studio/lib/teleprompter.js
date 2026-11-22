@@ -183,11 +183,12 @@ function liveDraw(W,H2,ctx,mode){
   liveRaf=requestAnimationFrame(()=>liveDraw(W,H2,ctx,mode));
 }
 let wCt=-1,wAt=0,wFix=0,hiccups=0,wl=null,dgMax=0,dgSlow=0,dgLast=0,dgRe=0,dgMsg=0;
-function camFrames(cam){try{const q=cam.getVideoPlaybackQuality&&cam.getVideoPlaybackQuality();if(q&&q.totalVideoFrames!=null)return q.totalVideoFrames;}catch(e){}return cam.webkitDecodedFrameCount||cam.currentTime;}
-function watch(cam){const now=performance.now();if(dgLast){const g=now-dgLast;if(g>dgMax)dgMax=g;if(g>400)dgSlow++;}dgLast=now;
+let pfN=0,pfBound=null;function pfBind(cam){if(!cam.requestVideoFrameCallback||pfBound===cam.srcObject)return;pfBound=cam.srcObject;const f=()=>{pfN++;cam.requestVideoFrameCallback(f);};cam.requestVideoFrameCallback(f);}
+function camFrames(cam){if(cam.requestVideoFrameCallback){return pfN;}try{const q=cam.getVideoPlaybackQuality&&cam.getVideoPlaybackQuality();if(q&&q.totalVideoFrames!=null)return q.totalVideoFrames;}catch(e){}return cam.currentTime;}
+function watch(cam){const now=performance.now();pfBind(cam);if(dgLast){const g=now-dgLast;if(g>dgMax)dgMax=g;if(g>400)dgSlow++;}dgLast=now;
   const f=camFrames(cam);if(f!==wCt){wCt=f;wAt=now;}else{
-  if(now-wAt>1200&&now-wFix>1200){wFix=now;cam.play().catch(()=>{});}
-  if(now-wAt>2500){hiccups++;dgRe++;$('msg').textContent='Camera froze for a moment, recovering…';try{const ts=stream.getVideoTracks()[0];cam.srcObject=null;cam.srcObject=stream;cam.play().catch(()=>{});}catch(e){}wAt=now;}}
+  if(now-wAt>1000&&now-wFix>1000){wFix=now;cam.play().catch(()=>{});}
+  if(now-wAt>1800){hiccups++;dgRe++;$('msg').textContent='Camera froze for a moment, recovering…';try{const ts=stream.getVideoTracks()[0];cam.srcObject=null;cam.srcObject=stream;pfBound=null;cam.play().catch(()=>{});}catch(e){}wAt=now;}}
   if(now-dgMsg>3000&&mr&&mr.state==='recording'){dgMsg=now;window._diag='slowest draw '+Math.round(dgMax)+' ms, slow draws '+dgSlow+', camera restarts '+dgRe+', camera frames '+f;try{$('clock').title=window._diag;}catch(e){}}}
 async function getWake(){try{if(navigator.wakeLock)wl=await navigator.wakeLock.request('screen');}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&mr&&mr.state==='recording')getWake();});
