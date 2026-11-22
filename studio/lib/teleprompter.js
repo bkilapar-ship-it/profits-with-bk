@@ -3,7 +3,7 @@ const sigOf=(sc)=>{let h=5381;const t=sc.map(x=>x.id).join('|');for(let i=0;i<t.
 /* One self-contained HTML page: the script as a teleprompter, with an optional front-camera recorder (works offline, nothing is uploaded). */
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-const { pointsOf } = require('./script');
+const { pointsOf, metaParts } = require('./script');
 const { FRAME_N, FRAME_FPS } = require('./render');
 function teleprompterHtml(ep) {
   const total = ep.scenes.reduce((s, x) => s + x.dur, 0);
@@ -61,7 +61,7 @@ label{font-size:11px;color:#8FA3C7;display:flex;flex-direction:column;gap:4px;fo
   <div id="set"><label>SPEED <b id="wpmv">110</b> words/min<input id="spd" type="range" min="50" max="200" step="5" value="110"></label><label>TEXT SIZE<input id="fs" type="range" min="20" max="60" value="26"></label><label>LIVE VIDEO<select id="lv"><option value="side">Combine live: side by side</option><option value="pip">Combine live: face in a corner</option><option value="off">Camera only (combine later)</option></select></label><label>BACKUP COPY<select id="lb"><option value="off">No backup (default)</option><option value="on">Also save a plain camera file</option></select></label><label>QUALITY<select id="lq"><option value="720">720p</option><option value="1080">1080p</option></select></label></div>
 </div>
 <script>
-const HEADS=${heads},KEY='${ep.mode}-${ep.asOf}-${sigOf(ep.scenes)}';
+const MD=${JSON.stringify(metaParts(ep)).replace(/</g, '\\u003c')},HEADS=${heads},KEY='${ep.mode}-${ep.asOf}-${sigOf(ep.scenes)}';
 const $=id=>document.getElementById(id);let rt={},lastMark=0;let y=0,run=false,last=0,stream=null,mr=null,chunks=[],t0=0,mime='';
 const sc=$('scroller');
 const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
@@ -104,7 +104,7 @@ function fit(){document.documentElement.style.setProperty('--bar',($('bar').offs
 addEventListener('resize',fit);
 $('fs').oninput=e=>{document.documentElement.style.setProperty('--fs',e.target.value+'px');apply();};
 $('mir').onclick=()=>{document.body.classList.toggle('mirror');$('mir').classList.toggle('on');apply();};
-addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();$('play').click();}});
+addEventListener('keydown',e=>{if(e.target&&(e.target.isContentEditable||/INPUT|TEXTAREA|SELECT/.test(e.target.tagName)))return;if(e.code==='Space'){e.preventDefault();$('play').click();}});
 let touchY=null;addEventListener('touchstart',e=>{touchY=e.touches[0].clientY;},{passive:true});
 addEventListener('touchmove',e=>{if(document.body.classList.contains('review'))return;if(touchY===null||e.target.closest('#bar'))return;const d=touchY-e.touches[0].clientY;touchY=e.touches[0].clientY;y=Math.max(0,y+d);apply();},{passive:true});
 async function cam(){if(stream)return true;try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1920},height:{ideal:1080}},audio:{echoCancellation:true,noiseSuppression:true}});$('cam').srcObject=stream;document.body.classList.add('camon');$('cambtn').classList.add('on');return true;}catch(e){$('msg').textContent='Camera or microphone blocked: allow access in Safari settings for this page. ('+e.name+')';return false;}}
@@ -112,6 +112,17 @@ $('cam').onclick=()=>{if(live)return;$('cam').classList.toggle('hid');};
 $('cambtn').onclick=async()=>{if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;document.body.classList.remove('camon');$('cambtn').classList.remove('on');}else await cam();};
 
 
+
+function mm(sec){return String(Math.floor(sec/60)).padStart(2,'0')+':'+String(Math.round(sec%60)).padStart(2,'0');}
+function ytDetails(){
+  const order=vis().map(b=>b.dataset.id),have=order.filter(id=>rt[id]!==undefined);let last=-99;const lines=[];
+  (have.length?have:order).forEach(id=>{const c=MD.chap.find(x=>x.id===id);if(!c)return;const sec=have.length?rt[id]:0;if(!lines.length||sec-last>=10){lines.push((lines.length?mm(sec):'00:00')+' '+c.name);last=sec;}});
+  const desc=MD.head+'\\n\\nCHAPTERS\\n'+lines.join('\\n')+'\\n\\n'+MD.tail,tags=MD.tags.join(', ');
+  window._yt={title:MD.title,desc:desc,tags:tags,pin:MD.pinned};
+  const row=(k,l)=>'<a class="btn alt" href="#" data-yt="'+k+'">Copy '+l+'</a>';
+  return '<h2 style="margin-top:18px">YouTube details</h2><p>Chapter times come from when you actually moved to each scene in this take. Paste them into YouTube Studio.</p><pre style="white-space:pre-wrap;font-size:12px;color:#B8C6E0;background:#0E1626;border-radius:10px;padding:10px;max-height:180px;overflow:auto">'+MD.title.replace(/&/g,'&amp;')+'\\n\\n'+lines.join('\\n').replace(/&/g,'&amp;')+'</pre>'+row('title','title')+row('desc','description (with chapters)')+row('tags','tags')+row('pin','pinned comment');
+}
+document.addEventListener('click',e=>{const a=e.target.closest&&e.target.closest('[data-yt]');if(!a||!window._yt)return;e.preventDefault();const k=a.dataset.yt,v=({title:window._yt.title,desc:window._yt.desc,tags:window._yt.tags,pin:window._yt.pin})[k];(navigator.clipboard?navigator.clipboard.writeText(v):Promise.reject()).then(()=>{a.textContent='Copied ✓';}).catch(()=>{a.textContent='Could not copy (long-press and copy from the text)';});});
 /* ---- crash-safe storage: every recorded piece is also kept in the browser database ---- */
 let _db=null;function idb(){return _db||(_db=new Promise((res,rej)=>{const q=indexedDB.open('bkstudio-rec',1);q.onupgradeneeded=()=>{const d=q.result;d.createObjectStore('chunks',{autoIncrement:true});d.createObjectStore('meta');};q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);}));}
 async function idbStart(id){try{const d=await idb();await new Promise(r=>{const t=d.transaction(['chunks','meta'],'readwrite');t.objectStore('chunks').clear();t.objectStore('meta').clear();t.objectStore('meta').put({id,at:Date.now(),mime:(typeof mime!=='undefined'?mime:'')||'',asOf:'${esc(ep.asOf)}'},'cur');t.oncomplete=r;t.onerror=r;});}catch(e){}}
@@ -186,7 +197,7 @@ $('rec').onclick=async()=>{
   mr.ondataavailable=e=>{if(e.data&&e.data.size){chunks.push(e.data);idbPut(takeId,ci++,e.data);}};
   bmr=null;bchunks=[];if(useLive&&$('lb').value==='on'){try{bmr=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:3e6,audioBitsPerSecond:96e3}:undefined);bmr.ondataavailable=e=>{if(e.data&&e.data.size)bchunks.push(e.data);};}catch(e){bmr=null;}}
   const fin=()=>{if(fin.done)return;fin.done=true;t0=0;store.set('bkstudio-marks2-'+KEY,{order:vis().map(b=>b.dataset.id),t:rt});$('rec').textContent='● Record';$('rec').classList.remove('on');const type=mr.mimeType||mime||'video/mp4';const blob=new Blob(chunks,{type});const ext=/mp4/.test(type)?'mp4':'webm';const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(window._lg&&window._lg.used?'trade-with-bk-':'recording-')+'${esc(ep.asOf)}.'+ext;document.body.appendChild(a);a.click();a.remove();const mainUrl=a.href,mainName=a.download;let bkUrl='',bkName='';
-  const showRes=()=>{$('res').innerHTML='<h2>Your take is ready</h2><p>Check the preview below. '+(window._lg&&window._lg.used?'The charts should be on the right and you on the left.':'This one is camera only.')+(hiccups?' The camera stalled '+hiccups+' time(s), so watch the whole preview.':'')+'</p>'+(blob.size<120e6?'<video src="'+mainUrl+'" controls playsinline></video>':'<p>This video is large, so it is not previewed here. Save it, then open it from Files or Photos to check it.</p>')+'<a class="btn" href="'+mainUrl+'" download="'+mainName+'">Save the finished video</a>'+(bkUrl?'<a class="btn alt" href="'+bkUrl+'" download="'+bkName+'">Save the camera-only backup (no visuals)</a>':'')+'<a class="btn alt" href="#" id="resx">Close and record again</a>';$('res').classList.add('on');const x=$('resx');if(x)x.onclick=e=>{e.preventDefault();$('res').classList.remove('on');$('res').innerHTML='';};};
+  const showRes=()=>{$('res').innerHTML='<h2>Your take is ready</h2><p>Check the preview below. '+(window._lg&&window._lg.used?'The charts should be on the right and you on the left.':'This one is camera only.')+(hiccups?' The camera stalled '+hiccups+' time(s), so watch the whole preview.':'')+'</p>'+(blob.size<120e6?'<video src="'+mainUrl+'" controls playsinline></video>':'<p>This video is large, so it is not previewed here. Save it, then open it from Files or Photos to check it.</p>')+'<a class="btn" href="'+mainUrl+'" download="'+mainName+'">Save the finished video</a>'+(bkUrl?'<a class="btn alt" href="'+bkUrl+'" download="'+bkName+'">Save the camera-only backup (no visuals)</a>':'')+ytDetails()+'<a class="btn alt" href="#" id="resx">Close and record again</a>';$('res').classList.add('on');const x=$('resx');if(x)x.onclick=e=>{e.preventDefault();$('res').classList.remove('on');$('res').innerHTML='';};};
   if(bmr&&bmr.state!=='inactive'){const bm=bmr;bm.onstop=()=>{const bb=new Blob(bchunks,{type:bm.mimeType||type});bkUrl=URL.createObjectURL(bb);bkName='camera-backup-${esc(ep.asOf)}.'+ext;showRes();};try{bm.stop();}catch(e){showRes();}}else showRes();
   stopLive();$('msg').textContent=(hiccups?'The camera stalled '+hiccups+' time(s) during this take, so check your video. ':'')+(window._lg&&window._lg.used?'Your finished video is saved (camera and visuals together). ':'Saved. ')+'If nothing downloaded, long-press the video that opened and choose Save.';};
   window._fin=fin;mr.onstop=fin;

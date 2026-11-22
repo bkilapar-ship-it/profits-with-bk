@@ -234,13 +234,39 @@ function buildEpisodeInner({ mode, setups, config }) {
   return { mode, title, date: dayShort(asOf), asOf, scenes, tickers: featured.map(x => x.ticker).concat(short ? [short.ticker] : []), cfg };
 }
 
-function metadata(ep) {
+function chapName(s) {
+  if (s.type === 'setup') { const t = s.heading; return NAMES[t] ? `${NAMES[t]} (${t}) setup` : `${t} setup`; }
+  let h = s.heading.charAt(0) + s.heading.slice(1).toLowerCase();
+  h = h.replace(/\b(ai|bk|spy|etf|atr|s&p|rsi)\b/gi, m => m.toUpperCase()).replace(/\b(\d+)\s*pct\b/gi, '$1%');
+  return h.replace(/\bmonday's\b/i, m => m.charAt(0).toUpperCase() + m.slice(1));
+}
+/** Structured YouTube details. {{CHAPTERS}} is replaced by real timestamps. */
+function metaParts(ep) {
   const t0 = []; let t = 0;
   for (const s of ep.scenes) { t0.push(t); t += s.dur; }
   const mmss = sec => `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(Math.round(sec % 60)).padStart(2, '0')}`;
-  const chapters = ep.scenes.map((s, i) => `${mmss(t0[i])} ${s.heading.charAt(0) + s.heading.slice(1).toLowerCase()}`).join('\n');
-  const tags = ['stock screener', 'S&P 500', 'dip buying', 'swing trading', 'stock market today', 'trading signals', 'technical analysis', ...ep.tickers];
-  return `TITLE\n${ep.title}\n\nDESCRIPTION\n${ep.mode === 'welcome' ? `${ep.cfg.channelName}: S&P 500 dip signals for ${ep.nxd}. Hi, I'm Bharat. In this video: what the channel is for, how the Uptrend Dip screen picks S&P 500 stocks (and what it skips), how to use a signal (wait 3 to 5 minutes after the open, only within 2% of the signal close, 4% target, 3 ATR stop, exit by the close of day 3), this week's market and the first list of signals.` : ep.mode === 'weekly' ? 'Weekly review of how the screen signals played out under the tested rules, plus a watch list for next week.' : `Today's results from the Uptrend Dip screen on S&P 500 stocks: what triggered, why, and the tested plan levels.`}\n\nChapters (approximate, adjust after you edit):\n${chapters}\n\n${ep.cfg.disclaimer}\n\nAI note: the charts and graphics in this video are generated automatically from market data. The voice and presenter are real.\n\nTAGS\n${tags.join(', ')}\n`;
+  const chap = ep.scenes.map((s, i) => ({ id: s.id, name: chapName(s), planned: mmss(t0[i]) }));
+  const setupsSc = ep.scenes.filter(x => x.type === 'setup'), tick = setupsSc.map(x => x.heading);
+  const named = tick.map(x => NAMES[x] ? `${x} (${NAMES[x]})` : x).join(', ');
+  const surv = typeof ep.chg5d === 'number' && ep.chg5d <= -3 && tick.length > 0;
+  const drop = typeof ep.chg5d === 'number' ? `${ep.chg5d >= 0 ? '+' : '−'}${Math.abs(ep.chg5d).toFixed(1)}%` : '';
+  const sources = (ep.sources || []).map(x => `• ${x}`).join('\n');
+  let hook, rules = '';
+  if (ep.mode === 'welcome') {
+    hook = `${surv ? `The S&P 500 fell ${drop.replace('−', '')} in five sessions. ` : ''}Here are the ${tick.length} S&P 500 stocks the Uptrend Dip screen still flagged for ${ep.nxd}, how to treat them as 4% target swing trades, and the rules that keep the risk sane. Signals are from the ${dayShort(ep.asOf)} close.`;
+    rules = `THE RULES\n• Wait 3-5 minutes after the open on ${ep.nxd}\n• Only if the price is within 2% of the signal-day close\n• Target: 4% above the signal-day close (a target, not a promise)\n• Stop: 3x ATR below. It is far away, so NEVER use leverage, margin, leveraged ETFs or options\n• Exit by the close of day 3 at the latest`;
+  } else if (ep.mode === 'weekly') hook = 'Weekly review of how the screen signals played out under the tested rules, plus a watch list for next week.';
+  else hook = `Today's Uptrend Dip signals on S&P 500 stocks for ${ep.nxd || 'the next session'}: what triggered, why, and the tested plan levels.`;
+  const head = [hook, tick.length ? `SIGNALS: ${named}` : '', rules].filter(Boolean).join('\n\n');
+  const tail = [sources ? `MARKET SOURCES (checked by me, double-check before relying on them)\n${sources}` : '', ep.cfg.disclaimer, 'AI note: the charts and graphics in this video are generated automatically from market data. The voice and presenter are real.', `#TradeWithBK #SwingTrading #SP500 #StockMarket`].filter(Boolean).join('\n\n');
+  const tags = ['S&P 500', 'S&P 500 stocks', 'swing trading', 'swing trading strategy', '4% swing trade', 'stock screener', 'dip buying', 'uptrend pullback', 'stock market correction', 'stock market today', 'trading signals', 'technical analysis', 'stocks to watch', 'trade with bk', ...tick, ...tick.map(x => NAMES[x]).filter(Boolean)];
+  const pinned = ep.mode === 'welcome' ? `Which of these ${tick.length} would you have picked, and which AI stock are you watching? Educational only, not financial advice. Never use leverage with these.` : 'Which setup do you like most today? Educational only, not financial advice.';
+  return { title: ep.title, head, tail, chap, tags, pinned };
+}
+function metadata(ep) {
+  const m = metaParts(ep);
+  const chapters = m.chap.map(c => `${c.planned} ${c.name}`).join('\n');
+  return `TITLE\n${m.title}\n\nDESCRIPTION\n${m.head}\n\nCHAPTERS (planned times; after you record, the take-ready screen gives the real ones)\n${chapters}\n\n${m.tail}\n\nTAGS\n${m.tags.join(', ')}\n\nPINNED COMMENT\n${m.pinned}\n`;
 }
 
 function tapeFor(ep, setups) {
@@ -253,6 +279,6 @@ function tapeFor(ep, setups) {
   parts.push('Never use leverage');
   return parts.join('  //  ');
 }
-function buildEpisode(args) { const ep = buildEpisodeInner(args); if (args.setups && args.setups.market && typeof args.setups.market.chg5d === 'number') ep.chg5d = args.setups.market.chg5d; if (!ep.nxd && ep.mode !== 'weekly' && args.setups && args.setups.asOf) ep.nxd = nextSessionFull(args.setups.asOf); ep.tape = tapeFor(ep, args.setups); return ep; }
+function buildEpisode(args) { const ep = buildEpisodeInner(args); if (args.setups && args.setups.__news && args.setups.__news.asOf === args.setups.asOf) ep.sources = args.setups.__news.sources || []; if (args.setups && args.setups.market && typeof args.setups.market.chg5d === 'number') ep.chg5d = args.setups.market.chg5d; if (!ep.nxd && ep.mode !== 'weekly' && args.setups && args.setups.asOf) ep.nxd = nextSessionFull(args.setups.asOf); ep.tape = tapeFor(ep, args.setups); return ep; }
 function pointsOf(sc) { return (sc.points && sc.points.length) ? sc.points : sentences(sc.narration).slice(0, 7); }
-module.exports = { pointsOf, buildEpisode, metadata, spell, money, pct, nearTrigger };
+module.exports = { metaParts, pointsOf, buildEpisode, metadata, spell, money, pct, nearTrigger };
