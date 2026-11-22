@@ -49,6 +49,7 @@ function outroText(cfg) {
 
 
 const weekday = iso => new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' });
+function nextSessionFull(iso) { const d = new Date(`${iso}T12:00:00Z`); do { d.setUTCDate(d.getUTCDate() + 1); } while ([0, 6].includes(d.getUTCDay())); return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).replace(/^(\w+),? /, '$1 '); }
 function nextSessionName(iso) { const d = new Date(`${iso}T12:00:00Z`); do { d.setUTCDate(d.getUTCDate() + 1); } while ([0, 6].includes(d.getUTCDay())); return d.toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' }); }
 const sentences = t => (String(t).match(/[^.!?]+[.!?]+(\s|$)/g) || [String(t)]).map(x => x.trim()).filter(Boolean);
 function weekLine(m) {
@@ -91,7 +92,7 @@ function pickNarration(x, i, wd, nx) {
 
 function buildWelcome({ setups, config, news }) {
   const cfg = config, asOf = setups.asOf, scenes = [], m = setups.market || {};
-  const wd = weekday(asOf), nx = nextSessionName(asOf);
+  const wd = weekday(asOf), nx = nextSessionName(asOf), nxd = nextSessionFull(asOf);
   const dipSp = (setups.dip || []).filter(x => x.sessionsAgo === 0 && x.sp500).sort(sortLive);
   const top = dipSp.slice(0, 5);
   const add = (id, type, heading, narration, points, data = {}) => scenes.push({ id, type, heading, narration, points, data, dur: Math.max(7, Math.round((words(narration) / cfg.speakingWordsPerSecond + 1.5) * 10) / 10) });
@@ -101,9 +102,9 @@ function buildWelcome({ setups, config, news }) {
   const maxStop = rows.length ? Math.round(Math.max(...rows.map(r => Math.abs(r.stopDist)))) : null;
 
   add('intro', 'intro', 'Welcome to Trade With BK',
-    `Hi everyone, I'm Bharat, and welcome to ${ch}. This is episode one, so let me tell you what we're doing here, how the strategy works, and how to use it safely. Then we'll look at what the market did this week, and the five best signals the screener found for ${nx}.`,
-    ["Hi, I'm Bharat", `Welcome to ${ch}: episode one`, 'What the channel is, how it works, how to use it safely', `This week's market, and ${nx}'s top five`],
-    { date: `Episode 1 · ${dayShort(asOf)}`, kicker: 'Episode 1', chips: ['S&P 500 signals every weekday', 'Weekly review on Fridays'], market: m });
+    `Hi everyone, I'm Bharat, and welcome to ${ch}. This is our very first video, so let me tell you what we're doing here, how the strategy works, and how to use it safely. Then we'll look at what the market did this week, and the five best signals the screener found for ${nx}.`,
+    ["Hi, I'm Bharat", `Welcome to ${ch}: signals for ${nxd}`, 'What the channel is, how it works, how to use it safely', `This week's market, and ${nx}'s top five`],
+    { date: `Based on the ${dayShort(asOf)} close`, kicker: `Signals for ${nxd}`, chips: ['S&P 500 signals every weekday', 'Weekly review on Fridays'], market: m });
 
   add('channel', 'bullets', 'WHAT THIS CHANNEL IS FOR',
     `So, what is this channel? Every weekday after the US market closes, I run one screen across the S&P 500, and I show you exactly what it found, with the reasons behind every pick. On Fridays, I'll also do a weekly review: what the market did, and what I'm watching next. It's one strategy, one process, the same every day. I won't hype stocks, and I won't predict prices. The goal is simple: show you a clear, tested way to look at pullbacks in strong stocks, and let you decide what to do with it.`,
@@ -164,7 +165,7 @@ function buildWelcome({ setups, config, news }) {
     add('monday', 'summary', `${nx.toUpperCase()}'S TOP ${top.length}`,
       `So here's what the screener found for ${nx}. ${dipSp.length} S&P 500 stocks passed the screen, which is a lot, and honestly too many to trade well. So I'm only going to show you the top ${top.length}, using the same ranking we tested: the strongest setups first, then the ones sitting furthest above their 200-day average. Those ${top.length} are ${lst}. Let's go through them one by one, with the chart and the reasons.`,
       [`${dipSp.length} S&P 500 stocks passed ${wd}'s screen`, `Too many to trade well: showing the top ${top.length}`, lst, 'Same ranking we tested'],
-      { rows, kick: `FOR ${nx.toUpperCase()}'S OPEN`, title: `Top ${top.length} of ${dipSp.length} signals`, note: `${dipSp.length} passed the screen. These are the top ${top.length} by our tested ranking.` });
+      { rows, kick: `FOR THE OPEN ON ${nxd.toUpperCase()}`, title: `Top ${top.length} of ${dipSp.length} signals`, note: `${dipSp.length} passed the screen. These are the top ${top.length} by our tested ranking.` });
     top.forEach((x, i) => add(`setup-${x.ticker}`, 'setup', x.ticker, pickNarration(x, i, wd, nx),
       [`#${i + 1}: ${NAMES[x.ticker] || x.ticker} (${x.ticker})`, `${wd}'s close ${money(x.close)}, ${x.chg5d.toFixed(1)}% in 5 days, still ${x.vs200.toFixed(0)}% above the 200-day`, (x.reasons || []).join(', ') || 'selling looks stretched', `Target ${money(plan(x).target)}, stop ${money(plan(x).stop)} (${Math.abs((plan(x).stop / x.close - 1) * 100).toFixed(0)}% below)`, 'Wait 3 to 5 minutes after the open, within 2% of the close'],
       { setup: x, plan: plan(x), rank: i + 1, total: dipSp.length }));
@@ -179,7 +180,7 @@ function buildWelcome({ setups, config, news }) {
 
   add('outro', 'outro', 'THANKS FOR WATCHING', `Thanks for watching. ${cfg.disclaimer} Subscribe to ${ch}, and see you after the next close.`, ['Thanks for watching', 'Subscribe so you catch the next one', 'See you after the next close'], { disclaimer: cfg.disclaimer });
 
-  return { mode: 'welcome', title: `Welcome to ${ch}: S&P 500 dip signals, how to trade them safely, and ${nx}'s top ${top.length || ''} picks (Episode 1)`.replace('  ', ' '), date: dayShort(asOf), asOf, scenes, tickers: top.map(x => x.ticker).slice(0, 3), cfg, news };
+  return { mode: 'welcome', title: `${ch}: S&P 500 dip signals for ${nxd} (top ${top.length || ''} picks)`.replace('  ', ' '), nxd, date: dayShort(asOf), asOf, scenes, tickers: top.map(x => x.ticker).slice(0, 3), cfg, news };
 }
 
 function buildEpisodeInner({ mode, setups, config }) {
@@ -239,7 +240,7 @@ function metadata(ep) {
   const mmss = sec => `${String(Math.floor(sec / 60)).padStart(2, '0')}:${String(Math.round(sec % 60)).padStart(2, '0')}`;
   const chapters = ep.scenes.map((s, i) => `${mmss(t0[i])} ${s.heading.charAt(0) + s.heading.slice(1).toLowerCase()}`).join('\n');
   const tags = ['stock screener', 'S&P 500', 'dip buying', 'swing trading', 'stock market today', 'trading signals', 'technical analysis', ...ep.tickers];
-  return `TITLE\n${ep.title}\n\nDESCRIPTION\n${ep.mode === 'welcome' ? `Episode 1 of ${ep.cfg.channelName}. Hi, I'm Bharat. In this video: what the channel is for, how the Uptrend Dip screen picks S&P 500 stocks (and what it skips), how to use a signal (wait 3 to 5 minutes after the open, only within 2% of the signal close, 4% target, 3 ATR stop, exit by the close of day 3), this week's market and the first list of signals.` : ep.mode === 'weekly' ? 'Weekly review of how the screen signals played out under the tested rules, plus a watch list for next week.' : `Today's results from the Uptrend Dip screen on S&P 500 stocks: what triggered, why, and the tested plan levels.`}\n\nChapters (approximate, adjust after you edit):\n${chapters}\n\n${ep.cfg.disclaimer}\n\nAI note: the charts and graphics in this video are generated automatically from market data. The voice and presenter are real.\n\nTAGS\n${tags.join(', ')}\n`;
+  return `TITLE\n${ep.title}\n\nDESCRIPTION\n${ep.mode === 'welcome' ? `${ep.cfg.channelName}: S&P 500 dip signals for ${ep.nxd}. Hi, I'm Bharat. In this video: what the channel is for, how the Uptrend Dip screen picks S&P 500 stocks (and what it skips), how to use a signal (wait 3 to 5 minutes after the open, only within 2% of the signal close, 4% target, 3 ATR stop, exit by the close of day 3), this week's market and the first list of signals.` : ep.mode === 'weekly' ? 'Weekly review of how the screen signals played out under the tested rules, plus a watch list for next week.' : `Today's results from the Uptrend Dip screen on S&P 500 stocks: what triggered, why, and the tested plan levels.`}\n\nChapters (approximate, adjust after you edit):\n${chapters}\n\n${ep.cfg.disclaimer}\n\nAI note: the charts and graphics in this video are generated automatically from market data. The voice and presenter are real.\n\nTAGS\n${tags.join(', ')}\n`;
 }
 
 function tapeFor(ep, setups) {

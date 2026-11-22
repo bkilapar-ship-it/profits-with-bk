@@ -4,7 +4,7 @@
 const fs = require('fs');
 const path = require('path');
 const dir = process.argv[2];
-const LABEL = { welcome: 'Episode 1: welcome video', daily: 'Daily video', weekly: 'Weekly review' };
+const LABEL = { welcome: 'Welcome video', daily: 'Daily video', weekly: 'Weekly review' };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const sections = ['welcome', 'daily', 'weekly'].map(m => {
   const f = path.join(dir, m, 'meta.json');
