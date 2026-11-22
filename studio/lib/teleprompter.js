@@ -12,7 +12,7 @@ function teleprompterHtml(ep) {
 #cam{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transform:scaleX(-1);pointer-events:none}
 body.camon #cam{opacity:.38}
 #hud{position:fixed;top:0;left:0;right:0;padding:calc(8px + env(safe-area-inset-top)) 14px 8px;display:flex;gap:12px;align-items:center;font-size:13px;font-weight:700;color:#8FA3C7;z-index:4;background:linear-gradient(#05080F 70%,transparent)}
-#clock{flex:none;font-variant-numeric:tabular-nums;color:#fff;font-size:15px}#ttl{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#hud a{flex:none;color:#9DB8FF;text-decoration:none;padding:6px 10px;border:1px solid #2A3B61;border-radius:10px;background:#121C33}#clock{flex:none;font-variant-numeric:tabular-nums;color:#fff;font-size:15px}#ttl{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 #msg{position:fixed;left:14px;right:14px;top:calc(36px + env(safe-area-inset-top));font-size:13px;color:#F5B945;z-index:4}
 #stage{position:fixed;left:0;right:0;top:calc(40px + env(safe-area-inset-top));bottom:calc(var(--bar) + env(safe-area-inset-bottom));overflow:hidden}
 #scroller{position:absolute;left:0;right:0;top:0;padding:6vh 6vw 70vh;will-change:transform}
@@ -31,7 +31,7 @@ button.go{background:#2563EB;border-color:#2563EB}button.rec{background:#C0213A;
 label{font-size:11px;color:#8FA3C7;display:flex;flex-direction:column;gap:4px;font-weight:700;letter-spacing:.08em}input[type=range]{width:100%}
 </style></head><body>
 <video id="cam" playsinline muted autoplay></video>
-<div id="hud"><span id="clock">00:00</span><span id="ttl">${esc(ep.title)} · aim for ${Math.floor(total / 60)}:${String(Math.round(total % 60)).padStart(2, '0')}</span></div><div id="msg"></div>
+<div id="hud"><a href="../" class="nav">‹ Studio</a><a href="../combine.html" class="nav">Combine ›</a><span id="clock">00:00</span><span id="ttl">${esc(ep.title)} · aim for ${Math.floor(total / 60)}:${String(Math.round(total % 60)).padStart(2, '0')}</span></div><div id="msg"></div>
 <div id="stage"><div id="scroller">${blocks}</div></div><div id="line"></div>
 <div id="bar">
   <div id="row1"><button id="play" class="go">▶ Start</button><button id="cambtn">Camera</button><button id="rec">● Record</button></div>
@@ -50,6 +50,7 @@ function tick(ts){if(run){const dt=(ts-last)/1000;y+=parseFloat($('spd').value)*
 const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0');
 $('play').onclick=()=>{run=!run;$('play').textContent=run?'❚❚ Pause':'▶ Start';};
 $('next').onclick=()=>{const bl=[...document.querySelectorAll('.blk')];let cur=0;bl.forEach((b,i)=>{if(b.classList.contains('now'))cur=i;});const j=Math.min(bl.length-1,cur+1);if(j===cur)return;const lineRel=$('line').getBoundingClientRect().top-$('stage').getBoundingClientRect().top;y=Math.max(0,bl[j].offsetTop-lineRel+4);apply();};
+document.querySelectorAll('a.nav').forEach(a=>a.addEventListener('click',e=>{if(typeof mr!=='undefined'&&mr&&mr.state==='recording'&&!confirm('Your recording is still running. Leave this page and lose it?'))e.preventDefault();}));
 $('gear').onclick=()=>{$('set').classList.toggle('open');$('gear').classList.toggle('on');fit();};
 $('mode').onclick=()=>{document.body.classList.toggle('full');$('mode').textContent=document.body.classList.contains('full')?'Show talking points':'Show full script';apply();};
 function fit(){document.documentElement.style.setProperty('--bar',($('bar').offsetHeight)+'px');apply();}

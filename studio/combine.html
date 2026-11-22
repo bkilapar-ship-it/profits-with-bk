@@ -14,8 +14,10 @@ input[type=file]{width:100%;padding:12px;border:1px dashed #2A3B61;border-radius
 #marks{font-size:14px;margin-top:10px}#marks b{color:#9DB8FF}.mrow{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #1B2742}.mn{flex:1;min-width:0}.mt{font-variant-numeric:tabular-nums;width:52px;text-align:right}.mb{display:flex;gap:4px}.mb button{padding:7px 8px;font-size:13px;border-radius:9px}
 video{width:100%;border-radius:12px;background:#000;margin-top:10px}
 canvas{width:100%;border-radius:12px;background:#000;margin-top:10px;display:none}
+nav.top{position:sticky;top:0;z-index:9;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:-18px -16px 14px;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;background:rgba(10,15,28,.94);backdrop-filter:blur(8px);border-bottom:1px solid #22304D}nav.top a{padding:11px 6px;border-radius:12px;border:1px solid #2A3B61;background:#121C33;color:#fff;text-decoration:none;text-align:center;font-weight:700;font-size:14px}nav.top a.cur{background:#2563EB;border-color:#2563EB}
 a.btn.dl{display:block;background:#2563EB;border-color:#2563EB;margin-top:10px}
 </style></head><body>
+<nav class="top"><a href="./">‹ Studio</a><a id="navtp" href="welcome/teleprompter.html">Teleprompter</a><a class="cur" href="combine.html">Combine</a></nav>
 <h1>Combine your video</h1>
 <p class="mut">Put your face and voice together with the visuals. It all happens in this page, on your phone. Nothing is uploaded.</p>
 
@@ -64,7 +66,7 @@ async function loadEpisodes(){
 }
 function pick(){
   const o=$('ep').selectedOptions[0];if(!o)return;const j=JSON.parse(o.dataset.j);ep={m:o.value,j};scenes=j.scenes;let t=0;starts=scenes.map(s=>{const a=t;t+=s.dur;return a;});
-  visUrl=null;prefetch();$('epinfo').textContent=scenes.length+' scenes · '+fmt(t)+' of visuals';marks=[];renderMarks();ready();
+  visUrl=null;prefetch();$('navtp').href=ep.m+'/teleprompter.html';$('epinfo').textContent=scenes.length+' scenes · '+fmt(t)+' of visuals';marks=[];renderMarks();ready();
 }
 $('rec').onchange=e=>{
   const f=e.target.files[0];if(!f)return;if(recUrl)URL.revokeObjectURL(recUrl);recUrl=URL.createObjectURL(f);
