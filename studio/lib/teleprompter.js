@@ -44,6 +44,7 @@ body.review p.full{display:block;font-size:17px;font-weight:500;line-height:1.5;
 body.review .pts{outline:none;border-radius:10px;padding:6px 4px;border:1px dashed #2A3B61;min-height:2em}
 body.review .pts li{font-size:18px;font-weight:700}
 body.review #rvbar{display:grid;grid-template-columns:2fr 1fr;gap:8px}body.review #rvnote{display:block;position:fixed;left:14px;right:14px;top:calc(46px + env(safe-area-inset-top));font-size:12px;color:#9DB8FF;z-index:4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#rowm{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}#rowm button{padding:9px 6px;font-size:13px;opacity:.65}#rowm button.on{opacity:1;outline:2px solid #26D0FF;background:#0E2A3A}body.review #rowm{display:none}
 body.review #stage{top:calc(74px + env(safe-area-inset-top))}
 label{font-size:11px;color:#8FA3C7;display:flex;flex-direction:column;gap:4px;font-weight:700;letter-spacing:.08em}input[type=range]{width:100%}
 </style></head><body>
@@ -54,6 +55,7 @@ label{font-size:11px;color:#8FA3C7;display:flex;flex-direction:column;gap:4px;fo
 <div id="stage"><div id="scroller">${blocks}</div></div><div id="line"></div>
 <div id="bar">
   <div id="row1"><button id="play" class="go">▶ Start</button><button id="cambtn">Camera</button><button id="rec">● Record</button><button id="rst">↺ Restart</button></div>
+  <div id="rowm"><button id="mLive">Live: visuals in the video</button><button id="mCam">Camera only</button></div>
   <div id="row0"><button id="next" class="go2">Next visual ▶</button></div>
   <div id="row2"><button id="mode">Full script</button><button id="mir">Mirror</button><button id="gear">Settings</button></div>
   <div id="row3" style="margin-top:8px"><button id="review" style="width:100%">Review scenes and edit</button></div>
@@ -192,6 +194,9 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 function stopLive(){try{if(wl){wl.release();wl=null;}}catch(e){}live=false;cancelAnimationFrame(liveRaf);try{lvis.pause();}catch(e){}}
 try{const sv=store.get('bkstudio-live');if(sv){if(sv.m)$('lv').value=sv.m;if(sv.q)$('lq').value=sv.q;if(sv.b)$('lb').value=sv.b;}}catch(e){}
 $('lv').onchange=$('lq').onchange=$('lb').onchange=()=>{store.set('bkstudio-live',{m:$('lv').value,q:$('lq').value,b:$('lb').value});if(lvMode()!=='off')lvPrefetch();else $('msg').textContent='Camera only: you will combine the video later on the Combine page.';};
+function syncM(){const off=lvMode()==='off';$('mCam').classList.toggle('on',off);$('mLive').classList.toggle('on',!off);}
+$('mLive').onclick=()=>{if(mr&&mr.state==='recording')return;if($('lv').value==='off')$('lv').value='side';$('lv').onchange();syncM();};
+$('mCam').onclick=()=>{if(mr&&mr.state==='recording')return;$('lv').value='off';$('lv').onchange();syncM();};syncM();
 if(lvMode()!=='off')setTimeout(lvPrefetch,1500);
 $('rst').onclick=()=>{
   const recording=mr&&mr.state==='recording';
