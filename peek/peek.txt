@@ -1,0 +1,62 @@
+asOf 2026-11-20; keys: version, generatedAt, asOf, nextSession, rules, sp500Listed, market, dip, rip, status
+dip: 299 rows (S&P: 30, live today: 15)
+rip: 26 rows (S&P: 0, live today: 0)
+
+S&P long setups, sessionsAgo 0 (all fields):
+{"ticker":"MRNA","sp500":true,"kind":"dip","signalDate":"2026-11-20","sessionsAgo":0,"close":195,"chg5d":-12.7,"rsi":41.15,"rsi5":21.81,"vs200":94.19,"atr":18.89,"atrPct":9.69,"relVol":0.9,"dollarVol":2089593743.25,"green":false,"bearEngulf":true,"sweep10":false,"priority":0,"reasons":["closed near the day’s low","new 20-day low"],"levels":{"ref":195,"entryLimit":198.9,"target":202.8,"stop":138.34},"entryDate":"2026-11-23","exitDate":"2026-11-25","track":{"state":"pending"}}
+{"ticker":"ACN","sp500":true,"kind":"dip","signalDate":"2026-11-20","sessionsAgo":0,"close":221.17,"chg5d":-11.71,"rsi":39.22,"rsi5":18.04,"vs200":16.48,"atr":9.72,"atrPct":4.4,"relVol":1.04,"dollarVol":1158435135.91,"green":false,"bearEngulf":false,"sweep10":false,"priority":1,"reasons":["closed near the day’s low"],"levels":{"ref":221.17,"entryLimit":225.59,"target":230.02,"stop":192.01},"entryDate":"2026-11-23","exitDate":"2026-11-25","track":{"state":"pending"}}
+{"ticker":"VLO","sp500":true,"kind":"dip","signalDate":"2026-11-20","sessionsAgo":0,"close":334.18,"chg5d":-12.02,"rsi":33.56,"rsi5":21.99,"vs200":11.85,"atr":16.71,"atrPct":5,"relVol":0.93,"dollarVol":1082564280.03,"green":false,"bearEngulf":false,"sweep10":false,"priority":1,"reasons":["closed near the day’s low","new 20-day low","3 down days in a row"],"levels":{"ref":334.18,"entryLimit":340.86,"target":347.55,"stop":284.05},"entryDate":"2026-11-23","exitDate":"2026-11-25","track":{"state":"pending"}}
+{"ticker":"MPC","sp500":true,"kind":"dip","signalDate":"2026-11-20","sessionsAgo":0,"close":367.19,"chg5d":-11.45,"rsi":33.88,"rsi5":21.21,"vs200":19.74,"atr":19.68,"atrPct":5.36,"relVol":1.29,"dollarVol":937347889.32,"green":true,"bearEngulf":false,"sweep10":false,"priority":2,"reasons":["new 20-day low","3 down days in a row"],"levels":{"ref":367.19,"entryLimit":374.53,"target":381.88,"stop":308.14},"entryDate":"2026-11-23","exitDate":"2026-11-25","track":{"state":"pending"}}
+{"ticker":"HUM","sp500":true,"kind":"dip","signalDate":"2026-11-20","sessionsAgo":0,"close":390,"chg5d":-13.33,"rsi":40.58,"rsi5":30.84,"vs200":20.8,"atr":23.32,"atrPct":5.98,"relVol":1.32,"dollarVol":685564249.5,"green":false,"bearEngulf":false,"sweep10":false,"priority":1,"reasons":["closed near the day’s low"],"levels":{"ref":390,"entryLimit":397.8,"target":405.6,"stop":320.03},"entryDate":"2026-11-23","exitDate":"2026-11-25","track":{"state":"pending"}}
+{"ticker":"PYPL","sp500":true,"kind":"dip","signalDate":"2026-11-20","sessionsAgo":0,"close":53.29,"chg5d":-10.1,"rsi":34.22,"rsi5":13.38,"vs200":5.68,"atr":1.71,"atrPct":3.21,"relVol":1.56,"dollarVol":577735770.65,"green":false,"bearEngulf":false,"sweep10":false,"priority":1,"reasons":["closed near the day’s low","new 20-day low","3 down days in a row"],"levels":{"ref":53.29,"entryLimit":54.36,"target":55.42,"stop":48.16},"entryDate":"2026-11-23","exitDate":"2026-11-25","track":{"state":"pending"}}
+{"ticker":"FISV","sp500":true,"kind":"dip","signalDate":"2026-11-20","sessionsAgo":0,"close":55.88,"chg5d":-12.39,"rsi":48.17,"rsi5":22.25,"vs200":2.61,"atr":2.74,"atrPct":4.91,"relVol":1.11,"dollarVol":502754723.72,"green":false,"bearEngulf":false,"sweep10":false,"priority":1,"reasons":["closed near the day’s low","3 down days in a row"],"levels":{"ref":55.88,"entryLimit":57,"target":58.12,"stop":47.66},"entryDate":"2026-11-23","exitDate":"2026-11-25","track":{"state":"pending"}}
+{"ticker":"CNC","sp500":true,"kind":"dip","signalDate":"2026-11-20","sessionsAgo":0,"close":63.78,"chg5d":-10.51,"rsi":39.97,"rsi5":24.48,"vs200":11.3,"atr":3.89,"atrPct":6.09,"relVol":1.07,"dollarVol":417308694.07,"green":false,"bearEngulf":false,"sweep10":false,"priority":1,"reasons":["closed near the day’s low","new 20-day low","3 down days in a row"],"levels":{"ref":63.78,"entryLimit":65.06,"target":66.33,"stop":52.12},"entryDate":"2026-11-23","exitDate":"2026-11-25","track":{"state":"pending"}}
+{"ticker":"EL","sp500":true,"kind":"dip","signalDate":"2026-11-20","sessionsAgo":0,"close":99.46,"chg5d":-11,"rsi":38.33,"rsi5":16.01,"vs200":9.28,"atr":4.29,"atrPct":4.31,"relVol":0.97,"dollarVol":389866341.53,"green":false,"bearEngulf":false,"sweep10":false,"priority":1,"reasons":["closed near the day’s low","new 20-day low","3 down days in a row"],"levels":{"ref":99.46,"entryLimit":101.45,"target":103.44,"stop":86.6},"entryDate":"2026-11-23","exitDate":"2026-11-25","track":{"state":"pending"}}
+{"ticker":"WDAY","sp500":true,"kind":"dip","signalDate":"2026-11-20","sessionsAgo":0,"close":174.52,"chg5d":-11.16,"rsi":33.14,"rsi5":20.86,"vs200":11.63,"atr":7.65,"atrPct":4.38,"relVol":1.2,"dollarVol":375036403.21,"green":true,"bearEngulf":false,"sweep10":false,"priority":2,"reasons":["closed near the day’s low"],"levels":{"ref":174.52,"entryLimit":178.01,"target":181.5,"stop":151.57},"entryDate":"2026-11-23","exitDate":"2026-11-25","track":{"state":"pending"}}
+{"ticker":"P","sp500":true,"kind":"dip","signalDate":"2026-11-20","sessionsAgo":0,"close":92.05,"chg5d":-14.76,"rsi":35.35,"rsi5":26.28,"vs200":4.51,"atr":10.01,"atrPct":10.87,"relVol":1.25,"dollarVol":331020641.4,"green":false,"bearEngulf":false,"sweep10":false,"priority":1,"reasons":["closed near the day’s low","new 20-day low"],"levels":{"ref":92.05,"entryLimit":93.89,"target":95.73,"stop":62.03},"entryDate":"2026-11-23","exitDate":"2026-11-25","track":{"state":"pending"}}
+{"ticker":"NTAP","sp500":true,"kind":"dip","signalDate":"2026-11-20","sessionsAgo":0,"close":157.65,"chg5d":-13.08,"rsi":29.31,"rsi5":13.98,"vs200":1.12,"atr":10.21,"atrPct":6.48,"relVol":1.17,"dollarVol":302588522.85,"green":false,"bearEngulf":false,"sweep10":false,"priority":1,"reasons":["closed near the day’s low","new 20-day low","3 down days in a row"],"levels":{"ref":157.65,"entryLimit":160.8,"target":163.96,"stop":127.02},"entryDate":"2026-11-23","exitDate":"2026-11-25","track":{"state":"pending"}}
+{"ticker":"SWKS","sp500":true,"kind":"dip","signalDate":"2026-11-20","sessionsAgo":0,"close":73.91,"chg5d":-17.82,"rsi":33.35,"rsi5":14.32,"vs200":6.21,"atr":4.89,"atrPct":6.62,"relVol":0.76,"dollarVol":308396744.05,"green":false,"bearEngulf":false,"sweep10":false,"priority":1,"reasons":["closed near the day’s low","new 20-day low","3 down days in a row"],"levels":{"ref":73.91,"entryLimit":75.39,"target":76.87,"stop":59.24},"entryDate":"2026-11-23","exitDate":"2026-11-25","track":{"state":"pending"}}
+{"ticker":"GDDY","sp500":true,"kind":"dip","signalDate":"2026-11-20","sessionsAgo":0,"close":99.53,"chg5d":-12.78,"rsi":37.22,"rsi5":14.84,"vs200":7.44,"atr":4.32,"atrPct":4.34,"relVol":0.91,"dollarVol":159799863.99,"green":false,"bearEngulf":false,"sweep10":false,"priority":1,"reasons":["closed near the day’s low","new 20-day low","3 down days in a row"],"levels":{"ref":99.53,"entryLimit":101.52,"target":103.51,"stop":86.56},"entryDate":"2026-11-23","exitDate":"2026-11-25","track":{"state":"pending"}}
+{"ticker":"BEN","sp500":true,"kind":"dip","signalDate":"2026-11-20","sessionsAgo":0,"close":32.04,"chg5d":-11.05,"rsi":41.7,"rsi5":19.6,"vs200":3.86,"atr":1.39,"atrPct":4.33,"relVol":1.16,"dollarVol":132424515.99,"green":false,"bearEngulf":false,"sweep10":false,"priority":1,"reasons":["closed near the day’s low"],"levels":{"ref":32.04,"entryLimit":32.68,"target":33.32,"stop":27.88},"entryDate":"2026-11-23","exitDate":"2026-11-25","track":{"state":"pending"}}
+
+market: {"asOf":"2026-11-20","chg20d":-9.23}
+
+AI/megacap names appearing in any setup list: 
+
+AI/megacap health (last bar, 5-day %, vs 200-day %, vs 50-day %, RSI14, drop from 60-day high %):
+NVDA: 2026-11-20 close 125.53 | 5d -22.9% | vs200 -38.3% | vs50 -39.4% | RSI 15 | from 60d high -48.4%
+AMD: 2026-11-20 close 424.39 | 5d -20.5% | vs200 -1.3% | vs50 -23.3% | RSI 38 | from 60d high -35.6%
+AVGO: 2026-11-20 close 304.41 | 5d -12.3% | vs200 -17.2% | vs50 -11.2% | RSI 41 | from 60d high -20.1%
+MU: 2026-11-20 close 594.51 | 5d -23.6% | vs200 -23.0% | vs50 -34.8% | RSI 30 | from 60d high -46.4%
+SMCI: 2026-11-20 close 21.65 | 5d -19.4% | vs200 -33.1% | vs50 -38.1% | RSI 28 | from 60d high -52.7%
+PLTR: 2026-11-20 close 143.49 | 5d -14.6% | vs200 -6.8% | vs50 -21.7% | RSI 26 | from 60d high -32.6%
+MSFT: 2026-11-20 close 484.52 | 5d -7.5% | vs200 9.2% | vs50 -6.8% | RSI 35 | from 60d high -13.3%
+GOOGL: 2026-11-20 close 265.29 | 5d -10.3% | vs200 -21.3% | vs50 -17.7% | RSI 28 | from 60d high -27.2%
+META: 2026-11-20 close 560.84 | 5d -12.6% | vs200 -10.8% | vs50 -17.1% | RSI 30 | from 60d high -28.1%
+AMZN: 2026-11-20 close 246.82 | 5d -7.4% | vs200 0.7% | vs50 -3.2% | RSI 42 | from 60d high -10.4%
+ORCL: 2026-11-20 close 101.19 | 5d -19.3% | vs200 -33.9% | vs50 -23.4% | RSI 32 | from 60d high -40.7%
+TSM: 2026-11-20 close 318.71 | 5d -20.1% | vs200 -21.0% | vs50 -24.5% | RSI 28 | from 60d high -34.6%
+ARM: 2026-11-20 close 152.20 | 5d -20.1% | vs200 -35.1% | vs50 -36.5% | RSI 32 | from 60d high -54.8%
+ANET: 2026-11-20 close 167.62 | 5d -15.0% | vs200 -0.6% | vs50 -12.7% | RSI 41 | from 60d high -22.9%
+VRT: 2026-11-20 close 166.24 | 5d -17.7% | vs200 -38.8% | vs50 -25.5% | RSI 35 | from 60d high -43.7%
+DELL: 2026-11-20 close 278.02 | 5d -19.3% | vs200 -20.2% | vs50 -41.0% | RSI 28 | from 60d high -53.3%
+CRWV: 2026-11-20 close 39.51 | 5d -25.6% | vs200 -55.1% | vs50 -41.9% | RSI 33 | from 60d high -62.2%
+COHR: 2026-11-20 close 187.22 | 5d -14.2% | vs200 -36.9% | vs50 -26.9% | RSI 39 | from 60d high -45.2%
+LRCX: 2026-11-20 close 183.27 | 5d -18.9% | vs200 -35.3% | vs50 -31.4% | RSI 30 | from 60d high -48.0%
+AMAT: 2026-11-20 close 302.63 | 5d -18.3% | vs200 -32.3% | vs50 -28.9% | RSI 31 | from 60d high -44.7%
+KLAC: 2026-11-20 close 126.87 | 5d -16.7% | vs200 -30.2% | vs50 -24.8% | RSI 33 | from 60d high -39.2%
+INTC: 2026-11-20 close 51.28 | 5d -14.0% | vs200 -41.4% | vs50 -43.2% | RSI 28 | from 60d high -59.8%
+QCOM: 2026-11-20 close 149.94 | 5d -13.1% | vs200 -12.1% | vs50 -15.4% | RSI 35 | from 60d high -27.2%
+NOW: 2026-11-20 close 87.61 | 5d -14.3% | vs200 -22.6% | vs50 -31.5% | RSI 24 | from 60d high -45.1%
+AAPL: 2026-11-20 close 342.56 | 5d -3.8% | vs200 13.0% | vs50 0.2% | RSI 46 | from 60d high -5.1%
+TSLA: 2026-11-20 close 345.82 | 5d -11.4% | vs200 -9.4% | vs50 -7.9% | RSI 38 | from 60d high -16.5%
+CEG: 2026-11-20 close 237.41 | 5d -15.3% | vs200 -14.7% | vs50 -10.8% | RSI 37 | from 60d high -23.4%
+VST: 2026-11-20 close 115.25 | 5d -13.4% | vs200 -23.8% | vs50 -18.1% | RSI 34 | from 60d high -31.7%
+SPY: 2026-11-20 close 689.81 | 5d -8.6% | vs200 -5.9% | vs50 -9.3% | RSI 25 | from 60d high -11.7%
+
+bt-1D.json: keys version, timeframe, generatedAt, thresholds, signals
+signals: ["NVDA","SPY","QQQ","MU","AMD","AAPL","MSFT","SPCX","TSLA","AMZN","META","GOOGL","SOXL","SNDK","AVGO","INTC","GOOG","IWM","TSM","SOXX","VOO","SMH","TQQQ","SOXS","MRVL","ORCL","LLY","IVV","LITE","PLTR","NBIS","GLD","CRWV","GEV","HYG","STX","SKHY","BE","LQD","AMAT","V","BRK.B","WMT","LRCX","TLT","SQQQ
+  version: 1
+  timeframe: "1D"
+  generatedAt: "2026-11-22T05:46:51.006Z"
+  thresholds: {"rsiMin":35,"rsiMax":55,"minBtc":1,"maxBtc":5,"volumeFilter":false,"minRelVol":1}
