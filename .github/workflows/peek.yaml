@@ -1,0 +1,39 @@
+name: Peek at live data (read-only)
+
+# Starts when Claude pushes research-trigger/peek.txt. Reads the live setups file and prices, and saves a text summary
+# to the research-results branch (peek/). It changes nothing else.
+on:
+  push:
+    paths: ['research-trigger/peek.txt']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  peek:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Look at the data
+        env:
+          ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          GITHUB_REPOSITORY: ${{ github.repository }}
+        run: node studio/peek.js peek-out
+      - name: Save the result (research-results branch)
+        if: always()
+        run: |
+          set -e
+          mkdir -p /tmp/pk && cp peek-out/* /tmp/pk/ 2>/dev/null || true
+          git config user.name "research-bot"; git config user.email "research-bot@users.noreply.github.com"
+          git fetch origin research-results:research-results 2>/dev/null || true
+          if git show-ref -q refs/heads/research-results; then git checkout -q research-results
+          else git checkout -q --orphan research-results; git rm -rfq . ; fi
+          rm -rf peek; mkdir -p peek && cp /tmp/pk/* peek/
+          git add peek && git commit -q -m "Peek $(date -u +%FT%TZ)" || echo "nothing to commit"
+          for i in 1 2 3 4; do git push -q origin research-results && break || { git pull -q --rebase origin research-results || true; sleep 5; }; done
