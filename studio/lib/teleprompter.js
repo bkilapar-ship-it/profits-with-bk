@@ -139,23 +139,24 @@ const lvis=$('lvis'),lcv=$('lcv');
 function lvMode(){return ($('lv')&&$('lv').value)||'side';}
 function lvPrefetch(){if(lvMode()==='off'||lvPre)return lvPre;$('msg').textContent='Loading the visuals for live recording…';
   lvPre=Promise.all(HEADS.map((h,i)=>new Promise((res,rej)=>{const im=new Image();im.onload=()=>{(window.createImageBitmap?createImageBitmap(im).catch(()=>im):Promise.resolve(im)).then(res);};im.onerror=()=>rej(new Error('img'));im.src='stills/scene-'+i+'.jpg';})).concat([fetch('frames/beats.json').then(r=>r.ok?r.json():{}).catch(()=>({}))])).then(a=>{lvB=a.pop();lvImgs=a;$('msg').textContent='Visuals ready. Live recording is on.';return true;}).catch(()=>{lvPre=null;$('msg').textContent='Could not load the visuals, so this take will be camera only.';return false;});return lvPre;}
-const FN=${FRAME_N},ANIMMS=650;let lvImgs=[],lvB={},lvIdx=-1,lvBs=-1,lvAnimK=-1,lvAnimT=0,lvTgt=0,lvFr={},lvLast=null,lvPrevScene=null,lvSceneT=0;
-function frLoad(i,k){if(i<0||i>=HEADS.length||k<0||k>(lvB[i]||0))return;lvFr[i]=lvFr[i]||{};if(lvFr[i][k])return;const a=new Array(FN).fill(null);lvFr[i][k]=a;for(let j=0;j<FN;j++){fetch('frames/s'+i+'/'+k+'-'+j+'.jpg').then(r=>r.blob()).then(bl=>createImageBitmap(bl)).then(bm=>{a[j]=bm;}).catch(()=>{});}}
+const FN=${FRAME_N},ANIMMS=600;let lvImgs=[],lvB={},lvIdx=-1,lvBs=-1,lvAnimK=-1,lvAnimT=0,lvTgt=0,lvFr={},lvLast=null,lvPrevScene=null,lvSceneT=0,lvBase=null;
+function frLoad(i,k){if(i<0||i>=HEADS.length||k<0||k>(lvB[i]||0))return;lvFr[i]=lvFr[i]||{};if(lvFr[i][k])return;const a=new Array(FN).fill(null);lvFr[i][k]=a;const im=new Image();im.onload=()=>{a[FN-1]=im;};im.src='frames/s'+i+'/'+k+'-'+(FN-1)+'.jpg';}
 function frDrop(i,below){const o=lvFr[i];if(!o)return;Object.keys(o).forEach(k=>{if(+k<below)delete o[k];});}
-function frOk(a){return a&&a.every(Boolean);}
-function showScene(id){liveId=id;const i=HEADS.findIndex(x=>x.id===id);if(i<0||!lvImgs[i])return;lvPrevScene=lvLast;lvSceneT=performance.now();lvIdx=i;lvBs=-1;lvAnimK=0;lvAnimT=lvSceneT;lvTgt=0;Object.keys(lvFr).forEach(k=>{if(+k!==i)delete lvFr[k];});frLoad(i,0);frLoad(i,1);frLoad(i,2);}
+function frOk(a){return !!(a&&a[FN-1]);}
+function showScene(id){liveId=id;const i=HEADS.findIndex(x=>x.id===id);if(i<0||!lvImgs[i])return;lvPrevScene=lvLast;lvSceneT=performance.now();lvIdx=i;lvBase=null;lvBs=-1;lvAnimK=0;lvAnimT=lvSceneT;lvTgt=0;Object.keys(lvFr).forEach(k=>{if(+k!==i)delete lvFr[k];});frLoad(i,0);frLoad(i,1);}
 function drawVis(ctx,x,y,w,h){const now=performance.now(),i=lvIdx;if(i<0){return;}
   const B=lvB[i];
   if(B===undefined){const k=Math.min(1,(now-lvSceneT)/300);if(lvPrevScene&&k<1){ctx.drawImage(lvPrevScene,x,y,w,h);ctx.globalAlpha=k;ctx.drawImage(lvImgs[i],x,y,w,h);ctx.globalAlpha=1;}else ctx.drawImage(lvImgs[i],x,y,w,h);lvLast=lvImgs[i];return;}
   if(lvAnimK>=0&&(now-lvAnimT)/ANIMMS>=1){lvBs=lvAnimK;lvAnimK=-1;frDrop(i,lvBs-0);}
-  if(lvAnimK<0&&lvBs<Math.min(lvTgt,B)){if(lvTgt-lvBs>2)lvBs=lvTgt-2;lvAnimK=lvBs+1;lvAnimT=now;frLoad(i,lvAnimK+1);frLoad(i,lvAnimK+2);}
+  if(lvAnimK<0&&lvBs<Math.min(lvTgt,B)){if(lvTgt-lvBs>2)lvBs=lvTgt-2;lvAnimK=lvBs+1;lvAnimT=now;frLoad(i,lvAnimK+1);}
   let img=null,img2=null,fa=0;
-  if(lvAnimK>=0){const a=lvFr[i]&&lvFr[i][lvAnimK];if(frOk(a)){const q=Math.min(1,(now-lvAnimT)/ANIMMS),f=q*(FN-1),ia=Math.floor(f);img=a[ia];img2=a[Math.min(FN-1,ia+1)];fa=f-ia;}}
-  else{const a=lvFr[i]&&lvFr[i][lvBs];if(frOk(a))img=a[FN-1];else if(lvBs>=B)img=lvImgs[i];}
-  if(!img)img=lvLast||lvImgs[i];
+  if(lvAnimK>=0){const a=lvFr[i]&&lvFr[i][lvAnimK];if(frOk(a)){const q=Math.min(1,(now-lvAnimT)/ANIMMS);img=lvBase;img2=a[FN-1];fa=q*q*(3-2*q);if(q>=1)lvBase=img2;}else lvAnimT=now;}
+  else{const a=lvFr[i]&&lvFr[i][lvBs];if(frOk(a))img=a[FN-1];else if(lvBs>=B)img=lvImgs[i];else img=lvBase;}
+  if(!img&&!img2)img=lvBase||lvLast;
   const k=Math.min(1,(now-lvSceneT)/250),pv=lvPrevScene&&k<1;
   if(pv){ctx.drawImage(lvPrevScene,x,y,w,h);ctx.globalAlpha=k;}
-  ctx.drawImage(img,x,y,w,h);if(img2&&fa>0.02){ctx.globalAlpha=(pv?k:1)*fa;ctx.drawImage(img2,x,y,w,h);}ctx.globalAlpha=1;lvLast=img2&&fa>0.5?img2:img;}
+  if(img)ctx.drawImage(img,x,y,w,h);
+  if(img2&&fa>0.02){ctx.globalAlpha=(pv?k:1)*fa;ctx.drawImage(img2,x,y,w,h);}ctx.globalAlpha=1;lvLast=(img2&&fa>0.5)?img2:(img||lvLast);}
 function setTarget(cur,v,mid){if(!live||lvIdx<0)return;const b=v[cur];if(!b||b.dataset.id!==liveId)return;const r=b.getBoundingClientRect(),f=Math.max(0,Math.min(1,(mid-r.top)/Math.max(1,r.height))),B=lvB[lvIdx]||0;const t=Math.min(B,Math.floor(Math.min(1,f/0.85)*(B+1)));if(t>lvTgt)lvTgt=t;}
 function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
 function cover(c,v,x,y,w,h){const vw=v.videoWidth,vh=v.videoHeight;if(!vw)return;const k=Math.max(w/vw,h/vh),sw=w/k,sh=h/k;c.drawImage(v,(vw-sw)/2,(vh-sh)/2,sw,sh,x,y,w,h);}
