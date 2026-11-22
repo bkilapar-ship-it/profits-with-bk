@@ -12,7 +12,7 @@ function teleprompterHtml(ep) {
 <style>
 :root{color-scheme:dark;--bar:128px}*{box-sizing:border-box}html,body{margin:0;height:100%;background:#05080F;color:#F2F6FF;font-family:-apple-system,BlinkMacSystemFont,'Inter',system-ui,sans-serif;-webkit-text-size-adjust:100%}
 #cam{position:fixed;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;transform:scaleX(-1);pointer-events:none}
-body.camon #cam{opacity:.38}
+body.camon #cam{opacity:.95;inset:auto;top:8px;right:8px;width:84px;height:112px;border-radius:12px;border:2px solid #26D0FF;z-index:20;pointer-events:auto}body.camon #cam.hid{opacity:0;pointer-events:none}
 #hud{position:fixed;top:0;left:0;right:0;padding:calc(8px + env(safe-area-inset-top)) 14px 8px;display:flex;gap:12px;align-items:center;font-size:13px;font-weight:700;color:#8FA3C7;z-index:4;background:linear-gradient(#05080F 70%,transparent)}
 #hud a{flex:none;color:#9DB8FF;text-decoration:none;padding:6px 10px;border:1px solid #2A3B61;border-radius:10px;background:#121C33}#clock{flex:none;font-variant-numeric:tabular-nums;color:#fff;font-size:15px}#ttl{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
 #msg{position:fixed;left:14px;right:14px;top:calc(36px + env(safe-area-inset-top));font-size:13px;color:#F5B945;z-index:4}
@@ -103,6 +103,7 @@ addEventListener('keydown',e=>{if(e.code==='Space'){e.preventDefault();$('play')
 let touchY=null;addEventListener('touchstart',e=>{touchY=e.touches[0].clientY;},{passive:true});
 addEventListener('touchmove',e=>{if(document.body.classList.contains('review'))return;if(touchY===null||e.target.closest('#bar'))return;const d=touchY-e.touches[0].clientY;touchY=e.touches[0].clientY;y=Math.max(0,y+d);apply();},{passive:true});
 async function cam(){if(stream)return true;try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'user',width:{ideal:1920},height:{ideal:1080}},audio:{echoCancellation:true,noiseSuppression:true}});$('cam').srcObject=stream;document.body.classList.add('camon');$('cambtn').classList.add('on');return true;}catch(e){$('msg').textContent='Camera or microphone blocked: allow access in Safari settings for this page. ('+e.name+')';return false;}}
+$('cam').onclick=()=>$('cam').classList.toggle('hid');
 $('cambtn').onclick=async()=>{if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;document.body.classList.remove('camon');$('cambtn').classList.remove('on');}else await cam();};
 $('rst').onclick=()=>{
   const recording=mr&&mr.state==='recording';
