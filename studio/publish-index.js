@@ -4,13 +4,14 @@
 const fs = require('fs');
 const path = require('path');
 const dir = process.argv[2];
+const LABEL = { welcome: 'Episode 1: welcome video', daily: 'Daily video', weekly: 'Weekly review' };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const sections = ['daily', 'weekly'].map(m => {
+const sections = ['welcome', 'daily', 'weekly'].map(m => {
   const f = path.join(dir, m, 'meta.json');
-  if (!fs.existsSync(f)) return `<section><h2>${m === 'daily' ? 'Daily video' : 'Weekly review'}</h2><p class="mut">None generated yet.</p></section>`;
+  if (!fs.existsSync(f)) return m === 'welcome' ? '' :  `<section><h2>${LABEL[m]}</h2><p class="mut">None generated yet.</p></section>`;
   const meta = JSON.parse(fs.readFileSync(f, 'utf8'));
   const md = fs.readFileSync(path.join(dir, m, 'metadata.txt'), 'utf8');
-  return `<section><h2>${m === 'daily' ? 'Daily video' : 'Weekly review'}</h2><p class="t">${esc(meta.title)}</p><p class="mut">${esc(meta.asOf)} · ${meta.scenes} scenes · about ${Math.floor(meta.seconds / 60)}:${String(Math.round(meta.seconds % 60)).padStart(2, '0')}</p>
+  return `<section><h2>${LABEL[m]}</h2><p class="t">${esc(meta.title)}</p><p class="mut">${esc(meta.asOf)} · ${meta.scenes} scenes · about ${Math.floor(meta.seconds / 60)}:${String(Math.round(meta.seconds % 60)).padStart(2, '0')}</p>
   <div class="btns"><a class="b go" href="${m}/teleprompter.html">1. Open teleprompter and record</a><a class="b" href="${m}/visuals.mp4" download>2. Download visuals video</a><a class="b" href="${m}/thumbnail.png">3. Thumbnail</a><a class="b" href="${m}/script.txt">Script (text)</a></div>
   <details><summary>Title, description and tags (tap to copy)</summary><pre id="md-${m}">${esc(md)}</pre><button class="b" onclick="navigator.clipboard.writeText(document.getElementById('md-${m}').innerText).then(()=>this.textContent='Copied')">Copy</button></details></section>`;
 }).join('');
