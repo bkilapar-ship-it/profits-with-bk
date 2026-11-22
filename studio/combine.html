@@ -45,8 +45,8 @@ a.btn.dl{display:block;background:#2563EB;border-color:#2563EB;margin-top:10px}
   <div id="bar" style="display:none"><i></i></div><div id="status" class="mut" style="margin-top:8px"></div>
   <canvas id="cv"></canvas><div id="out"></div></div>
 
-<video id="vis" playsinline muted preload="auto" style="display:none"></video>
-<video id="rv" playsinline preload="auto" style="display:none"></video>
+<video id="vis" playsinline muted preload="auto" style="position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none"></video>
+<video id="rv" playsinline preload="auto" style="position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none"></video>
 
 <script>
 const $=id=>document.getElementById(id);
@@ -64,7 +64,7 @@ async function loadEpisodes(){
 }
 function pick(){
   const o=$('ep').selectedOptions[0];if(!o)return;const j=JSON.parse(o.dataset.j);ep={m:o.value,j};scenes=j.scenes;let t=0;starts=scenes.map(s=>{const a=t;t+=s.dur;return a;});
-  visUrl=null;$('epinfo').textContent=scenes.length+' scenes · '+fmt(t)+' of visuals';marks=[];renderMarks();ready();
+  visUrl=null;prefetch();$('epinfo').textContent=scenes.length+' scenes · '+fmt(t)+' of visuals';marks=[];renderMarks();ready();
 }
 $('rec').onchange=e=>{
   const f=e.target.files[0];if(!f)return;if(recUrl)URL.revokeObjectURL(recUrl);recUrl=URL.createObjectURL(f);
@@ -96,10 +96,9 @@ $('lay').onclick=e=>{const b=e.target.closest('button');if(!b)return;layout=b.da
 $('pos').onclick=e=>{const b=e.target.closest('button');if(!b)return;pos=b.dataset.p;[...$('pos').children].forEach(x=>x.classList.toggle('on',x===b));};
 function ready(){$('make').disabled=!(ep&&recUrl&&recDur&&marks.length>=1);}
 
+let pre=null;function prefetch(){const m=ep.m,f=ep.j.video||'visuals.mp4';$('status').textContent='Loading the visuals in the background…';pre=fetch(m+'/'+f).then(r=>{if(!r.ok)throw new Error('Could not load the visuals video.');return r.blob();}).then(b=>{visUrl=URL.createObjectURL(b);$('status').innerHTML='<span class="ok">Visuals ready ('+(b.size/1048576).toFixed(0)+' MB)</span>';return visUrl;}).catch(e=>{$('status').innerHTML='<span class="err">'+e.message+'</span>';pre=null;throw e;});pre.catch(()=>{});}
 async function getVisuals(){
-  if(visUrl)return visUrl;$('status').textContent='Loading the visuals…';
-  const r=await fetch(ep.m+'/'+(ep.j.video||'visuals.mp4'));if(!r.ok)throw new Error('Could not load the visuals video.');
-  visUrl=URL.createObjectURL(await r.blob());return visUrl;
+  if(visUrl)return visUrl;if(!pre)prefetch();return pre;
 }
 function cover(ctx,v,x,y,w,h){const vw=v.videoWidth,vh=v.videoHeight;if(!vw)return;const s=Math.max(w/vw,h/vh),sw=w/s,sh=h/s;ctx.drawImage(v,(vw-sw)/2,(vh-sh)/2,sw,sh,x,y,w,h);}
 function rr(ctx,x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
@@ -108,14 +107,18 @@ $('make').onclick=async()=>{
   const btn=$('make');btn.disabled=true;$('out').innerHTML='';
   try{
     if(!window.MediaRecorder)throw new Error('This browser cannot create videos in the page. Use the CapCut route instead.');
-    const vis=$('vis'),rv=$('rv');vis.src=await getVisuals();
-    await Promise.all([new Promise(r=>{if(vis.readyState>=2)r();else vis.onloadeddata=r;}),new Promise(r=>{if(rv.readyState>=2)r();else rv.onloadeddata=r;})]);
+    const vis=$('vis'),rv=$('rv');
+    const AC0=window.AudioContext||window.webkitAudioContext;const ac=new AC0();ac.resume();
+    rv.play().then(()=>rv.pause()).catch(()=>{});vis.play().then(()=>vis.pause()).catch(()=>{});   // unlock playback while still inside the tap
+    $('status').textContent='Getting ready…';vis.src=await getVisuals();vis.load();
+    const ready1=v=>new Promise(r=>{if(v.readyState>=2)return r();const d=()=>r();v.addEventListener('loadeddata',d,{once:true});v.addEventListener('canplay',d,{once:true});setTimeout(r,4000);});
+    await Promise.all([ready1(vis),ready1(rv)]);
     const H=parseInt($('q').value,10),W=Math.round(H*16/9),cv=$('cv');cv.width=W;cv.height=H;cv.style.display='block';const ctx=cv.getContext('2d');
     const hasFace=layout!=='voice'&&rv.videoWidth>0;
     // sync data
     const n=scenes.length,mk=[];for(let i=0;i<n;i++)mk[i]=i===0?0:(marks[i]!=null?marks[i]:Infinity);
     let idx=-1;
-    const AC=window.AudioContext||window.webkitAudioContext,ac=new AC();await ac.resume();
+    await ac.resume();
     const src=ac.createMediaElementSource(rv),dst=ac.createMediaStreamDestination();src.connect(dst);
     const stream=cv.captureStream(30);dst.stream.getAudioTracks().forEach(t=>stream.addTrack(t));
     const opts=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm'];const mime=opts.find(t=>MediaRecorder.isTypeSupported(t))||'';
