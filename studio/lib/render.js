@@ -344,6 +344,14 @@ async function renderStills(ep, outDir, { chromium }) {
   } finally { await browser.close(); fs.rmSync(work, { recursive: true, force: true }); }
 }
 
+function photoHtml(dir, spark) {
+  const src = path.join(__dirname, '..', 'assets', 'bk.png');
+  if (!fs.existsSync(src)) return `<div class="abs" style="left:780px;top:170px;width:470px;height:450px;opacity:.95">${spark}</div>`;
+  fs.copyFileSync(src, path.join(dir, 'bk.png'));
+  return `<div class="abs" style="left:770px;top:100px;width:480px;height:480px;border-radius:50%;box-shadow:0 0 0 6px #26D0FF,0 0 50px 8px rgba(38,208,255,.55),0 0 120px rgba(38,208,255,.25)"><img src="bk.png" style="width:480px;height:480px;border-radius:50%;display:block"></div>
+    <div class="abs" style="left:770px;top:610px;width:480px;text-align:center;font-weight:800;font-size:30px;letter-spacing:.12em;color:var(--amb);text-shadow:0 0 16px rgba(255,194,26,.6)">BK</div>`;
+}
+
 function thumbHtml(ep, dir, art) {
   const n = ep.scenes.filter(x => x.type === 'setup').length, t = ep.scenes.filter(x => x.type === 'setup').map(x => x.heading).slice(0, 5);
   const first = ep.scenes.find(x => x.view), spark = first ? miniCandles(first.view.slice(-34), 560, 500) : '';
@@ -356,7 +364,7 @@ function thumbHtml(ep, dir, art) {
     <div class="abs" style="left:56px;top:190px;width:720px"><div class="h1" style="font-size:96px;line-height:1.04">${head}</div></div>
     ${t.length ? `<div class="abs" style="left:56px;top:540px;width:900px;display:flex;gap:10px">${t.map(x => `<span class="chip g" style="font-size:28px;padding:8px 18px">${esc(x)}</span>`).join('')}</div>` : ''}
     <div class="abs" style="left:56px;bottom:36px;font-size:26px;font-weight:700;color:var(--mut)">Educational only · Not financial advice</div>
-    ${art ? `<div class="abs" style="left:780px;top:170px;width:470px;height:450px;opacity:.95">${spark}</div>` : ''}</body></html>`;
+    ${art ? photoHtml(dir, spark) : ''}</body></html>`;
 }
 
 function studioBgHtml(ep, dir) {
