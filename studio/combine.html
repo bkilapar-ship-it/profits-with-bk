@@ -11,7 +11,7 @@ button.go{background:#2563EB;border-color:#2563EB;width:100%;padding:16px}button
 input[type=file]{width:100%;padding:12px;border:1px dashed #2A3B61;border-radius:12px;background:#0C1426;color:#cdd8f0}
 .warn{color:#F5B945;font-size:14px;line-height:1.45}.ok{color:#2FD17A;font-size:14px}.err{color:#F0506E;font-size:14px}
 #bar{height:10px;border-radius:6px;background:#1B2742;overflow:hidden;margin-top:12px}#bar i{display:block;height:100%;width:0;background:#2563EB}
-#marks{font-size:14px;line-height:1.7;margin-top:8px}#marks b{color:#9DB8FF}
+#marks{font-size:14px;margin-top:10px}#marks b{color:#9DB8FF}.mrow{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid #1B2742}.mn{flex:1;min-width:0}.mt{font-variant-numeric:tabular-nums;width:52px;text-align:right}.mb{display:flex;gap:4px}.mb button{padding:7px 8px;font-size:13px;border-radius:9px}
 video{width:100%;border-radius:12px;background:#000;margin-top:10px}
 canvas{width:100%;border-radius:12px;background:#000;margin-top:10px;display:none}
 a.btn.dl{display:block;background:#2563EB;border-color:#2563EB;margin-top:10px}
@@ -69,7 +69,7 @@ function pick(){
 $('rec').onchange=e=>{
   const f=e.target.files[0];if(!f)return;if(recUrl)URL.revokeObjectURL(recUrl);recUrl=URL.createObjectURL(f);
   const v=$('prev');v.src=recUrl;v.style.display='block';$('rv').src=recUrl;
-  v.onloadedmetadata=()=>{recDur=v.duration;$('recinfo').innerHTML='<span class="ok">Loaded: '+fmt(recDur)+'</span>';$('markhelp').textContent='Press play on your recording below. Each time you move on to the next scene in what you are saying, tap the blue button. The first scene starts at the beginning.';$('markbtns').style.display='flex';$('markbtns2').style.display='flex';loadAuto();renderMarks();ready();};
+  v.onloadedmetadata=()=>{recDur=v.duration;$('recinfo').innerHTML='<span class="ok">Loaded: '+fmt(recDur)+'</span>';$('markhelp').textContent='You decide exactly when each visual appears. Play your recording below and tap the blue button each time you want the next visual. Then fine-tune any scene: Go jumps there, −0.5 and +0.5 nudge it, Here sets it to the moment the player is at. Every visual stays on screen until the next one starts.';$('markbtns').style.display='flex';$('markbtns2').style.display='flex';loadAuto();renderMarks();ready();};
   v.onerror=()=>{$('recinfo').innerHTML='<span class="err">This browser cannot play that file. Try an .mp4 or .mov recording.</span>';};
 };
 function autoKey(){return 'bkstudio-marks-'+(ep?ep.j.mode+'-'+ep.j.asOf:'');}
@@ -80,8 +80,15 @@ function renderMarks(){
   const n=scenes.length;
   $('tap').textContent=marks.length>=n?'All scenes marked':'Scene '+(Math.max(marks.length,1)+1)+' starts now';
   $('tap').disabled=marks.length>=n;
-  $('marks').innerHTML=scenes.map((s,i)=>{const t=i===0?0:marks[i];const done=i===0||marks[i]!=null;return '<div>'+(done?'✓ ':'· ')+'<b>'+(i+1)+'</b> '+s.heading.charAt(0)+s.heading.slice(1).toLowerCase()+(done?' <span class="mut">'+fmt(t||0)+'</span>':'')+'</div>';}).join('');
+  $('marks').innerHTML=scenes.map((s,i)=>{const done=i===0||marks[i]!=null;const t=i===0?0:marks[i];
+    return '<div class="mrow"><span class="mn"><b>'+(i+1)+'</b> '+s.heading.charAt(0)+s.heading.slice(1).toLowerCase()+'</span>'+(done?'<span class="mt">'+fmt(t||0)+'.'+String(Math.floor(((t||0)%1)*10))+'</span>':'<span class="mt mut">not set</span>')+(i===0?'':'<span class="mb"><button data-a="seek" data-i="'+i+'"'+(done?'':' disabled')+'>Go</button><button data-a="m" data-i="'+i+'"'+(done?'':' disabled')+'>−0.5</button><button data-a="p" data-i="'+i+'"'+(done?'':' disabled')+'>+0.5</button><button data-a="here" data-i="'+i+'">Here</button></span>')+'</div>';}).join('');
 }
+$('marks').onclick=e=>{const b=e.target.closest('button');if(!b)return;const i=+b.dataset.i,a=b.dataset.a,v=$('prev');
+  if(a==='seek'){v.currentTime=Math.max(0,marks[i]-0.3);v.play().catch(()=>{});}
+  else if(a==='here'){if(marks.length===0)marks=[0];while(marks.length<i)marks.push(null);marks[i]=v.currentTime;}
+  else if(a==='m'){marks[i]=Math.max(0,marks[i]-0.5);}
+  else if(a==='p'){marks[i]=Math.min(recDur,marks[i]+0.5);}
+  renderMarks();ready();};
 $('tap').onclick=()=>{if(marks.length===0)marks=[0];if(marks.length>=scenes.length)return;marks.push($('prev').currentTime);renderMarks();ready();};
 $('undo').onclick=()=>{if(marks.length>1)marks.pop();else marks=[];renderMarks();ready();};
 $('reset').onclick=()=>{marks=[];renderMarks();ready();};

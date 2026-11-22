@@ -24,7 +24,7 @@ body.full .pts{display:none}body.full p.full{display:block}
 .blk.now .pts li,.blk.now p.full{color:#fff}.blk:not(.now) .pts li,.blk:not(.now) p.full{color:#8394B8}
 #line{position:fixed;left:0;right:0;top:calc(40px + env(safe-area-inset-top) + var(--ln,22vh));height:0;border-top:2px dashed rgba(91,140,255,.55);pointer-events:none;z-index:3}
 #bar{position:fixed;left:0;right:0;bottom:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#080D18;border-top:1px solid #1E2A44;z-index:5}
-#row1,#row2{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}#row2{margin-top:8px}
+#row0{margin-bottom:8px}#row0 button{width:100%;background:#0E7A4B;border-color:#0E7A4B;font-size:17px;padding:15px}#row1,#row2{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}#row2{margin-top:8px}
 button{font:inherit;font-size:15px;font-weight:700;padding:13px 6px;border-radius:13px;border:1px solid #2A3B61;background:#121C33;color:#fff;touch-action:manipulation}
 button.go{background:#2563EB;border-color:#2563EB}button.rec{background:#C0213A;border-color:#C0213A}button.on{outline:2px solid #5B8CFF}
 #set{display:none;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px}#set.open{display:grid}
@@ -35,6 +35,7 @@ label{font-size:11px;color:#8FA3C7;display:flex;flex-direction:column;gap:4px;fo
 <div id="stage"><div id="scroller">${blocks}</div></div><div id="line"></div>
 <div id="bar">
   <div id="row1"><button id="play" class="go">▶ Start</button><button id="cambtn">Camera</button><button id="rec">● Record</button></div>
+  <div id="row0"><button id="next" class="go2">Next visual ▶</button></div>
   <div id="row2"><button id="mode">Show full script</button><button id="mir">Mirror</button><button id="gear">Settings</button></div>
   <div id="set"><label>SPEED<input id="spd" type="range" min="8" max="140" value="40"></label><label>TEXT SIZE<input id="fs" type="range" min="20" max="60" value="26"></label></div>
 </div>
@@ -48,6 +49,7 @@ function apply(){sc.style.transform='translateY('+(-y)+'px)'+(document.body.clas
 function tick(ts){if(run){const dt=(ts-last)/1000;y+=parseFloat($('spd').value)*dt;const max=sc.scrollHeight-$('stage').clientHeight*.8;if(y>=max){y=max;run=false;$('play').textContent='▶ Start';}apply();}last=ts;if(t0)$('clock').textContent=fmt((Date.now()-t0)/1000);requestAnimationFrame(tick);}
 const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0');
 $('play').onclick=()=>{run=!run;$('play').textContent=run?'❚❚ Pause':'▶ Start';};
+$('next').onclick=()=>{const bl=[...document.querySelectorAll('.blk')];let cur=0;bl.forEach((b,i)=>{if(b.classList.contains('now'))cur=i;});const j=Math.min(bl.length-1,cur+1);if(j===cur)return;const lineRel=$('line').getBoundingClientRect().top-$('stage').getBoundingClientRect().top;y=Math.max(0,bl[j].offsetTop-lineRel+4);apply();};
 $('gear').onclick=()=>{$('set').classList.toggle('open');$('gear').classList.toggle('on');fit();};
 $('mode').onclick=()=>{document.body.classList.toggle('full');$('mode').textContent=document.body.classList.contains('full')?'Show talking points':'Show full script';apply();};
 function fit(){document.documentElement.style.setProperty('--bar',($('bar').offsetHeight)+'px');apply();}
