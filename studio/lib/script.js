@@ -49,9 +49,28 @@ function outroText(cfg) {
 
 
 const weekday = iso => new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' });
-function nextSessionFull(iso) { const d = new Date(`${iso}T12:00:00Z`); do { d.setUTCDate(d.getUTCDate() + 1); } while ([0, 6].includes(d.getUTCDay())); return d.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).replace(/^(\w+),? /, '$1 '); }
-function nextSessionName(iso) { const d = new Date(`${iso}T12:00:00Z`); do { d.setUTCDate(d.getUTCDate() + 1); } while ([0, 6].includes(d.getUTCDay())); return d.toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' }); }
-const sentences = t => (String(t).match(/[^.!?]+[.!?]+(\s|$)/g) || [String(t)]).map(x => x.trim()).filter(Boolean);
+// NYSE closures (update each year). Early close = 1pm ET.
+const HOLIDAYS = { '2026-01-01': "New Year's Day", '2026-01-19': 'Martin Luther King Jr. Day', '2026-02-16': "Presidents' Day", '2026-04-03': 'Good Friday', '2026-05-25': 'Memorial Day', '2026-06-19': 'Juneteenth', '2026-07-03': 'Independence Day (observed)', '2026-09-07': 'Labor Day', '2026-11-26': 'Thanksgiving', '2026-12-25': 'Christmas Day' };
+const EARLY = { '2026-11-27': 'the day after Thanksgiving', '2026-12-24': 'Christmas Eve' };
+// Fed rate decisions (second day of each meeting), 2026 schedule
+const FOMC = { '2026-01-28': 1, '2026-03-18': 1, '2026-04-29': 1, '2026-06-17': 1, '2026-07-29': 1, '2026-09-16': 1, '2026-10-28': 1, '2026-12-09': 1 };
+const isoOf = d => d.toISOString().slice(0, 10);
+function nextSessionIso(iso) { const d = new Date(`${iso}T12:00:00Z`); do { d.setUTCDate(d.getUTCDate() + 1); } while ([0, 6].includes(d.getUTCDay()) || HOLIDAYS[isoOf(d)]); return isoOf(d); }
+const fullDay = iso => new Date(`${iso}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' }).replace(/^(\w+),? /, '$1 ');
+function nextSessionFull(iso) { return fullDay(nextSessionIso(iso)); }
+function nextSessionName(iso) { return weekday(nextSessionIso(iso)); }
+/** Verified calendar facts for the next session: built-in closures/Fed days plus anything in content/events.json */
+function eventsFor(asOf, file) {
+  const nx = nextSessionIso(asOf), out = [];
+  const d = new Date(`${asOf}T12:00:00Z`);
+  for (;;) { d.setUTCDate(d.getUTCDate() + 1); const k = isoOf(d); if (k >= nx) break; if (HOLIDAYS[k]) out.push(`US markets are closed on ${fullDay(k)} (${HOLIDAYS[k]})`); }
+  if (EARLY[nx]) out.push(`${fullDay(nx)}: the market closes early, at 1pm New York time (${EARLY[nx]})`);
+  if (FOMC[nx]) out.push(`${fullDay(nx)}: the US central bank announces its interest-rate decision`);
+  const extra = file && file[nx];
+  if (extra && Array.isArray(extra.items)) extra.items.forEach(t => out.push(String(t)));
+  return { nx, items: out, source: (extra && extra.source) || '' };
+}
+const sentences = t => String(t).split(/(?<=[.!?])\s+(?=[A-Z0-9'"“$])/).map(x => x.trim()).filter(Boolean);
 function weekLine(m) {
   if (!m) return '';
   const parts = [];
@@ -212,26 +231,68 @@ function buildEpisodeInner({ mode, setups, config }) {
     return { mode, title, date: dayShort(asOf), asOf, scenes, tickers: [], cfg };
   }
 
-  // ---------------- daily ----------------
+  // ---------------- daily (plain-English briefing) ----------------
   featured = dipSp.slice(0, cfg.maxSetups);
-  const short = ripSp[0] || null;
-  title = featured.length ? `Dip signals ${dayShort(asOf)}: ${featured.map(x => x.ticker).join(', ')}` : `S&P 500 dip screen ${dayShort(asOf)}: no signals today`;
-  const countLine = live.length ? `${dipSp.length} S&P 500 long setup${dipSp.length === 1 ? '' : 's'}, ${ripSp.length} short, and ${dipOther.length} outside the index passed the screen today.` : 'No stocks passed the screen today.';
-  add('intro', 'intro', 'DAILY DIP SIGNALS', `Welcome back to ${cfg.channelName}. It is ${date}. Here are the results from the Uptrend Dip screen, run on the close. ${countLine} ${marketLine(setups.market)}`, { date: dayShort(asOf), kicker: 'Daily screen', market: setups.market, counts: { dip: dipSp.length, rip: ripSp.length, other: dipOther.length } });
-  add('rules', 'rules', 'HOW THE SCREEN WORKS', RULES_TEXT, {});
-  featured.forEach((x, i) => add(`setup-${x.ticker}`, 'setup', x.ticker, setupNarration(x, i, cfg), { setup: x, plan: plan(x), rank: i + 1, total: dipSp.length }));
-  if (short) add(`short-${short.ticker}`, 'setup', short.ticker, ripNarration(short), { setup: short, plan: plan(short), short: true });
-  const rest = dipSp.slice(cfg.maxSetups);
-  if (dipSp.length || ripSp.length) {
-    const rows = dipSp.concat(ripSp).slice(0, 10).map(x => ({ ticker: x.ticker, kind: x.kind, chg5d: x.chg5d, vs200: x.vs200, rsi: x.rsi, close: x.close, stopDist: plan(x).stop ? (plan(x).stop / x.close - 1) * 100 : null }));
-    add('summary', 'summary', 'ALL S&P 500 SETUPS TODAY', `${rest.length ? `Beyond those, the other S&P names were ${rest.slice(0, 8).map(x => spell(x.ticker)).join(', ')}. ` : ''}The table shows every S&P 500 setup from today's screen. ${dipOther.length ? `${dipOther.length} more passed outside the index, which the live rules only trade under extra conditions.` : ''}`, { rows });
+  const m = setups.market || {}, wd = weekday(asOf), nx = nextSessionName(asOf), nxd = nextSessionFull(asOf), ch = cfg.channelName;
+  const news = setups.__news && setups.__news.asOf === asOf ? setups.__news : null;
+  const ev = eventsFor(asOf, setups.__events);
+  const n = featured.length;
+  const dayWord = isNum(m.chg1d) ? (m.chg1d >= 0 ? 'rose' : 'fell') : '';
+  title = n
+    ? (isNum(m.chg1d) && Math.abs(m.chg1d) >= 0.5 ? `S&P 500 ${dayWord} ${pct(m.chg1d)} Today: ${n} Stocks to Watch for ${nxd}` : `${n} Stocks to Watch for ${nxd}: S&P 500 Daily Briefing`)
+    : `S&P 500 Daily Briefing for ${nxd}: no signals today`;
+  const hookState = isNum(m.chg1d) ? `The S&P 500 ${dayWord} ${say(m.chg1d)} today, and ` : '';
+  add('intro', 'intro', 'DAILY BRIEFING',
+    `Welcome back to ${ch}. It's ${date}. Quick summary: ${hookState}${n ? `${n} stock${n === 1 ? '' : 's'} passed my screen for ${nx}.` : 'no stocks passed my screen for ' + nx + '.'} Here's the plan for the next few minutes: what the market did today in plain English, how my earlier picks have done, ${n ? `then each pick and the plan for it, ` : ''}and what is coming up ${nx}.`,
+    { date: dayShort(asOf), kicker: `Briefing for ${nxd}`, chips: [isNum(m.chg1d) ? `S&P 500 ${m.chg1d >= 0 ? '+' : '−'}${Math.abs(m.chg1d).toFixed(1)}% today` : 'Daily briefing', `${n} stock${n === 1 ? '' : 's'} for ${nx}`, 'Scorecard included'], market: m });
+
+  // 1) the market today
+  const mkt = [];
+  if (isNum(m.chg1d)) mkt.push(`The S&P 500, which tracks 500 of America's biggest companies, ${dayWord} ${say(m.chg1d)} today.`);
+  if (isNum(m.chg5d)) mkt.push(`Over the last five trading days it is ${m.chg5d >= 0 ? 'up' : 'down'} ${say(m.chg5d)}.`);
+  const heads = news && Array.isArray(news.headlines) ? news.headlines.filter(Boolean).slice(0, 4) : [];
+  mkt.push(isNum(m.chg5d) && m.chg5d <= -3 ? "When markets fall like this, even strong companies get sold along with the weak ones. That is exactly the situation my screen is built to look at." : "On a calmer day, the screen simply looks for strong companies that had a short, sharp sell-off.");
+  add('market', 'market', "TODAY'S MARKET", mkt.join(' '), { market: m });
+  if (heads.length) add('news', 'bullets', 'WHAT MOVED THE MARKET', `So what was behind it? ${heads.map(h => h.replace(/[.]$/, '') + '.').join(' ')}`, { kick: 'WHAT WAS BEHIND IT', title: 'What moved the market', items: heads });
+
+  // 2) scorecard of earlier picks
+  const tracked = (setups.dip || []).filter(x => x.sp500 && x.sessionsAgo >= 1 && x.sessionsAgo <= 8 && x.track && ['target', 'stop', 'closed'].includes(x.track.state));
+  if (tracked.length) {
+    const tn = tracked.length, hit = tracked.filter(x => x.track.state === 'target').length, stp = tracked.filter(x => x.track.state === 'stop').length, up = tracked.filter(x => x.track.pct > 0).length, lossEnd = tracked.filter(x => x.track.state === 'closed' && x.track.pct < 0).length;
+    const avg = tracked.reduce((a, x) => a + x.track.pct, 0) / tn;
+    add('scorecard', 'outcomes', 'SCORECARD: HOW EARLIER PICKS DID',
+      `Before today's picks, a quick scorecard, because I think you should see the misses as well as the hits. Of the ${tn} earlier picks that have finished their three days, ${hit} reached the 4 percent target and ${stp} hit the safety exit${lossEnd ? `, while ${lossEnd} reached day three at a loss and were closed out` : ''}. ${up} finished in profit overall, and the average result was ${avg >= 0 ? 'a gain' : 'a loss'} of ${say(avg, 2)} per trade, before costs. Losses are part of this, so keep each trade small.`,
+      { n: tn, hit, stop: stp, avg, kick: 'THE SCORECARD', title: 'How our earlier picks did', rows: tracked.sort((a, b) => b.track.pct - a.track.pct).slice(0, 10).map(x => ({ ticker: x.ticker, sub: x.signalDate ? new Date(`${x.signalDate}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : '', pct: x.track.pct, state: x.track.state })) });
+  }
+
+  if (n) {
+    // 3) the plan in four steps, once
+    add('plan', 'bullets', 'THE PLAN IN FOUR STEPS',
+      `Here is how each pick works, in four steps, so I don't repeat it every time. One: after the market opens ${nx}, wait three to five minutes. Two: only buy if the price is still within 2 percent of ${wd}'s closing price. Three: aim to sell at 4 percent above that close, and set a safety exit below, in case the stock keeps falling. Four: whatever happens, be out by the close of day three.`,
+      { kick: 'EVERY PICK, SAME PLAN', title: 'The plan in four steps', items: [`Wait 3–5 minutes after the ${nx} open`, `Buy only if the price is within 2% of ${wd}'s close`, 'Aim to sell at +4%. Set a safety exit below', 'Be out by the close of day 3, whatever happens'] });
+    // 4) the picks
+    featured.forEach((x, i) => add(`setup-${x.ticker}`, 'setup', x.ticker, dailyPick(x, i, wd, nx), { setup: x, plan: plan(x), rank: i + 1, total: dipSp.length }));
   } else {
     const watch = nearTrigger(setups.status, new Set());
-    add('watch', 'watch', 'NOTHING TRIGGERED, WHAT TO WATCH', `Nothing triggered today. ${watch.length ? `Stocks closest to the screen: ${watch.map(x => spell(x.ticker)).join(', ')}.` : ''} No signal means no trade, and that is a normal outcome.`, { watch, market: setups.market });
+    add('watch', 'watch', 'NOTHING TRIGGERED, WHAT TO WATCH', `Nothing passed my screen today. ${watch.length ? `The stocks closest to qualifying are ${watch.map(x => spell(x.ticker)).join(', ')}.` : ''} No signal means no trade, and that is a perfectly normal day.`, { watch, market: setups.market });
   }
-  add('stats', 'stats', 'WHAT HISTORY SAYS', statsText(cfg), { winRate: cfg.backtest.winRate, avgPct: cfg.backtest.avgPct, period: cfg.backtest.period });
-  add('outro', 'outro', 'THANKS FOR WATCHING', outroText(cfg), { disclaimer: cfg.disclaimer });
-  return { mode, title, date: dayShort(asOf), asOf, scenes, tickers: featured.map(x => x.ticker).concat(short ? [short.ticker] : []), cfg };
+
+  // 5) tomorrow's calendar (only verified items)
+  if (ev.items.length) {
+    add('calendar', 'bullets', "TOMORROW'S CALENDAR",
+      `Finally, what is coming up. ${ev.items.map(t => t.replace(/[.]$/, '') + '.').join(' ')} Big scheduled events can move the whole market, so they are worth knowing about before you trade.`,
+      { kick: `COMING UP: ${nxd.toUpperCase()}`, title: 'On the calendar', items: ev.items.slice(0, 5) });
+  }
+  add('outro', 'outro', 'THANKS FOR WATCHING', `${n ? `That's it for tonight: ${n} stock${n === 1 ? '' : 's'} on the list for ${nx}, with the same plan for each. ` : ''}${cfg.disclaimer} If this was useful, subscribe to ${ch} and I'll see you after the next close.`, { disclaimer: cfg.disclaimer });
+  return { mode, title, date: dayShort(asOf), asOf, nxd, scenes, tickers: featured.map(x => x.ticker), cfg, calSource: ev.source };
+}
+
+function dailyPick(x, i, wd, nx) {
+  const p = plan(x), nm = NAMES[x.ticker] ? `${NAMES[x.ticker]}, ticker ${x.ticker}` : x.ticker;
+  const stopDist = Math.abs((p.stop / x.close - 1) * 100), rs = x.reasons || [];
+  const tired = [rs.includes('closed near the day’s low') ? 'it closed near the low of the day' : null, rs.includes('new 20-day low') ? 'it hit a fresh 20-day low' : null, rs.includes('3 down days in a row') ? 'it fell three days in a row' : null].filter(Boolean);
+  const lead = i === 0 ? 'Number one' : `Number ${ORD[i]}`;
+  return `${lead}: ${nm}. It closed ${wd} at ${money(x.close)}, after falling ${say(x.chg5d)} in five days. But it's still trading ${say(x.vs200)} above its long-term average, so the bigger trend is still up. ${tired.length ? `The sell-off looks tired: ${tired.join(', and ')}.` : ''} The plan: after the ${nx} open, wait a few minutes and only buy if it's within 2 percent of ${money(x.close)}. The target is ${money(p.target)}. The safety exit is ${money(p.stop)}, and you should be out by the close of day three.${i === 0 ? ` That safety exit looks far away, ${Math.round(stopDist)} percent, because this stock normally swings about ${x.atrPct.toFixed(0)} percent a day. That's why you keep the size small and never borrow money to trade it.` : ''}`;
 }
 
 function chapName(s) {
@@ -256,11 +317,15 @@ function metaParts(ep) {
     hook = `${surv ? `The S&P 500 fell ${drop.replace('−', '')} in five sessions. ` : ''}Here are the ${tick.length} S&P 500 stocks the Uptrend Dip screen still flagged for ${ep.nxd}, how to treat them as 4% target swing trades, and the rules that keep the risk sane. Signals are from the ${dayShort(ep.asOf)} close.`;
     rules = `THE RULES\n• Wait 3-5 minutes after the open on ${ep.nxd}\n• Only if the price is within 2% of the signal-day close\n• Target: 4% above the signal-day close (a target, not a promise)\n• Stop: 3x ATR below. It is far away, so NEVER use leverage, margin, leveraged ETFs or options\n• Exit by the close of day 3 at the latest`;
   } else if (ep.mode === 'weekly') hook = 'Weekly review of how the screen signals played out under the tested rules, plus a watch list for next week.';
-  else hook = `Today's Uptrend Dip signals on S&P 500 stocks for ${ep.nxd || 'the next session'}: what triggered, why, and the tested plan levels.`;
+  else {
+    const d1 = typeof ep.chg1d === 'number' ? `The S&P 500 ${ep.chg1d >= 0 ? 'rose' : 'fell'} ${Math.abs(ep.chg1d).toFixed(1)}% today. ` : '';
+    hook = `${d1}Today's market in plain English, a scorecard of how my earlier picks did, and the ${tick.length} S&P 500 stocks my screen flagged for ${ep.nxd || 'the next session'}, each with a simple plan: when to buy, the +4% target, and a safety exit.${ep.calSource ? '' : ''}`;
+    rules = `THE PLAN FOR EACH PICK\n• Wait 3-5 minutes after the open on ${ep.nxd}\n• Only buy if the price is within 2% of the signal-day close\n• Target: 4% above that close (a target, not a promise)\n• Safety exit: far below, so keep size small and NEVER use leverage or borrowed money\n• Be out by the close of day 3 at the latest`;
+  }
   const head = [hook, tick.length ? `SIGNALS: ${named}` : '', rules].filter(Boolean).join('\n\n');
   const tail = [sources ? `MARKET SOURCES (checked by me, double-check before relying on them)\n${sources}` : '', ep.cfg.disclaimer, 'AI note: the charts and graphics in this video are generated automatically from market data. The voice and presenter are real.', `#TradeWithBK #SwingTrading #SP500 #StockMarket`].filter(Boolean).join('\n\n');
   const tags = ['S&P 500', 'S&P 500 stocks', 'swing trading', 'swing trading strategy', '4% swing trade', 'stock screener', 'dip buying', 'uptrend pullback', 'stock market correction', 'stock market today', 'trading signals', 'technical analysis', 'stocks to watch', 'trade with bk', ...tick, ...tick.map(x => NAMES[x]).filter(Boolean)];
-  const pinned = ep.mode === 'welcome' ? `Which of these ${tick.length} would you have picked, and which AI stock are you watching? Educational only, not financial advice. Never use leverage with these.` : 'Which setup do you like most today? Educational only, not financial advice.';
+  const pinned = ep.mode === 'weekly' ? 'Which setup did you follow this week, and how did it go? Educational only, not financial advice.' : `Which of these ${tick.length} would you have picked: ${tick.join(', ')}? Tell me below, and I'll reply to every comment. 👇\n\nReminder: these are signals from a screen, not recommendations. 4% is a target, not a promise, and the safety exit is far away, so never use leverage. Educational only, not financial advice.`;
   return { title: ep.title, head, tail, chap, tags, pinned };
 }
 function metadata(ep) {
@@ -279,6 +344,6 @@ function tapeFor(ep, setups) {
   parts.push('Never use leverage');
   return parts.join('  //  ');
 }
-function buildEpisode(args) { const ep = buildEpisodeInner(args); if (args.setups && args.setups.__news && args.setups.__news.asOf === args.setups.asOf) ep.sources = args.setups.__news.sources || []; if (args.setups && args.setups.market && typeof args.setups.market.chg5d === 'number') ep.chg5d = args.setups.market.chg5d; if (!ep.nxd && ep.mode !== 'weekly' && args.setups && args.setups.asOf) ep.nxd = nextSessionFull(args.setups.asOf); ep.tape = tapeFor(ep, args.setups); return ep; }
+function buildEpisode(args) { const ep = buildEpisodeInner(args); if (args.setups && args.setups.__news && args.setups.__news.asOf === args.setups.asOf) ep.sources = args.setups.__news.sources || []; if (args.setups && args.setups.market && typeof args.setups.market.chg5d === 'number') ep.chg5d = args.setups.market.chg5d; if (args.setups && args.setups.market && typeof args.setups.market.chg1d === 'number') ep.chg1d = args.setups.market.chg1d; if (!ep.nxd && ep.mode !== 'weekly' && args.setups && args.setups.asOf) ep.nxd = nextSessionFull(args.setups.asOf); ep.tape = tapeFor(ep, args.setups); return ep; }
 function pointsOf(sc) { return (sc.points && sc.points.length) ? sc.points : sentences(sc.narration).slice(0, 7); }
 module.exports = { metaParts, pointsOf, buildEpisode, metadata, spell, money, pct, nearTrigger };

@@ -1,4 +1,5 @@
 'use strict';
+const NAMES_R = require('./names');
 /* Scene HTML, frame capture (Chromium) and video assembly (ffmpeg). */
 const fs = require('fs');
 const path = require('path');
@@ -203,17 +204,17 @@ const SCENES = {
     const cap = (x.reasons || []).map(t => t.replace(/^./, c => c.toUpperCase()).replace('day’s low', 'day’s low')).slice(0, 1).join(' · ') || 'Washed-out short-term RSI';
     const row = (t, sub, a) => `<div data-a="${a}" style="display:flex;gap:14px;align-items:flex-start;margin-top:10px"><div style="flex:none;color:var(--up);font-size:30px;font-weight:800;line-height:1.1;text-shadow:0 0 14px rgba(31,229,165,.6)">✓</div><div><div style="font-size:23px;font-weight:800;line-height:1.1">${t}</div><div class="mut" style="font-size:19px;line-height:1.25;margin-top:2px">${sub}</div></div></div>`;
     return frame(`
-      <div class="abs" data-a="0,0.25" style="left:80px;top:100px;display:flex;align-items:center;gap:22px"><div class="h2" style="font-size:70px;color:#7FE3FF;text-shadow:0 0 28px rgba(38,208,255,.6)">${rank ? '#' + rank + ' ' : ''}${esc(x.ticker)}</div><span class="chip ${short ? 'r' : 'g'}">${short ? 'SHORT SETUP' : 'UPTREND DIP'}</span>${tag}${total ? `<span class="chip">${rank} of ${total} signals</span>` : ''}</div>
+      <div class="abs" data-a="0,0.25" style="left:80px;top:100px;display:flex;align-items:center;gap:22px"><div class="h2" style="font-size:70px;color:#7FE3FF;text-shadow:0 0 28px rgba(38,208,255,.6)">${rank ? '#' + rank + ' ' : ''}${esc(x.ticker)}</div>${NAMES_R[x.ticker] ? `<div class="mut" style="font-size:34px;font-weight:700;white-space:nowrap">${esc(NAMES_R[x.ticker])}</div>` : ''}<span class="chip ${short ? 'r' : 'g'}">${short ? 'SHORT SETUP' : 'STRONG STOCK, SHORT DIP'}</span>${tag}${total ? `<span class="chip">${rank} of ${total} signals</span>` : ''}</div>
       <div class="card abs" data-a="0,0.2" style="left:80px;top:196px;width:1250px;height:650px;padding:8px 10px">${s.chart}</div>
-      ${st2('5-DAY MOVE', cnt(x.chg5d, 1, x.chg5d > 0 ? '+' : '', '%', 0.25, 0.65, cls(x.chg5d)), 1360, 196, '0.2,0.45')}
-      ${st2('VS 200-DAY', cnt(x.vs200, 1, x.vs200 > 0 ? '+' : '', '%', 0.3, 0.7, x.vs200 >= 0 ? 'up' : 'down'), 1609, 196, '0.25,0.5')}
-      ${st2('RSI (14)', cnt(x.rsi || 0, 0, '', '', 0.35, 0.75), 1360, 328, '0.3,0.55')}
-      ${st2('REL. VOLUME', isNum(x.relVol) ? cnt(x.relVol, 1, '', '×', 0.4, 0.8) : '–', 1609, 328, '0.35,0.6')}
-      ${st2('DAILY RANGE', isNum(x.atrPct) ? cnt(x.atrPct, 1, '', '%', 0.4, 0.8) : '–', 1360, 460, '0.4,0.65')}
-      ${st2('STOP DISTANCE', stopDist !== null ? cnt(Math.abs(stopDist), 0, short ? '+' : '−', '%', 0.45, 0.85, 'down') : '–', 1609, 460, '0.45,0.7')}
+      ${st2('5-DAY DROP', cnt(x.chg5d, 1, x.chg5d > 0 ? '+' : '', '%', 0.25, 0.65, cls(x.chg5d)), 1360, 196, '0.2,0.45')}
+      ${st2('ABOVE TREND', cnt(x.vs200, 1, x.vs200 > 0 ? '+' : '', '%', 0.3, 0.7, x.vs200 >= 0 ? 'up' : 'down'), 1609, 196, '0.25,0.5')}
+      ${st2('OVERSOLD (RSI)', cnt(x.rsi || 0, 0, '', '', 0.35, 0.75), 1360, 328, '0.3,0.55')}
+      ${st2('VOLUME VS USUAL', isNum(x.relVol) ? cnt(x.relVol, 1, '', '×', 0.4, 0.8) : '–', 1609, 328, '0.35,0.6')}
+      ${st2('USUAL DAILY SWING', isNum(x.atrPct) ? cnt(x.atrPct, 1, '', '%', 0.4, 0.8) : '–', 1360, 460, '0.4,0.65')}
+      ${st2('SAFETY EXIT', stopDist !== null ? cnt(Math.abs(stopDist), 0, short ? '+' : '−', '%', 0.45, 0.85, 'down') : '–', 1609, 460, '0.45,0.7')}
       <div class="card y abs" data-a="0.5,0.75" style="left:1360px;top:594px;width:484px;height:252px;padding:16px 22px"><div class="lab" style="color:var(--amb)">WHY IT MADE THE LIST</div>
-        ${row('Uptrend', `${sgn(x.vs200)} ${x.vs200 >= 0 ? 'above' : 'below'} its 200-day average`, '0.55,0.8')}${row('Sharp drop', `${sgn(x.chg5d)} over five sessions`, '0.62,0.87')}${row('Capitulation', esc(cap), '0.69,0.94')}</div>
-      ${[['ENTRY', '3–5 min after the open, only if within 2% of ' + money(x.close), 'b'], ['TARGET', sgnLevel(short, p.target, 4), short ? 'r' : 'g'], ['STOP', '3 ATR · ' + money(p.stop), short ? 'g' : 'r'], ['EXIT', 'Close of day 3', 'a']].map((b, i) => `<div class="card ${b[2] === 'g' ? 'g' : b[2] === 'r' ? 'r' : b[2] === 'a' ? 'y' : ''} abs" data-a="${0.5 + i * 0.07},${0.75 + i * 0.07}" style="left:${80 + i * 456}px;top:862px;width:432px;height:112px;padding:14px 26px"><div class="lab" style="font-size:16px">${b[0]}</div><div style="font-size:${b[0] === 'ENTRY' ? 21 : 29}px;font-weight:700;margin-top:4px;line-height:1.2" class="${b[2] === 'g' ? 'up' : b[2] === 'r' ? 'down' : ''}">${esc(b[1])}</div></div>`).join('')}`, ep.date);
+        ${row('Strong stock', `${sgn(x.vs200)} ${x.vs200 >= 0 ? 'above' : 'below'} its long-term average`, '0.55,0.8')}${row('Sold off fast', `${sgn(x.chg5d)} over five days`, '0.62,0.87')}${row('Sellers look tired', esc(cap), '0.69,0.94')}</div>
+      ${[['ENTRY', '3–5 min after the open, only if within 2% of ' + money(x.close), 'b'], ['TARGET', sgnLevel(short, p.target, 4), short ? 'r' : 'g'], ['SAFETY EXIT (IF IT KEEPS FALLING)', money(p.stop), short ? 'g' : 'r'], ['SELL BY', 'Close of day 3', 'a']].map((b, i) => `<div class="card ${b[2] === 'g' ? 'g' : b[2] === 'r' ? 'r' : b[2] === 'a' ? 'y' : ''} abs" data-a="${0.5 + i * 0.07},${0.75 + i * 0.07}" style="left:${80 + i * 456}px;top:862px;width:432px;height:112px;padding:14px 26px"><div class="lab" style="font-size:16px">${b[0]}</div><div style="font-size:${b[0] === 'ENTRY' ? 21 : 29}px;font-weight:700;margin-top:4px;line-height:1.2" class="${b[2] === 'g' ? 'up' : b[2] === 'r' ? 'down' : ''}">${esc(b[1])}</div></div>`).join('')}`, ep.date);
   },
   summary: (s, ep) => {
     const rows = s.data.rows || [];
@@ -223,9 +224,9 @@ const SCENES = {
   },
   outcomes: (s, ep) => {
     const d = s.data, rows = d.rows || [], mx = Math.max(5, ...rows.map(r => Math.abs(r.pct)));
-    return frame(`<div class="abs" data-a="0,0.3" style="left:80px;top:150px"><div class="kick">TESTED RULES, EVERY SIGNAL</div><div class="h2" style="margin-top:12px">How the signals played out</div></div>
-      ${stat('COMPLETED', cnt(d.n, 0, '', '', 0.1, 0.5), 'signals', 80, 330, 360, '0.1,0.4')}${stat('HIT TARGET', cnt(d.hit, 0, '', '', 0.15, 0.55, 'up'), '', 80, 500, 360, '0.15,0.45')}${stat('HIT STOP', cnt(d.stop, 0, '', '', 0.2, 0.6, 'down'), '', 80, 670, 360, '0.2,0.5')}${stat('AVERAGE', cnt(d.avg, 2, d.avg > 0 ? '+' : '', '%', 0.25, 0.65, cls(d.avg)), 'per trade', 80, 840, 360, '0.25,0.55')}
-      <div class="card abs" data-a="0.1,0.4" style="left:480px;top:330px;width:1360px;height:660px;padding:30px 40px">${rows.map((r, i) => { const w = Math.abs(r.pct) / mx * 520; return `<div style="display:flex;align-items:center;height:${Math.min(50, 600 / Math.max(rows.length, 1))}px"><div style="width:150px;font-weight:800;font-size:30px">${esc(r.ticker)}</div><div style="width:540px;position:relative;height:100%"><div data-w="${0.2 + i * 0.03},${0.6 + i * 0.03}" data-max="${w.toFixed(1)}" style="position:absolute;top:8px;bottom:8px;${r.pct >= 0 ? 'left:0' : 'right:0'};width:0;border-radius:8px;background:${r.pct >= 0 ? 'var(--up)' : 'var(--down)'}"></div></div><div style="width:150px;text-align:right;font-weight:700;font-size:30px" class="${cls(r.pct)}">${sgn(r.pct)}</div><div class="mut" style="margin-left:24px;font-size:24px">${r.state === 'target' ? 'target' : r.state === 'stop' ? 'stop' : 'day 3 close'}</div></div>`; }).join('')}</div>`, ep.date);
+    return frame(`<div class="abs" data-a="0,0.3" style="left:80px;top:150px"><div class="kick">${esc(d.kick || 'TESTED RULES, EVERY SIGNAL')}</div><div class="h2" style="margin-top:12px">${esc(d.title || 'How the signals played out')}</div></div>
+      ${stat('COMPLETED', cnt(d.n, 0, '', '', 0.1, 0.5), 'signals', 80, 330, 360, '0.1,0.4')}${stat('HIT TARGET', cnt(d.hit, 0, '', '', 0.15, 0.55, 'up'), '', 80, 500, 360, '0.15,0.45')}${stat('SAFETY EXIT', cnt(d.stop, 0, '', '', 0.2, 0.6, 'down'), '', 80, 670, 360, '0.2,0.5')}${stat('AVERAGE', cnt(d.avg, 2, d.avg > 0 ? '+' : '', '%', 0.25, 0.65, cls(d.avg)), '', 80, 840, 360, '0.25,0.55')}
+      <div class="card abs" data-a="0.1,0.4" style="left:480px;top:330px;width:1360px;height:660px;padding:30px 40px">${rows.map((r, i) => { const w = Math.abs(r.pct) / mx * 520; return `<div style="display:flex;align-items:center;height:${Math.min(50, 600 / Math.max(rows.length, 1))}px"><div style="width:150px;font-weight:800;font-size:30px;line-height:1">${esc(r.ticker)}${r.sub ? `<div class="mut" style="font-size:15px;font-weight:600">${esc(r.sub)}</div>` : ''}</div><div style="width:540px;position:relative;height:100%"><div data-w="${0.2 + i * 0.03},${0.6 + i * 0.03}" data-max="${w.toFixed(1)}" style="position:absolute;top:8px;bottom:8px;${r.pct >= 0 ? 'left:0' : 'right:0'};width:0;border-radius:8px;background:${r.pct >= 0 ? 'var(--up)' : 'var(--down)'}"></div></div><div style="width:150px;text-align:right;font-weight:700;font-size:30px" class="${cls(r.pct)}">${sgn(r.pct)}</div><div class="mut" style="margin-left:24px;font-size:24px">${r.state === 'target' ? 'target' : r.state === 'stop' ? 'stop' : 'day 3 close'}</div></div>`; }).join('')}</div>`, ep.date);
   },
   watch: (s, ep) => {
     const w = s.data.watch || [], m = s.data.market;
@@ -255,9 +256,10 @@ const SCENES = {
   },
   market: (s, ep) => {
     const d = s.data, m = d.market || {};
-    return frame(`<div class="abs" data-a="0,0.3" style="left:80px;top:140px"><div class="kick">THE BACKDROP</div><div class="h2" style="margin-top:12px">S&amp;P 500, this week</div></div>
-      ${isNum(m.chg5d) ? `<div class="card abs" data-a="0.1,0.4" style="left:80px;top:320px;width:560px;height:300px;padding:40px"><div class="lab">LAST 5 SESSIONS</div><div class="num ${cls(m.chg5d)}" style="font-size:120px;line-height:1.15;margin-top:10px">${cnt(m.chg5d, 1, m.chg5d > 0 ? '+' : '', '%', 0.15, 0.6, cls(m.chg5d))}</div></div>` : ''}
-      ${isNum(m.chg20d) ? `<div class="card abs" data-a="0.2,0.5" style="left:80px;top:650px;width:560px;height:300px;padding:40px"><div class="lab">LAST 20 SESSIONS</div><div class="num" style="font-size:120px;line-height:1.15;margin-top:10px">${cnt(m.chg20d, 1, m.chg20d > 0 ? '+' : '', '%', 0.2, 0.65, cls(m.chg20d))}</div></div>` : ''}
+    return frame(`<div class="abs" data-a="0,0.3" style="left:80px;top:140px"><div class="kick">${isNum(m.chg1d) ? 'PLAIN ENGLISH' : 'THE BACKDROP'}</div><div class="h2" style="margin-top:12px">${isNum(m.chg1d) ? 'The S&amp;P 500 today' : 'S&amp;P 500, this week'}</div></div>
+      ${isNum(m.chg1d) ? `<div class="card abs" data-a="0.1,0.4" style="left:80px;top:320px;width:560px;height:300px;padding:40px"><div class="lab">TODAY</div><div class="num ${cls(m.chg1d)}" style="font-size:120px;line-height:1.15;margin-top:10px">${cnt(m.chg1d, 1, m.chg1d > 0 ? '+' : '', '%', 0.15, 0.6, cls(m.chg1d))}</div></div>` : ''}
+      ${isNum(m.chg5d) ? `<div class="card abs" data-a="0.1,0.4" style="left:80px;top:${isNum(m.chg1d) ? 650 : 320}px;width:560px;height:300px;padding:40px"><div class="lab">LAST 5 DAYS</div><div class="num ${cls(m.chg5d)}" style="font-size:120px;line-height:1.15;margin-top:10px">${cnt(m.chg5d, 1, m.chg5d > 0 ? '+' : '', '%', 0.15, 0.6, cls(m.chg5d))}</div></div>` : ''}
+      ${(isNum(m.chg20d) && !isNum(m.chg1d)) ? `<div class="card abs" data-a="0.2,0.5" style="left:80px;top:650px;width:560px;height:300px;padding:40px"><div class="lab">LAST 20 SESSIONS</div><div class="num" style="font-size:120px;line-height:1.15;margin-top:10px">${cnt(m.chg20d, 1, m.chg20d > 0 ? '+' : '', '%', 0.2, 0.65, cls(m.chg20d))}</div></div>` : ''}
       ${s.spy ? `<div class="card abs" data-a="0.15,0.55" style="left:680px;top:320px;width:1160px;height:630px;padding:34px 40px"><div class="lab">LAST 60 SESSIONS</div><div class="abs" style="left:100px;top:110px">${s.spy}</div></div>` : ''}`, ep.date);
   },
   proof: (s, ep) => {

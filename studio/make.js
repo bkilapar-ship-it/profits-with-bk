@@ -30,12 +30,14 @@ async function main() {
   } catch (e) { console.log('Note: could not load S&P 500 history early:', e.message); }
   if (bars.SPY && bars.SPY.length > 21) {
     const c = bars.SPY.map(b => b.c), n = c.length - 1;
-    setups.market = { ...(setups.market || {}), chg5d: (c[n] / c[n - 5] - 1) * 100, chg20d: (setups.market && typeof setups.market.chg20d === 'number') ? setups.market.chg20d : (c[n] / c[n - 20] - 1) * 100 };
+    setups.market = { ...(setups.market || {}), chg1d: (c[n] / c[n - 1] - 1) * 100, close: c[n], chg5d: (c[n] / c[n - 5] - 1) * 100, chg20d: (setups.market && typeof setups.market.chg20d === 'number') ? setups.market.chg20d : (c[n] / c[n - 20] - 1) * 100 };
   }
   // Episode 1 extras: market news facts file (if present) and the AI/chip health check from real prices
-  if (mode === 'welcome') {
-    const nf = path.join(__dirname, 'content', `news-${setups.asOf}.json`);
+  { const nf = path.join(__dirname, 'content', `news-${setups.asOf}.json`);
     if (fs.existsSync(nf)) setups.__news = JSON.parse(fs.readFileSync(nf, 'utf8'));
+    const ef = path.join(__dirname, 'content', 'events.json');
+    if (fs.existsSync(ef)) setups.__events = JSON.parse(fs.readFileSync(ef, 'utf8')); }
+  if (mode === 'welcome') {
     const AI = ['NVDA', 'AMD', 'AVGO', 'MU', 'SMCI', 'PLTR', 'MSFT', 'GOOGL', 'META', 'AMZN', 'ORCL', 'TSM', 'ARM', 'ANET', 'VRT', 'DELL', 'CRWV', 'COHR', 'LRCX', 'AMAT', 'KLAC', 'INTC', 'QCOM', 'NOW', 'CEG', 'VST'];
     try {
       const ab = barsFile ? bars : await fetchBars(AI, { keyId: process.env.ALPACA_KEY_ID, secret: process.env.ALPACA_SECRET_KEY });
