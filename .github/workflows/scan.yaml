@@ -6,6 +6,11 @@ on:
     - cron: '5 14-21 * * 1-5'   # hourly while the market is open (updates 1H / 4H)
     - cron: '45 22 * * 1-5'     # after the close (final daily candle)
   workflow_dispatch:             # "Run workflow" button in the Actions tab
+    inputs:
+      skip_scan:
+        description: 'Republish the site with the data already live (no new market scan). Used when only the studio files changed.'
+        type: boolean
+        default: false
   push:
     branches: [main]
 
@@ -49,8 +54,17 @@ jobs:
           ref: studio-latest
           path: studio-latest
 
+      - name: Reuse the live data (no new scan)
+        if: ${{ inputs.skip_scan }}
+        run: |
+          mkdir -p _site/data
+          base='${{ steps.pages.outputs.base_url }}/data'
+          for f in 1D 4H 1H bt-1D bt-4H bt-1H setups universe paper; do curl -fsS "$base/$f.json" -o "_site/data/$f.json" || echo "not available yet: $f.json"; done
+          ls -la _site/data
+
       - name: Run market scan
         id: scan
+        if: ${{ !inputs.skip_scan }}
         continue-on-error: true   # still deploy the site (and keep previous results) if the scan fails
         env:
           ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}

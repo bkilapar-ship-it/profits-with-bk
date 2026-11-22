@@ -92,4 +92,4 @@ jobs:
       - name: Redeploy the site so the new files go live
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: gh workflow run scan.yaml --ref "${{ github.event.repository.default_branch }}" || echo "Could not start the site deploy; the files go live on the next scan run."
+        run: gh workflow run scan.yaml --ref "${{ github.event.repository.default_branch }}" -f skip_scan=true || echo "Could not start the site deploy; the files go live on the next scan run."
