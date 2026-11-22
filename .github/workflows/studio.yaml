@@ -16,7 +16,7 @@ on:
         description: 'Which episode to build'
         type: choice
         default: daily
-        options: [daily, weekly]
+        options: [daily, weekly, welcome]
 
 permissions:
   contents: write
@@ -46,7 +46,7 @@ jobs:
           if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" = "55 23 * * 5" ]; then m=weekly; fi
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then m="${{ inputs.mode }}"; fi
           if [ "${{ github.event_name }}" = "push" ] && [ -f research-trigger/studio.txt ]; then m=$(sed -n 1p research-trigger/studio.txt | tr -cd 'a-z'); fi
-          case "$m" in daily|weekly) ;; *) m=daily;; esac
+          case "$m" in daily|weekly|welcome) ;; *) m=daily;; esac
           echo "m=$m" >> "$GITHUB_OUTPUT"
 
       - name: Install the video tools

@@ -112,8 +112,8 @@ const SCENES = {
       <div class="abs" data-a="0.1,0.5" style="left:80px;top:310px;width:1500px"><div class="h1">${esc(s.heading.split(' ').slice(0, 1).join(' '))}<br><span style="color:var(--acc)">${esc(s.heading.split(' ').slice(1).join(' '))}</span></div></div>
       <div class="abs" data-a="0.3,0.7" style="left:80px;top:640px"><div class="h2" style="font-weight:600;color:var(--mut);font-size:46px">${esc(d.date || '')}</div></div>
       <div class="abs" data-a="0.45,0.85" style="left:80px;top:760px;display:flex;gap:18px">
-        <span class="chip g">${k.dip || 0} S&amp;P long setups</span><span class="chip r">${k.rip || 0} short</span><span class="chip">${k.other || 0} outside the index</span>
-        ${m && isNum(m.chg20d) ? `<span class="chip ${m.chg20d <= 0 ? 'a' : 'b'}">S&amp;P 500 20-day ${sgn(m.chg20d)}</span>` : ''}</div>
+        ${d.chips ? d.chips.map((c, i) => `<span class="chip ${['g', 'b', ''][i % 3]}">${esc(c)}</span>`).join('') : `<span class="chip g">${k.dip || 0} S&amp;P long setups</span><span class="chip r">${k.rip || 0} short</span><span class="chip">${k.other || 0} outside the index</span>
+        ${m && isNum(m.chg20d) ? `<span class="chip ${m.chg20d <= 0 ? 'a' : 'b'}">S&amp;P 500 20-day ${sgn(m.chg20d)}</span>` : ''}`}</div>
       ${s.spy ? `<div class="card abs" data-a="0.2,0.6" style="left:1000px;top:230px;width:840px;height:520px;padding:34px 40px"><div class="lab">S&amp;P 500, LAST 60 SESSIONS</div><div class="abs" style="left:40px;top:96px">${s.spy}</div></div>` : ''}`, d.date);
   },
   rules: (s, ep) => {
@@ -138,7 +138,7 @@ const SCENES = {
   },
   summary: (s, ep) => {
     const rows = s.data.rows || [];
-    return frame(`<div class="abs" data-a="0,0.3" style="left:80px;top:150px"><div class="kick">TODAY'S SCREEN</div><div class="h2" style="margin-top:12px">All S&amp;P 500 setups</div></div>
+    return frame(`<div class="abs" data-a="0,0.3" style="left:80px;top:150px"><div class="kick">${esc(s.data.kick || "TODAY'S SCREEN")}</div><div class="h2" style="margin-top:12px">${esc(s.data.title || 'All S&P 500 setups')}</div></div>
       <div class="card abs" data-a="0.15,0.5" style="left:80px;top:290px;width:1760px;padding:34px 40px"><table><thead><tr><th>TICKER</th><th>SIDE</th><th>5-DAY MOVE</th><th>VS 200-DAY</th><th>CLOSE</th></tr></thead><tbody>${rows.map(r => `<tr><td style="font-weight:800">${esc(r.ticker)}</td><td class="${r.kind === 'dip' ? 'up' : 'down'}">${r.kind === 'dip' ? 'Long' : 'Short'}</td><td class="${cls(r.chg5d)}">${sgn(r.chg5d)}</td><td>${sgn(r.vs200)}</td><td>${money(r.close)}</td></tr>`).join('')}</tbody></table></div>`, ep.date);
   },
   outcomes: (s, ep) => {
@@ -163,6 +163,23 @@ const SCENES = {
   },
   outro: (s, ep) => frame(`<div class="abs" data-a="0,0.3" style="left:80px;top:230px"><div class="kick">THANKS FOR WATCHING</div><div class="h1" style="font-size:96px;margin-top:16px">${esc(ep.cfg.channelName)}</div></div>
       <div class="card abs" data-a="0.2,0.55" style="left:80px;top:520px;width:1760px;padding:44px 50px;font-size:34px;line-height:1.45;color:#C9D6EE">${esc(s.data.disclaimer || '')}</div>`, ep.date),
+  bullets: (s, ep) => {
+    const d = s.data, items = d.items || [];
+    return frame(`<div class="abs" data-a="0,0.3" style="left:80px;top:140px"><div class="kick">${esc(d.kick || '')}</div><div class="h2" style="margin-top:12px">${esc(d.title || s.heading)}</div></div>
+      <div class="abs" style="left:80px;top:320px;width:1760px;display:grid;gap:22px">${items.map((t, i) => `<div class="card" data-a="${0.15 + i * 0.1},${0.45 + i * 0.1}" style="display:flex;align-items:center;gap:34px;padding:${items.length > 4 ? 26 : 34}px 44px"><div style="flex:none;width:64px;height:64px;border-radius:20px;background:rgba(91,140,255,.16);border:1px solid rgba(91,140,255,.5);display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800;color:#9DB8FF">${i + 1}</div><div style="font-size:${items.length > 4 ? 38 : 42}px;font-weight:700;line-height:1.25">${esc(t)}</div></div>`).join('')}</div>`, ep.date);
+  },
+  steps: (s, ep) => {
+    const items = s.data.items || [];
+    return frame(`<div class="abs" data-a="0,0.3" style="left:80px;top:130px"><div class="kick">THE TESTED PLAN</div><div class="h2" style="margin-top:12px">How to use a signal</div></div>
+      <div class="abs" style="left:80px;top:270px;width:1760px;display:grid;gap:14px">${items.map((it, i) => `<div class="card" data-a="${0.12 + i * 0.09},${0.4 + i * 0.09}" style="display:flex;align-items:center;gap:36px;padding:18px 44px"><div class="num" style="flex:none;width:70px;font-size:64px;color:var(--acc)">${i + 1}</div><div><div style="font-size:42px;font-weight:800;line-height:1.15">${esc(it.t)}</div><div class="mut" style="font-size:28px;margin-top:4px">${esc(it.s)}</div></div></div>`).join('')}</div>`, ep.date);
+  },
+  market: (s, ep) => {
+    const d = s.data, m = d.market || {};
+    return frame(`<div class="abs" data-a="0,0.3" style="left:80px;top:140px"><div class="kick">THE BACKDROP</div><div class="h2" style="margin-top:12px">S&amp;P 500, this week</div></div>
+      ${isNum(m.chg5d) ? `<div class="card abs" data-a="0.1,0.4" style="left:80px;top:320px;width:560px;height:300px;padding:40px"><div class="lab">LAST 5 SESSIONS</div><div class="num ${cls(m.chg5d)}" style="font-size:120px;line-height:1.15;margin-top:10px">${cnt(m.chg5d, 1, m.chg5d > 0 ? '+' : '', '%', 0.15, 0.6, cls(m.chg5d))}</div></div>` : ''}
+      ${isNum(m.chg20d) ? `<div class="card abs" data-a="0.2,0.5" style="left:80px;top:650px;width:560px;height:300px;padding:40px"><div class="lab">LAST 20 SESSIONS</div><div class="num" style="font-size:120px;line-height:1.15;margin-top:10px">${cnt(m.chg20d, 1, m.chg20d > 0 ? '+' : '', '%', 0.2, 0.65, cls(m.chg20d))}</div></div>` : ''}
+      ${s.spy ? `<div class="card abs" data-a="0.15,0.55" style="left:680px;top:320px;width:1160px;height:630px;padding:34px 40px"><div class="lab">LAST 60 SESSIONS</div><div class="abs" style="left:100px;top:110px">${s.spy}</div></div>` : ''}`, ep.date);
+  },
   text: (s, ep) => frame(`<div class="abs" data-a="0,0.4" style="left:80px;top:300px;width:1700px"><div class="h2">${esc(s.heading)}</div><div class="mut" style="font-size:40px;margin-top:24px;line-height:1.4">${esc(s.narration)}</div></div>`, ep.date),
 };
 function sgnLevel(short, v, p) { return `${short ? '−' : '+'}${p}% · ${money(v)}`; }
@@ -187,7 +204,7 @@ function prepareCharts(ep, barsBySym) {
   if (spyBars && spyBars.length >= 30) {
     const closes = spyBars.slice(-60).map(b => b.c);
     ep.spyCloses = closes;
-    for (const s of ep.scenes) if (s.type === 'intro') s.spy = areaSvg(closes, 760, 370, closes[closes.length - 1] >= closes[0]);
+    for (const s of ep.scenes) { if (s.type === 'intro') s.spy = areaSvg(closes, 760, 370, closes[closes.length - 1] >= closes[0]); if (s.type === 'market') s.spy = areaSvg(closes, 960, 440, closes[closes.length - 1] >= closes[0]); }
   }
 }
 
@@ -225,8 +242,8 @@ function thumbHtml(ep, dir) {
   const first = ep.scenes.find(x => x.view), art = first ? miniCandles(first.view.slice(-34), 600, 520) : (ep.spyCloses ? areaSvg(ep.spyCloses, 600, 400, ep.spyCloses[ep.spyCloses.length - 1] >= ep.spyCloses[0]) : '');
   return `<!doctype html><html><head><meta charset="utf-8"><style>${fontCss(dir)}${CSS.replace(/html,body\{width:1920px;height:1080px/, 'html,body{width:1280px;height:720px')}</style></head><body>
     <div class="grid"></div>
-    <div class="abs" style="left:64px;top:70px"><div class="kick" style="font-size:30px">${esc(ep.mode === 'weekly' ? 'WEEKLY REVIEW' : 'DAILY SCREEN')}</div></div>
-    <div class="abs" style="left:64px;top:130px;width:1150px"><div class="h1" style="font-size:150px;width:620px">${ep.mode === 'weekly' ? 'WEEK IN<br><span style="color:var(--acc)">REVIEW</span>' : 'DIP<br><span style="color:var(--acc)">SIGNALS</span>'}</div></div>
+    <div class="abs" style="left:64px;top:70px"><div class="kick" style="font-size:30px">${esc(ep.mode === 'weekly' ? 'WEEKLY REVIEW' : ep.mode === 'welcome' ? 'START HERE' : 'DAILY SCREEN')}</div></div>
+    <div class="abs" style="left:64px;top:130px;width:1150px"><div class="h1" style="font-size:150px;width:620px">${ep.mode === 'weekly' ? 'WEEK IN<br><span style="color:var(--acc)">REVIEW</span>' : ep.mode === 'welcome' ? 'TRADE<br><span style="color:var(--acc)">WITH BK</span>' : 'DIP<br><span style="color:var(--acc)">SIGNALS</span>'}</div></div>
     <div class="abs" style="left:64px;top:520px;display:flex;gap:16px">${t.map(x => `<span class="chip g" style="font-size:44px;padding:16px 30px">${esc(x)}</span>`).join('')}</div>
     <div class="abs" style="left:64px;bottom:44px;font-size:34px;font-weight:700;color:var(--mut)">${esc(ep.date)}</div>
     ${art ? `<div class="abs" style="left:640px;top:70px;width:600px;height:560px;opacity:.95">${art}</div>` : ''}</body></html>`;
