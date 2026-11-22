@@ -32,6 +32,17 @@ async function main() {
     const c = bars.SPY.map(b => b.c), n = c.length - 1;
     setups.market = { ...(setups.market || {}), chg5d: (c[n] / c[n - 5] - 1) * 100, chg20d: (setups.market && typeof setups.market.chg20d === 'number') ? setups.market.chg20d : (c[n] / c[n - 20] - 1) * 100 };
   }
+  // Episode 1 extras: market news facts file (if present) and the AI/chip health check from real prices
+  if (mode === 'welcome') {
+    const nf = path.join(__dirname, 'content', `news-${setups.asOf}.json`);
+    if (fs.existsSync(nf)) setups.__news = JSON.parse(fs.readFileSync(nf, 'utf8'));
+    const AI = ['NVDA', 'AMD', 'AVGO', 'MU', 'SMCI', 'PLTR', 'MSFT', 'GOOGL', 'META', 'AMZN', 'ORCL', 'TSM', 'ARM', 'ANET', 'VRT', 'DELL', 'CRWV', 'COHR', 'LRCX', 'AMAT', 'KLAC', 'INTC', 'QCOM', 'NOW', 'CEG', 'VST'];
+    try {
+      const ab = barsFile ? bars : await fetchBars(AI, { keyId: process.env.ALPACA_KEY_ID, secret: process.env.ALPACA_SECRET_KEY });
+      setups.aiHealth = AI.filter(t => ab[t] && ab[t].length >= 205).map(t => { const c = ab[t].map(b => b.c), n = c.length - 1, ma = c.slice(-200).reduce((a, b) => a + b, 0) / 200; return { ticker: t, vs200: (c[n] / ma - 1) * 100, chg5d: (c[n] / c[n - 5] - 1) * 100 }; });
+      console.log(`AI health: ${setups.aiHealth.length} names, ${setups.aiHealth.filter(a => a.vs200 < 0).length} below the 200-day`);
+    } catch (e) { console.log('Note: AI health check skipped:', e.message); }
+  }
   const ep = buildEpisode({ mode, setups, config });
   const out = path.resolve(arg('out', path.join(__dirname, 'out', `${mode}-${setups.asOf}`)));
   fs.mkdirSync(out, { recursive: true });

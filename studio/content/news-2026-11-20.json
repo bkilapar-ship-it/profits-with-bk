@@ -1,0 +1,15 @@
+{
+  "asOf": "2026-11-20",
+  "note": "Market facts for the week ending Friday 20 Nov 2026, taken from AP (via NBC Bay Area) and Fox Business reports. Check them before publishing.",
+  "spxFridayPct": -3.7,
+  "spxClose": "6,910",
+  "recordDate": "October 6th",
+  "losingStreak": 7,
+  "nasdaqFridayPct": -5.3,
+  "nvdaFridayPct": 14,
+  "chipIndexFridayPct": 10.7,
+  "sources": [
+    "AP via NBC Bay Area: https://www.nbcbayarea.com/news/national-international/november-20-stock-market-updates/4179477/",
+    "Fox Business: https://foxbusiness.com/markets/wall-street-suffers-historic-losses-dow-sp-500-plunge-correction-territory"
+  ]
+}
