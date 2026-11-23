@@ -1,0 +1,125 @@
+name: Opening minute candles
+
+# READ-ONLY record of the first 15 minutes of trading for each day's setups (one-minute candles), so we can see what a
+# 3-5 minute entry would really have looked like, and compare it with the price Alpaca's paper account filled at.
+# It only reads market data and the saved paper-trading state. It never places, changes or cancels an order and never
+# changes a trading setting. Results are saved on the "open-bars" branch (open-bars/<date>.json and index.json).
+
+on:
+  schedule:
+    # Times are UTC; ~9:50 ET in summer (EDT) and winter (EST). The run that lands before 9:46 ET records nothing, and a day
+    # that is already recorded is left alone, so the spare line is harmless.
+    - cron: '50 13 * * 1-5'
+    - cron: '50 14 * * 1-5'
+  push:
+    paths: ['research-trigger/openbars.txt']   # Claude can request a run by pushing this file (line 1 = a date YYYY-MM-DD to re-record, or empty for today)
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Overwrite today (or the date below) if it is already recorded'
+        type: boolean
+        default: false
+      date:
+        description: 'Optional date YYYY-MM-DD, to record a past day (the setups for that day must still be the live ones)'
+        type: string
+        default: ''
+
+permissions:
+  contents: write   # only to push the open-bars data branch
+
+concurrency:
+  group: open-bars
+  cancel-in-progress: false
+
+jobs:
+  record:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Check out the paper-state branch (to compare with Alpaca's actual fills)
+        continue-on-error: true
+        uses: actions/checkout@v6
+        with:
+          ref: paper-state
+          path: paper-state
+
+      - name: Check out the open-bars branch
+        id: ob_checkout
+        continue-on-error: true
+        uses: actions/checkout@v6
+        with:
+          ref: open-bars
+          path: open-bars
+
+      - name: Create the open-bars branch if this is the first run
+        if: steps.ob_checkout.outcome == 'failure'
+        run: |
+          set -e
+          rm -rf open-bars
+          mkdir -p open-bars
+          cd open-bars
+          git init -q -b open-bars
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          echo "One-minute candles for the first 15 minutes of each day's setups. Bot-managed, read-only data." > README.md
+          git add README.md
+          git commit -q -m "Initialize open-bars branch"
+          git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push -q -u origin open-bars
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Read the run request (only when started by pushing research-trigger/openbars.txt)
+        id: req
+        if: github.event_name == 'push'
+        run: |
+          d=""
+          if [ -f research-trigger/openbars.txt ]; then d=$(sed -n 1p research-trigger/openbars.txt | tr -cd '0-9-'); fi
+          case "$d" in [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]) ;; *) d="";; esac
+          echo "date=$d" >> "$GITHUB_OUTPUT"
+
+      - name: Record the opening minutes
+        env:
+          ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
+          ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
+          OUT_DIR: open-bars
+          PAPER_STATE_DIR: paper-state
+          FORCE: ${{ inputs.force || (steps.req.outputs.date != '' && 'true') || 'false' }}
+          DATE: ${{ inputs.date || steps.req.outputs.date || '' }}
+          PAPER_CHASE: '0.02'
+          PAPER_SETUPS_URL: ${{ vars.PAGES_BASE_URL && format('{0}/data/setups.json', vars.PAGES_BASE_URL) || format('https://{0}.github.io/{1}/data/setups.json', github.repository_owner, github.event.repository.name) }}
+        run: node scanner/openbars.js
+
+      - name: Save the record
+        run: |
+          cd open-bars
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Nothing new to save."
+            exit 0
+          fi
+          git commit -q -m "Opening minutes: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          for attempt in 1 2 3 4; do
+            if git push -q origin open-bars; then echo "Saved (attempt $attempt)."; exit 0; fi
+            sleep $((attempt * 5))
+            git pull -q --rebase origin open-bars || { git rebase --abort || true; echo "::error::Could not merge with the open-bars branch."; exit 1; }
+          done
+          echo "::error::Could not push the open-bars branch."
+          exit 1
+
+      - name: Alert if the run failed
+        if: failure()
+        env:
+          CALLMEBOT_PHONE: ${{ secrets.CALLMEBOT_PHONE }}
+          CALLMEBOT_APIKEY: ${{ secrets.CALLMEBOT_APIKEY }}
+        run: node scanner/notify.js failure "Opening minute candles"
