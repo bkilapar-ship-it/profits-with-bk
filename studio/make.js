@@ -49,6 +49,7 @@ async function main() {
       let vix = null; const vf = arg('vix', null);
       try { vix = vf ? await loadJson(vf) : await fetchVix(); } catch (e) { console.log('Note: VIX history unavailable, the fear-gauge slide is left out:', e.message); }
       setups.__bottom = analyze(dropUnfinishedToday(long), vix);
+      if (setups.__bottom && setups.__bottom.cur) console.log('Bottom checklist now: ' + setups.__bottom.cur.items.map((x, i) => `${i + 1}:${x.ok === null ? 'n/a' : x.ok ? 'tick' : 'no'} (${x.note})`).join(' | '));
       if (!bars.SPY && long) bars.SPY = dropUnfinishedToday(long).slice(-300);
     } catch (e) { console.log('Note: could not load long S&P 500 history, the data slides are left out:', e.message); }
   }

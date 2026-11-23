@@ -70,7 +70,9 @@ function current(spy, vix, { c, n, dates, s20, dd }) {
   const out = [], last = n - 1, win = 30;
   const a = Math.max(1, n - win);
   // 1. a real fall
-  out.push({ ok: dd[last] <= -0.10, note: `${Math.abs(dd[last] * 100).toFixed(0)}% below its high` });
+  // (the worst drawdown of the recent decline counts, not just today's: after a bounce the market is closer to its high again)
+  let worst = 0; for (let j = a; j <= last; j++) if (dd[j] < worst) worst = dd[j];
+  out.push({ ok: worst <= -0.10, note: worst <= -0.10 && dd[last] > worst + 0.005 ? `fell ${Math.abs(worst * 100).toFixed(0)}% at the low, now ${Math.abs(dd[last] * 100).toFixed(0)}% below its high` : `${Math.abs(dd[last] * 100).toFixed(0)}% below its high` });
   // 2. a panic day in the last 25 sessions, then calm (no fresh low since)
   let panic = -1, best = 0;
   for (let j = Math.max(21, n - 25); j <= last; j++) {
