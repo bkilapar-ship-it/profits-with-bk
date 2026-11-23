@@ -3,6 +3,7 @@ const NAMES_R = require('./names');
 /* Scene HTML, frame capture (Chromium) and video assembly (ffmpeg). */
 const fs = require('fs');
 const path = require('path');
+const { cues } = require('./cues');
 const { execFileSync } = require('child_process');
 const { sma } = require('./data');
 const { NEON, logoSvg, bgCandles } = require('./brand');
@@ -68,6 +69,7 @@ window.setP=function(p){items().forEach(it=>paint(it,it.k==='r'?ease(p/0.55):eas
 /* beats: header = beat 0, then one beat per distinct start time, so items can appear one by one */
 window.beatInfo=function(){const st=[...new Set(items().filter(i=>i.s>=0.12).map(i=>Math.round(i.s*100)/100))].sort((a,b)=>a-b),M=8,n=st.length,B=Math.min(M,n);
   return {B,starts:st,of:s=>1+Math.min(B-1,Math.floor(st.indexOf(Math.round(s*100)/100)*B/Math.max(1,n)))};};
+window.beatTexts=function(){const isIt=n=>n.hasAttribute&&(n.hasAttribute('data-a')||n.hasAttribute('data-w')||n.hasAttribute('data-d')||n.hasAttribute('data-count')),own=el=>{let s='';(function walk(n){n.childNodes.forEach(c=>{if(c.nodeType===3)s+=c.nodeValue+' ';else if(c.nodeType===1&&!isIt(c))walk(c);});})(el);return s.replace(/\\s+/g,' ').trim();};const info=window.beatInfo(),o=Array.from({length:info.B},()=>[]);items().forEach(it=>{if(it.s<0.12)return;const g=info.of(it.s);if(g>=1&&o[g-1])o[g-1].push(own(it.el));});return o.map(a=>a.join(' '));};
 window.setB=function(k,q){const info=window.beatInfo();items().forEach(it=>{const g=it.s<0.12?0:info.of(it.s);
   const t=g===0?(k===0?ease(q):1):(g<k?1:(g===k?ease(q):0));paint(it,t);});};
 `;
@@ -264,7 +266,8 @@ const SCENES = {
       <div class="abs" data-a="${st},${en}" style="left:${px - 12}px;top:${py - 12}px;width:24px;height:24px;border-radius:50%;background:${cl};box-shadow:0 0 26px ${cl},0 0 6px #fff inset"></div>
       <div class="abs" data-a="${st},${en}" style="left:${lx}px;top:${ly}px;width:${lw}px;line-height:1.2"><div style="background:rgba(6,12,24,.94);border:2px solid ${cl};border-radius:14px;padding:8px 16px;box-shadow:0 0 22px ${cl}55;text-align:center"><div style="font-weight:800;font-size:25px;color:${cl};white-space:nowrap">${esc(m.label)}</div>${m.sub ? `<div style="font-size:21px;font-weight:600;color:#C9D6EE;white-space:nowrap">${esc(m.sub)}</div>` : ''}</div></div>`;
     }).join('');
-    const cards = (d.cards || []).map((q, j) => { const st = (0.72 + j * 0.07).toFixed(2); return `<div class="card abs" data-a="${st},${(parseFloat(st) + 0.2).toFixed(2)}" style="left:${80 + j * 600}px;top:878px;width:560px;height:104px;padding:14px 26px;display:flex;align-items:center;justify-content:space-between"><div class="lab" style="white-space:nowrap">${esc(q.lab)}</div><div class="num ${q.c || ''}" style="font-size:46px;white-space:nowrap">${esc(q.val)}</div></div>`; }).join('');
+    const nM = (d.marks || []).length, pair = !!d.pair && nM >= 1;
+    const cards = (d.cards || []).map((q, j) => { const st = pair ? (0.2 + Math.max(0, nM - (d.cards || []).length + j) * (0.5 / Math.max(1, nM))).toFixed(2) : (0.72 + j * 0.07).toFixed(2); return `<div class="card abs" data-a="${st},${(parseFloat(st) + 0.2).toFixed(2)}" style="left:${80 + j * 600}px;top:878px;width:560px;height:104px;padding:14px 26px;display:flex;align-items:center;justify-content:space-between"><div class="lab" style="white-space:nowrap">${esc(q.lab)}</div><div class="num ${q.c || ''}" style="font-size:46px;white-space:nowrap">${esc(q.val)}</div></div>`; }).join('');
     return frame(`<div class="abs" data-a="0,0.3" style="left:80px;top:130px"><div class="kick">${esc(d.kick || '')}</div><div class="h2" style="margin-top:10px;font-size:68px">${esc(d.title || '')}</div></div>
       <div class="card abs" data-a="0.02,0.3" style="left:80px;top:270px;width:1760px;height:580px;padding:0"><div class="abs" style="left:30px;top:64px">${svg}</div>${d.ma20 ? '<div class="abs" style="left:34px;top:12px;font-size:21px;font-weight:700;display:flex;gap:26px"><span style="color:#FFC21A">━ 20-day average</span><span style="color:#B36BFF">━ 50-day average</span></div>' : ''}${mk}</div>
       ${cards}`, ep.date);
@@ -277,12 +280,12 @@ const SCENES = {
       <div class="abs" data-a="0.1,0.3" style="left:80px;top:318px;width:1280px;height:116px;border-radius:58px;background:#F4F8FF;box-shadow:0 0 60px rgba(38,208,255,.35)"></div>
       <svg class="abs" data-a="0.1,0.3" style="left:122px;top:350px" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#5B6B86" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>
       <div class="abs" style="left:206px;top:338px;height:76px;overflow:hidden;white-space:nowrap" data-w="0.3,0.6" data-max="1100"><div style="font-weight:600;font-size:54px;line-height:76px;color:#14213B">${esc(q)}</div></div>
-      <div class="abs" data-a="0.62,0.82" style="left:1390px;top:352px"><span class="chip" style="font-size:22px;padding:8px 20px">ANY SEARCH ENGINE OR APP</span></div>
-      <div class="card abs" data-a="0.45,0.65" style="left:80px;top:480px;width:960px;height:480px;padding:34px 40px"><div class="lab">ROUGH RULE OF THUMB</div>
-        <div class="abs" style="left:40px;top:110px;width:880px">${band(0, 270, '#1FE5A5', 'CALM', 'under about 20', 0.55)}${band(300, 270, '#FFC21A', 'NERVOUS', 'about 20 to 30', 0.62)}${band(600, 280, '#FF3B6B', 'FEAR', '30 or more', 0.69)}</div>
-        <div class="abs" data-a="0.78,0.98" style="left:40px;top:300px;width:880px;font-weight:600;font-size:30px;line-height:1.35;color:var(--text)">The exact number matters less than the <span style="color:var(--amb)">direction</span>.</div>
-        <div class="abs" data-a="0.85,1" style="left:40px;top:400px"><span class="chip" style="font-size:18px;padding:5px 16px">GENERAL GUIDE, NOT A SIGNAL</span></div></div>
-      <div class="abs" style="left:1100px;top:500px;width:740px;height:440px">${step(1, 'Search <span style="color:var(--acc)">' + esc(q) + '</span>', 0.6, '#26D0FF')}${step(2, 'Line spiking up? <span style="color:#FF3B6B">Not calm yet</span>', 0.72, '#FF3B6B')}${step(3, 'Peaked, now falling? <span style="color:#1FE5A5">Fear is easing</span>', 0.84, '#1FE5A5')}</div>`, ep.date);
+      <div class="abs" data-a="0.3,0.5" style="left:1390px;top:352px"><span class="chip" style="font-size:22px;padding:8px 20px">ANY SEARCH ENGINE OR APP</span></div>
+      <div class="card abs" data-a="0.5,0.7" style="left:80px;top:480px;width:960px;height:480px;padding:34px 40px"><div class="lab">ROUGH RULE OF THUMB</div>
+        <div class="abs" style="left:40px;top:110px;width:880px">${band(0, 270, '#1FE5A5', 'CALM', 'under about 20', 0.5)}${band(300, 270, '#FFC21A', 'NERVOUS', 'about 20 to 30', 0.5)}${band(600, 280, '#FF3B6B', 'FEAR', '30 or more', 0.5)}</div>
+        <div class="abs" data-a="0.62,0.82" style="left:40px;top:300px;width:880px;font-weight:600;font-size:30px;line-height:1.35;color:var(--text)">The exact number matters less than the <span style="color:var(--amb)">direction</span>.</div>
+        <div class="abs" data-a="0.95,1" style="left:40px;top:400px"><span class="chip" style="font-size:18px;padding:5px 16px">GENERAL GUIDE, NOT A SIGNAL</span></div></div>
+      <div class="abs" style="left:1100px;top:500px;width:740px;height:440px">${step(1, 'Search <span style="color:var(--acc)">' + esc(q) + '</span>', 0.3, '#26D0FF')}${step(2, 'Line spiking up? <span style="color:#FF3B6B">Not calm yet</span>', 0.74, '#FF3B6B')}${step(3, 'Peaked, now falling? <span style="color:#1FE5A5">Fear is easing</span>', 0.86, '#1FE5A5')}</div>`, ep.date);
   },
   compare: (s, ep) => {
     const d = s.data, rows = d.rows || [];
@@ -445,14 +448,18 @@ async function renderStills(ep, outDir, { chromium }) {
       await page.screenshot({ path: path.join(dirOut, `scene-${i}.jpg`), type: 'jpeg', quality: 72 });
     }
     // beat image sequences for live recording: beat 0 = header, then one beat per group of items (items appear while you talk)
-    const ctx2 = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 0.5 }), pg = await ctx2.newPage(), beats = {};
+    const ctx2 = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 0.5 }), pg = await ctx2.newPage(), beats = {}, cueMap = {}, btMap = {};
     for (let i = 0; i < ep.scenes.length; i++) {
       const dir = path.join(work, `s${i}`), html = path.join(dir, 'scene.html'), fd = path.join(outDir, 'frames', `s${i}`); fs.mkdirSync(fd, { recursive: true });
       await pg.goto('file://' + html); await pg.evaluate(() => document.fonts.ready);
       const B = (await pg.evaluate(() => window.beatInfo())).B; beats[i] = B;
+      const bt = await pg.evaluate(() => window.beatTexts()); cueMap[i] = cues(ep.scenes[i].narration, bt); btMap[i] = bt;
+      if (process.env.CUEDBG) console.log('CUE', i, ep.scenes[i].id, JSON.stringify(bt));
       for (let k = 0; k <= B; k++) for (let j = 0; j < FRAME_N; j++) { await pg.evaluate(([kk, q]) => window.setB(kk, q), [k, j / (FRAME_N - 1)]); await pg.screenshot({ path: path.join(fd, `${k}-${j}.jpg`), type: 'jpeg', quality: 52 }); }
     }
     fs.writeFileSync(path.join(outDir, 'frames', 'beats.json'), JSON.stringify(beats));
+    fs.writeFileSync(path.join(outDir, 'frames', 'cues.json'), JSON.stringify(cueMap));
+    if (process.env.CUEDBG) fs.writeFileSync(path.join(outDir, 'frames', 'beattexts.json'), JSON.stringify(btMap));
     await ctx2.close();
   } finally { await browser.close(); fs.rmSync(work, { recursive: true, force: true }); }
 }

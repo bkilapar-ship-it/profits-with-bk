@@ -61,7 +61,7 @@ a.btn.dl{display:block;background:#2563EB;border-color:#2563EB;margin-top:10px}
 <video id="rv" playsinline preload="auto" style="position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none"></video>
 
 <script>
-const $=id=>document.getElementById(id);
+let CUES={};const $=id=>document.getElementById(id);
 const EPS=(new URLSearchParams(location.search).get('eps')||'welcome,bottom,daily,weekly').split(',');
 let studioImg=null,thImg=null,thPh=null,thMode='photo',thSelf=null;let ep=null,all=[],planOrder=[],skipSet=new Set(),markById={},scenes=[],starts=[],visUrl=null,recUrl=null,recDur=0,marks=[],layout='side',pos='br';
 const label={welcome:'Welcome video',bottom:'Market bottoms (special)',daily:'Daily video',weekly:'Weekly review'};
@@ -143,7 +143,7 @@ $('make').onclick=async()=>{
     await Promise.all([ready1(vis),ready1(rv)]);
     // speech-timed reveal: one still per beat, spread over each scene's marked time
     let BEATS=null;const FIM={},STILL={};
-    try{$('status').textContent='Loading the reveal frames…';const bj=await fetch(ep.m+'/frames/beats.json').then(r=>r.ok?r.json():null);
+    try{$('status').textContent='Loading the reveal frames…';const bj=await fetch(ep.m+'/frames/beats.json').then(r=>r.ok?r.json():null);CUES=await fetch(ep.m+'/frames/cues.json').then(r=>r.ok?r.json():{}).catch(()=>({}));
       if(bj){const jobs=[];scenes.forEach(sc=>{const oi=all.indexOf(sc),B=bj[oi]||0;FIM[oi]=[];for(let k=0;k<=B;k++){jobs.push(new Promise(res=>{const im=new Image();im.onload=()=>{FIM[oi][k]=im;res();};im.onerror=()=>res();im.src=ep.m+'/frames/s'+oi+'/'+k+'-3.jpg';}));}
         jobs.push(new Promise(res=>{const im=new Image();im.onload=()=>{STILL[oi]=im;res();};im.onerror=()=>res();im.src=ep.m+'/stills/scene-'+oi+'.jpg';}));});
         await Promise.race([Promise.all(jobs),new Promise(r=>setTimeout(r,30000))]);BEATS=bj;}}catch(e){BEATS=null;}
@@ -177,7 +177,7 @@ $('make').onclick=async()=>{
     const drawV=(c,x,y,w,h,t,i)=>{if(!BEATS){c.drawImage(vis,x,y,w,h);return;}
       const oi=all.indexOf(scenes[i]),B=BEATS[oi]||0,im=FIM[oi]||[],st=mk[i],en=(i+1<n&&isFinite(mk[i+1]))?mk[i+1]:(rv.duration||st+30),D=Math.max(1,en-st),el=Math.max(0,t-st);
       if(!B||!im[0]){const f=STILL[oi]||im[B]||im[0];if(f)c.drawImage(f,x,y,w,h);return;}
-      const th=thrCache[oi]||(thrCache[oi]=beatThr(scenes[i].narration,B)),fr=Math.min(1,el/D);let k=0;th.forEach(x=>{if(fr>=x)k++;});k=Math.min(B,k);const tb=k===0?el:Math.max(0,el-th[k-1]*D),q0=Math.min(1,tb/0.6),q=q0*q0*(3-2*q0);
+      const th=thrCache[oi]||(thrCache[oi]=(CUES&&CUES[oi]&&CUES[oi].length===B)?CUES[oi]:beatThr(scenes[i].narration,B)),fr=Math.min(1,el/D);let k=0;th.forEach(x=>{if(fr>=x)k++;});k=Math.min(B,k);const tb=k===0?el:Math.max(0,el-th[k-1]*D),q0=Math.min(1,tb/0.6),q=q0*q0*(3-2*q0);
       const cur=im[k]||STILL[oi]||im[0],base=k>0?(im[k-1]||null):null;
       if(base){c.drawImage(base,x,y,w,h);c.globalAlpha=q;c.drawImage(cur,x,y,w,h);c.globalAlpha=1;}else{c.globalAlpha=Math.min(1,el/0.4);c.drawImage(cur,x,y,w,h);c.globalAlpha=1;}};
     const draw=()=>{
