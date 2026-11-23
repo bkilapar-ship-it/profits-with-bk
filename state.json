@@ -2,7 +2,7 @@
  "version": 1,
  "status": "running",
  "startedAt": "2026-09-26",
- "lastEntryRunDate": "2026-11-20",
+ "lastEntryRunDate": "2026-11-23",
  "lastExitRunDate": "2026-11-20",
  "spyBaseline": 764.95,
  "positions": {
@@ -19,7 +19,7 @@
    "target": 405.45,
    "stop": 322.03,
    "ocoOrderId": "67bdbb23-1b71-4a3e-bff6-25603b3c5b75",
-   "now": 390
+   "now": 376.91
   },
   "ACN": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 238.36,
    "stop": 200.15,
    "ocoOrderId": "10dd3f8f-5004-4f94-8131-adcd160d0e4d",
-   "now": 221.17
+   "now": 221.47
   },
   "CTSH": {
    "strategy": "dip",
@@ -49,7 +49,7 @@
    "target": 60.71,
    "stop": 51.24,
    "ocoOrderId": "58e651d8-489f-491a-9a0e-78390176bf24",
-   "now": 58.06
+   "now": 57.9
   },
   "TEAM": {
    "strategy": "dip",
@@ -64,7 +64,7 @@
    "target": 143.16,
    "stop": 105.31,
    "ocoOrderId": "aebf45ab-816f-4c16-8d97-13af77a751e1",
-   "now": 134.65
+   "now": 140.38
   },
   "STX": {
    "strategy": "dip",
@@ -79,10 +79,106 @@
    "target": 820.56,
    "stop": 634.67,
    "ocoOrderId": null,
-   "adopted": true
+   "adopted": true,
+   "now": 534.92
+  },
+  "MPC": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "green_or_sweep",
+   "pool": "sp500",
+   "signalDate": "2026-11-20",
+   "signalClose": 367.19,
+   "entryDate": "2026-11-23",
+   "entry": 365.91,
+   "shares": 13,
+   "target": 380.55,
+   "stop": 306.87,
+   "ocoOrderId": "a4623c45-8dd5-41cb-8127-8a22c3fc3ec6"
   }
  },
- "pendingEntries": {},
+ "pendingEntries": {
+  "VLO": {
+   "orderId": "8018f5eb-59ce-4fc2-8c28-d1537912c682",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "size": 5139.37494,
+   "shares": 15,
+   "limit": 340.86,
+   "opg": false,
+   "forDate": "2026-11-23",
+   "signalDate": "2026-11-20",
+   "signalClose": 334.18,
+   "atr": 16.71,
+   "placedAt": "2026-11-23T14:32:13.461Z"
+  },
+  "CNC": {
+   "orderId": "4618d0cd-d77f-40f5-ab2b-2387f641087d",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "size": 5139.37494,
+   "shares": 78,
+   "limit": 65.06,
+   "opg": false,
+   "forDate": "2026-11-23",
+   "signalDate": "2026-11-20",
+   "signalClose": 63.78,
+   "atr": 3.89,
+   "placedAt": "2026-11-23T14:32:13.581Z"
+  },
+  "PYPL": {
+   "orderId": "9994307a-bff6-451e-9bb3-7a407dcbe27a",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "size": 5139.37494,
+   "shares": 94,
+   "limit": 54.36,
+   "opg": false,
+   "forDate": "2026-11-23",
+   "signalDate": "2026-11-20",
+   "signalClose": 53.29,
+   "atr": 1.71,
+   "placedAt": "2026-11-23T14:32:13.621Z"
+  },
+  "FISV": {
+   "orderId": "de7a5463-54e4-421b-962b-27c90a5a6e47",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "size": 5139.37494,
+   "shares": 90,
+   "limit": 57,
+   "opg": false,
+   "forDate": "2026-11-23",
+   "signalDate": "2026-11-20",
+   "signalClose": 55.88,
+   "atr": 2.74,
+   "placedAt": "2026-11-23T14:32:13.665Z"
+  },
+  "WDAY": {
+   "orderId": "c6aca01c-4e83-49d9-a3e6-57cbe4df6a94",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "green_or_sweep",
+   "pool": "sp500",
+   "size": 5139.37494,
+   "shares": 28,
+   "limit": 178.01,
+   "opg": false,
+   "forDate": "2026-11-23",
+   "signalDate": "2026-11-20",
+   "signalClose": 174.52,
+   "atr": 7.65,
+   "placedAt": "2026-11-23T14:32:13.745Z"
+  }
+ },
  "pendingCloses": {},
  "trades": [
   {
@@ -1444,39 +1540,139 @@
    "value": 95005,
    "pct": -5,
    "spy": null
+  },
+  {
+   "d": "2026-11-23",
+   "value": 95174,
+   "pct": -4.83,
+   "spy": -5.7
   }
  ],
  "lastOrders": {
-  "forDate": "2026-11-20",
-  "entries": [],
+  "forDate": "2026-11-23",
+  "entries": [
+   {
+    "rank": 2,
+    "ticker": "VLO",
+    "strategy": "dip",
+    "tag": "normal",
+    "pool": "sp500",
+    "opg": false,
+    "size": 5139.37,
+    "shares": 15,
+    "limit": 340.86,
+    "vs200": 11.85,
+    "chg5d": -12.02
+   },
+   {
+    "rank": 3,
+    "ticker": "CNC",
+    "strategy": "dip",
+    "tag": "normal",
+    "pool": "sp500",
+    "opg": false,
+    "size": 5139.37,
+    "shares": 78,
+    "limit": 65.06,
+    "vs200": 11.3,
+    "chg5d": -10.51
+   },
+   {
+    "rank": 7,
+    "ticker": "PYPL",
+    "strategy": "dip",
+    "tag": "normal",
+    "pool": "sp500",
+    "opg": false,
+    "size": 5139.37,
+    "shares": 94,
+    "limit": 54.36,
+    "vs200": 5.68,
+    "chg5d": -10.1
+   },
+   {
+    "rank": 10,
+    "ticker": "FISV",
+    "strategy": "dip",
+    "tag": "normal",
+    "pool": "sp500",
+    "opg": false,
+    "size": 5139.37,
+    "shares": 90,
+    "limit": 57,
+    "vs200": 2.61,
+    "chg5d": -12.39
+   },
+   {
+    "rank": 12,
+    "ticker": "MPC",
+    "strategy": "dip",
+    "tag": "green_or_sweep",
+    "pool": "sp500",
+    "opg": false,
+    "size": 5139.37,
+    "shares": 13,
+    "limit": 374.53,
+    "vs200": 19.74,
+    "chg5d": -11.45
+   },
+   {
+    "rank": 13,
+    "ticker": "WDAY",
+    "strategy": "dip",
+    "tag": "green_or_sweep",
+    "pool": "sp500",
+    "opg": false,
+    "size": 5139.37,
+    "shares": 28,
+    "limit": 178.01,
+    "vs200": 11.63,
+    "chg5d": -11.16
+   }
+  ],
   "skipped": [
    {
-    "ticker": "VEEV",
+    "ticker": "MRNA",
     "strategy": "dip",
-    "reason": "The sleeve has no spare cash left today"
+    "reason": "Opened at 204.19, past the 2% cap (198.90)"
+   },
+   {
+    "ticker": "EL",
+    "strategy": "dip",
+    "reason": "Opened at 101.68, past the 2% cap (101.45)"
+   },
+   {
+    "ticker": "GDDY",
+    "strategy": "dip",
+    "reason": "Opened at 103.86, past the 2% cap (101.52)"
    },
    {
     "ticker": "SWKS",
     "strategy": "dip",
-    "reason": "The sleeve has no spare cash left today"
+    "reason": "Opened at 78.47, past the 2% cap (75.39)"
    },
    {
-    "ticker": "WSM",
+    "ticker": "P",
     "strategy": "dip",
-    "reason": "The sleeve has no spare cash left today"
+    "reason": "Opened at 111.04, past the 2% cap (93.89)"
    },
    {
-    "ticker": "MPC",
+    "ticker": "BEN",
     "strategy": "dip",
-    "reason": "The sleeve has no spare cash left today"
+    "reason": "Opened at 33.07, past the 2% cap (32.68)"
    },
    {
-    "ticker": "46 non-S&P",
+    "ticker": "NTAP",
+    "strategy": "dip",
+    "reason": "Opened at 172.87, past the 2% cap (160.80)"
+   },
+   {
+    "ticker": "58 non-S&P",
     "strategy": "dip",
     "reason": "Signals outside the S&P 500 below the $100M/day floor for stocks outside the S&P 500"
    },
    {
-    "ticker": "16 non-S&P",
+    "ticker": "23 non-S&P",
     "strategy": "dip",
     "reason": "Signals outside the S&P 500 no spare cash left after the S&P signals"
    }
