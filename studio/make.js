@@ -82,9 +82,11 @@ async function main() {
         const si = b.findIndex(x => x.t === r.signalDate); if (si < 0 || si + 1 >= b.length) continue;
         const ed = b[si + 1].t; if (!(ed in ob)) { try { ob[ed] = await loadJson(`https://raw.githubusercontent.com/${repo2}/open-bars/${ed}.json`); } catch (e) { ob[ed] = null; } }
         const rec = ob[ed] && (ob[ed].setups || ob[ed]).find && (ob[ed].setups || ob[ed]).find(x => x.ticker === r.ticker && x.strategy === 'dip');
-        const lv = r.levels || {}, cap = lv.entryLimit, openPx = rec && typeof rec.open === 'number' ? rec.open : b[si + 1].o;
+        const lv0 = r.levels || {}, cap = lv0.entryLimit, openPx = rec && typeof rec.open === 'number' ? rec.open : b[si + 1].o;
         const past = rec ? rec.openedPastCap === true : (cap != null && openPx > cap);
         const entry = past ? null : (rec && typeof rec.simulatedFill === 'number' ? rec.simulatedFill : openPx);
+        // the plan's exits are measured from the FILL: target = fill +4%, safety exit = fill -3 ATR (the levels in setups.json are from the signal close)
+        const lv = entry != null ? { target: entry * 1.04, stop: typeof r.atr === 'number' ? entry - 3 * r.atr : lv0.stop } : lv0;
         let state = 'open', pct = null, exitIdx = null;
         if (entry != null) {
           for (let j = si + 1; j < b.length && j <= si + 3; j++) {
