@@ -274,7 +274,7 @@ function buildEpisodeInner({ mode, setups, config }) {
   // 1b) when the market has been hit: is this the bottom? the six-sign checklist from the market-bottom video, applied to today's close
   { const A = setups.__bottom, cur = A && A.cur, dd = A && A.now ? A.now.dd : 0;
     if (cur && dd <= -0.05 && cur.date === asOf) {
-      if (hl && hl.closeNote && isNum(m.chg1d) && m.chg1d >= 1 && cur.items && cur.items[5]) cur.items[5] = { ...cur.items[5], ok: true, note: 'Good news held into the close' };
+      if (hl && news && news.closeNote && isNum(m.chg1d) && m.chg1d >= 1 && cur.items && cur.items[5]) cur.items[5] = { ...cur.items[5], ok: true, note: 'Good news held into the close' };
       const labs = BOTTOM_LABS, meas = cur.items.filter(x => x.ok !== null), nOk = meas.filter(x => x.ok).length, sp = ['One', 'Two', 'Three', 'Four', 'Five', 'Six'];
       const line = (l, i) => `${sp[i]}: ${l.charAt(0).toLowerCase() + l.slice(1).replace('(VIX)', 'V I X')}. ${cur.items[i].ok === null ? (i === 2 ? "I can't measure this one from here, so look it up yourself." : "No big move to judge today, so watch the headlines.") : cur.items[i].ok ? 'Tick.' : 'Not yet.'}`;
       add('bottomcheck', 'compare', 'IS THIS THE BOTTOM? THE CHECKLIST, UPDATED',
