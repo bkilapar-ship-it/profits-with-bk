@@ -168,6 +168,14 @@ function areaSvg(closes, cw, ch, up) {
     <g clip-path="url(#rvc)"><path d="${line}L${x(n - 1).toFixed(1)} ${ch}L${x(0).toFixed(1)} ${ch}Z" fill="url(#ag)"/><path d="${line}" fill="none" stroke="${col}" stroke-width="5" stroke-linejoin="round" stroke-linecap="round"/></g>
     <circle cx="${x(n - 1).toFixed(1)}" cy="${y(closes[n - 1]).toFixed(1)}" r="9" fill="${col}"/></svg>`;
 }
+function pctLinesSvg(acct, spyS, cw, ch) {
+  const all = acct.concat(spyS.filter(v => typeof v === 'number')).concat([0]), lo0 = Math.min(...all), hi0 = Math.max(...all), pad = (hi0 - lo0) * 0.15 || 1, lo = lo0 - pad, hi = hi0 + pad, n = acct.length;
+  const x = i => 10 + i * ((cw - 20) / Math.max(1, n - 1)), y = v => 10 + (hi - v) / (hi - lo) * (ch - 20);
+  const path = (arr, col, w, dash) => { let d = '', on = false; arr.forEach((v, i) => { if (typeof v !== 'number') { on = false; return; } d += `${on ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`; on = true; }); return `<path d="${d}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round" ${dash ? 'stroke-dasharray="14 10"' : ''}/>`; };
+  const lastA = acct[n - 1];
+  return `<svg width="${cw}" height="${ch}" viewBox="0 0 ${cw} ${ch}"><defs><clipPath id="rvc"><rect id="rv" x="0" y="0" width="0" height="${ch}" data-max="${cw}"/></clipPath></defs><line x1="10" x2="${cw - 10}" y1="${y(0).toFixed(1)}" y2="${y(0).toFixed(1)}" stroke="rgba(255,255,255,.25)" stroke-width="2" stroke-dasharray="6 8"/><g clip-path="url(#rvc)">${path(spyS, '#FFC21A', 4, true)}${path(acct, '#26D0FF', 6, false)}</g><circle cx="${x(n - 1).toFixed(1)}" cy="${y(lastA).toFixed(1)}" r="9" fill="#26D0FF"/></svg>
+    <div style="position:absolute;right:20px;top:-44px;font-size:22px;font-weight:700;display:flex;gap:26px"><span style="color:#26D0FF">● Paper account</span><span style="color:#FFC21A">┅ S&amp;P 500</span></div>`;
+}
 function miniCandles(view, cw, ch) {
   const n = view.length, lo = Math.min(...view.map(b => b.l)), hi = Math.max(...view.map(b => b.h)), x = i => 6 + (i + 0.5) * ((cw - 12) / n), y = v => 8 + (hi - v) / (hi - lo) * (ch - 16), bw = ((cw - 12) / n) * 0.64;
   return `<svg width="${cw}" height="${ch}" viewBox="0 0 ${cw} ${ch}">${view.map((b, i) => { const c = b.c >= b.o ? '#1FE5A5' : '#FF3B6B'; const t = y(Math.max(b.o, b.c)), bt = y(Math.min(b.o, b.c)); return `<line x1="${x(i).toFixed(1)}" x2="${x(i).toFixed(1)}" y1="${y(b.h).toFixed(1)}" y2="${y(b.l).toFixed(1)}" stroke="${c}" stroke-width="3"/><rect x="${(x(i) - bw / 2).toFixed(1)}" y="${t.toFixed(1)}" width="${bw.toFixed(1)}" height="${Math.max(3, bt - t).toFixed(1)}" rx="2" fill="${c}"/>`; }).join('')}</svg>`;
@@ -221,6 +229,18 @@ const SCENES = {
     return frame(`<div class="abs" data-a="0,0.3" style="left:80px;top:120px"><div class="kick">${esc(s.data.kick || "TODAY'S SCREEN")}</div><div class="h2" style="margin-top:10px">${esc(s.data.title || 'All S&P 500 setups')}</div></div>
       ${s.data.note ? `<div class="abs" data-a="0.1,0.4" style="left:80px;top:290px"><span class="chip b" style="font-size:24px">${esc(s.data.note)}</span></div>` : ''}
       <div class="card abs" data-a="0.15,0.5" style="left:80px;top:${s.data.note ? 360 : 300}px;width:1760px;padding:30px 40px"><table><thead><tr><th>#</th><th>TICKER</th><th>5-DAY MOVE</th><th>VS 200-DAY</th><th>RSI</th><th>SIGNAL CLOSE</th><th>STOP</th></tr></thead><tbody>${rows.map((r, i) => `<tr><td class="mut">${i + 1}</td><td style="font-weight:800;color:#7FE3FF;text-align:left">${esc(r.ticker)}</td><td class="${cls(r.chg5d)}">${sgn(r.chg5d)}</td><td>${sgn(r.vs200)}</td><td>${isNum(r.rsi) ? r.rsi.toFixed(0) : '–'}</td><td>${money(r.close)}</td><td class="down">${isNum(r.stopDist) ? '−' + Math.abs(r.stopDist).toFixed(0) + '%' : '–'}</td></tr>`).join('')}</tbody></table></div>`, ep.date);
+  },
+  paper: (s, ep) => {
+    const d = s.data, st = (label, val, py, a2, cl) => `<div class="card abs" data-a="${a2}" style="left:80px;top:${py}px;width:420px;height:150px;padding:20px 28px"><div class="lab">${label}</div><div class="num ${cl || ''}" style="font-size:66px;line-height:1.1;margin-top:6px">${val}</div></div>`;
+    const rows = (d.todays || []).map((t, i) => `<div data-a="${0.45 + i * 0.05},${0.75 + i * 0.05}" style="display:flex;align-items:center;gap:18px;height:44px"><div style="width:130px;font-weight:800;font-size:30px">${esc(t.ticker)}</div><div class="${cls(t.pct)}" style="width:150px;font-weight:700;font-size:30px">${sgn(t.pct)}</div><div class="mut" style="font-size:22px">${t.how === 'target' ? 'reached the 4% target' : t.how === 'stop' ? 'hit the safety exit' : 'closed on day 3'}</div></div>`).join('');
+    return frame(`<div class="abs" data-a="0,0.3" style="left:80px;top:130px"><div class="kick">THE PAPER ACCOUNT</div><div class="h2" style="margin-top:10px">Simulated money, same rules</div></div>
+      <div class="abs" data-a="0.05,0.4" style="left:80px;top:262px"><span class="chip a" style="font-size:24px">PAPER TRADING · SIMULATED MONEY · NOT A PROMISE OF FUTURE RESULTS</span></div>
+      ${isNum(d.acct) ? st('ACCOUNT SINCE START', cnt(d.acct, 1, d.acct > 0 ? '+' : '', '%', 0.15, 0.6, cls(d.acct)), 330, '0.1,0.4') : ''}
+      ${st('TRADES SO FAR', cnt(d.n, 0, '', '', 0.2, 0.6), 500, '0.15,0.45')}
+      ${st('FINISHED IN PROFIT', cnt(d.win, 0, '', '', 0.25, 0.65, 'up') + `<span class="mut" style="font-size:34px"> of ${d.n}</span>`, 670, '0.2,0.5')}
+      ${st('AVERAGE TRADE', cnt(d.avg, 2, d.avg > 0 ? '+' : '', '%', 0.3, 0.7, cls(d.avg)), 840, '0.25,0.55')}
+      <div class="card abs" data-a="0.15,0.55" style="left:540px;top:330px;width:1300px;height:420px;padding:20px 30px"><div class="lab">ACCOUNT VS S&amp;P 500, % SINCE THE START${isNum(d.spy) ? '' : ''}</div><div class="abs" style="left:30px;top:56px">${s.chartSvg || ''}</div></div>
+      <div class="card abs" data-a="0.3,0.65" style="left:540px;top:770px;width:1300px;height:220px;padding:14px 30px"><div class="lab">${rows ? 'TRADES CLOSED TODAY' : 'NO TRADES CLOSED TODAY'}</div>${rows ? `<div style="display:grid;grid-template-columns:1fr 1fr;column-gap:30px">${rows}</div>` : '<div class="mut" style="font-size:26px;margin-top:10px">Nothing reached its target, safety exit or day-3 close today.</div>'}</div>`, ep.date);
   },
   outcomes: (s, ep) => {
     const d = s.data, rows = d.rows || [], mx = Math.max(5, ...rows.map(r => Math.abs(r.pct)));
@@ -308,6 +328,7 @@ function prepareCharts(ep, barsBySym) {
     s.chart = chartSvg2(view, s.data.plan, 1230, 630, isNum(m) ? m.toFixed(m >= 100 ? 0 : 2) : '');
     s.view = view;
   }
+  for (const s of ep.scenes) if (s.type === 'paper' && s.data.series && s.data.series.length >= 3) s.chartSvg = pctLinesSvg(s.data.series, s.data.spySeries || [], 1230, 330);
   const spyBars = barsBySym.SPY;
   if (spyBars && spyBars.length >= 30) {
     const closes = spyBars.slice(-60).map(b => b.c);

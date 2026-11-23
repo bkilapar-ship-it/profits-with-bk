@@ -20,6 +20,10 @@ async function main() {
   const repo = process.env.GITHUB_REPOSITORY || 'bkilapar-ship-it/profits-with-bk';
   const src = arg('setups', process.env.STUDIO_SETUPS_URL || `https://${repo.split('/')[0]}.github.io/${repo.split('/')[1]}/data/setups.json`);
   const setups = await loadJson(src);
+  try { // the paper account's public history (simulated money), published by the scanner next to setups.json
+    const pu = process.env.STUDIO_PAPER_URL || arg('paper', null) || (String(src).replace(/setups\.json(\?.*)?$/, 'paper.json'));
+    if (pu && pu !== src) { const pj = await loadJson(pu); if (pj && Array.isArray(pj.trades)) setups.__paper = pj; }
+  } catch (e) { console.log('Note: no paper account history for the video:', e.message); }
   if (setups.stale) console.log('Note: setups.json is marked stale (the last scan failed); the episode uses the previous data.');
   if (!setups.asOf) throw new Error('setups.json has no asOf date.');
   // S&P 500 history first, so the script can quote this week's move

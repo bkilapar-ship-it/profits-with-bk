@@ -265,6 +265,18 @@ function buildEpisodeInner({ mode, setups, config }) {
       { n: tn, hit, stop: stp, avg, kick: 'THE SCORECARD', title: 'How our earlier picks did', rows: tracked.sort((a, b) => b.track.pct - a.track.pct).slice(0, 10).map(x => ({ ticker: x.ticker, sub: x.signalDate ? new Date(`${x.signalDate}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : '', pct: x.track.pct, state: x.track.state })) });
   }
 
+  // 2b) the paper account (simulated money), only once there are enough closed trades to be meaningful
+  const pp = setups.__paper, PAPER_MIN = 10;
+  if (pp && Array.isArray(pp.trades) && pp.trades.length >= PAPER_MIN && Array.isArray(pp.equity) && pp.equity.length >= 3) {
+    const tr = pp.trades, tn2 = tr.length, win = tr.filter(t => t.pct > 0).length, avg2 = tr.reduce((a, t) => a + t.pct, 0) / tn2;
+    const last = pp.equity[pp.equity.length - 1], first = pp.equity[0];
+    const acct = isNum(last.pct) ? last.pct : null, spyP = isNum(last.spy) ? last.spy : null;
+    const todays = tr.filter(t => t.exitDate === asOf).slice(0, 6).map(t => ({ ticker: t.ticker, pct: t.pct, how: t.how }));
+    add('paper', 'paper', 'THE PAPER ACCOUNT',
+      `Next, my paper trading account. That is simulated money, not real money, and I run it by the same rules, so you can see how the plan behaves in practice. It has made ${tn2} trades so far. ${win} of them finished in profit, and the average trade was ${avg2 >= 0 ? 'a gain' : 'a loss'} of ${say(avg2, 2)}. ${acct !== null ? `Overall, the account is ${acct >= 0 ? 'up' : 'down'} ${say(acct, 1)} since it started${spyP !== null ? `, while the S&P 500 is ${spyP >= 0 ? 'up' : 'down'} ${say(spyP, 1)} over the same time` : ''}.` : ''} ${todays.length ? `Today it closed ${todays.length} trade${todays.length === 1 ? '' : 's'}, shown on screen, wins and losses alike.` : ''} Remember, simulated results are not a promise of what will happen with real money.`,
+      { acct, spy: spyP, n: tn2, win, avg: avg2, todays, series: pp.equity.map(e => e.pct), spySeries: pp.equity.map(e => (isNum(e.spy) ? e.spy : null)), since: first.d });
+  }
+
   if (n) {
     // 3) the plan in four steps, once
     add('plan', 'bullets', 'THE PLAN IN FOUR STEPS',
