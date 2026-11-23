@@ -39,12 +39,13 @@ function analyze(spy, vix) {
   let ep = null;
   if (worst) {
     const L = worst.low, a = Math.max(0, worst.p - 6), b = Math.min(n - 1, L + 70);
-    // panic day: heaviest volume on a down day near the low
-    let panic = -1, best = 0;
-    for (let j = Math.max(worst.p + 1, L - 15); j <= Math.min(n - 1, L + 5); j++) {
+    // panic day: the down day close to the low with the biggest "volume x size of the drop" (the real washout, not just a busy day)
+    let panic = -1, best = 0, bestRatio = 0;
+    for (let j = Math.max(worst.p + 1, L - 12); j <= Math.min(n - 1, L + 1); j++) {
       if (c[j] >= c[j - 1]) continue;
-      const base = spy.slice(Math.max(0, j - 20), j).reduce((s, x) => s + x.v, 0) / Math.max(1, Math.min(20, j));
-      const r = spy[j].v / base; if (r > best) { best = r; panic = j; }
+      const base = spy.slice(Math.max(0, j - 60), j).reduce((s, x) => s + x.v, 0) / Math.max(1, Math.min(60, j));   // 'usual' = the last three months
+      const score = spy[j].v * Math.abs(c[j] / c[j - 1] - 1);
+      if (score > best) { best = score; panic = j; bestRatio = spy[j].v / base; }
     }
     // higher low: after the first bounce, a pullback that holds above the low
     let bounce = -1, hl = -1;
@@ -57,7 +58,7 @@ function analyze(spy, vix) {
     const vixW = vix && vix.length ? dates.slice(a, b + 1).map(d => { const v = vix.find(x => x.t === d); return v ? v.c : null; }) : null;
     let vixPeak = -1;
     if (vixW) vixW.forEach((v, k) => { if (v !== null && (vixPeak < 0 || v > vixW[vixPeak])) vixPeak = k; });
-    ep = { ...worst, win, panic, panicRatio: best, bounce, hl, r20, r50, vixW: vixW && vixW.filter(v => v !== null).length > 20 ? vixW : null, vixPeak };
+    ep = { ...worst, win, panic, panicRatio: bestRatio, bounce, hl, r20, r50, vixW: vixW && vixW.filter(v => v !== null).length > 20 ? vixW : null, vixPeak };
   }
   // where the market is now
   const now = { dd: dd[n - 1], peak: peakIdx[n - 1], close: c[n - 1], date: dates[n - 1], chg5: n > 5 ? c[n - 1] / c[n - 6] - 1 : null };
