@@ -239,7 +239,9 @@ function buildEpisodeInner({ mode, setups, config }) {
   }
 
   // ---------------- daily (plain-English briefing) ----------------
-  featured = dipSp.slice(0, cfg.maxSetups);
+  // a stock that was already one of the channel's calls (last 3 sessions) is not suggested again, unless it has since fallen more than 4% below that earlier call's close
+  { const prior = new Map(); callRows(setups, cfg).forEach(r => { if (!prior.has(r.ticker)) prior.set(r.ticker, { close: r.close, date: r.signalDate }); });
+    featured = dipSp.filter(x => { const p = prior.get(x.ticker); if (!p) return true; const fall = (1 - x.close / p.close) * 100; if (fall > 4) { x._rep = { fall, date: p.date }; return true; } return false; }).slice(0, cfg.maxSetups); }
   const m = setups.market || {}, wd = weekday(asOf), nx = nextSessionName(asOf), nxd = nextSessionFull(asOf), ch = cfg.channelName;
   const news = setups.__news && setups.__news.asOf === asOf ? setups.__news : null;
   const ev = eventsFor(asOf, setups.__events);
@@ -314,8 +316,8 @@ function buildEpisodeInner({ mode, setups, config }) {
   if (n) {
     // 3) the plan in four steps, once
     add('plan', 'bullets', 'THE PLAN IN FOUR STEPS',
-      `Quick reminder of how every pick works, so I don't repeat myself on each stock. One: after the market opens ${nx}, give it three to five minutes. Two: only buy if the price is still within 2 percent of ${wd}'s closing price. Three: aim to sell at 4 percent above that close, and set a safety exit below, just in case the stock keeps falling. Four: whatever happens, be out by the close of day three. Simple as that.`,
-      { kick: 'EVERY PICK, SAME PLAN', title: 'The plan in four steps', items: [`Wait 3–5 minutes after the ${nx} open`, `Buy only if the price is within 2% of ${wd}'s close`, 'Aim to sell at +4%. Set a safety exit below', 'Be out by the close of day 3, whatever happens'] });
+      `Quick reminder of how every pick works, so I don't repeat myself on each stock. One: after the market opens ${nx}, give it three to five minutes. Two: only buy if the price is still within 2 percent of ${wd}'s closing price. Three: aim to sell at 4 percent above that close, and set a safety exit below, just in case the stock keeps falling. Four: whatever happens, be out by the close of day three. Simple as that. And one more rule: if a stock is already on my list from an earlier day, I won't suggest it again, unless it has fallen more than 4 percent since.`,
+      { kick: 'EVERY PICK, SAME PLAN', title: 'The plan in four steps', items: [`Wait 3–5 minutes after the ${nx} open`, `Buy only if the price is within 2% of ${wd}'s close`, 'Aim to sell at +4%. Set a safety exit below', 'Be out by the close of day 3, whatever happens', 'Already on my list? Not repeated, unless it fell 4%+ since'] });
     // 4) the picks
     featured.forEach((x, i) => add(`setup-${x.ticker}`, 'setup', x.ticker, dailyPick(x, i, wd, nx), { setup: x, plan: plan(x), rank: i + 1, total: dipSp.length }));
   } else {
@@ -338,7 +340,8 @@ function dailyPick(x, i, wd, nx) {
   const stopDist = Math.abs((p.stop / x.close - 1) * 100), rs = x.reasons || [];
   const tired = [rs.includes('closed near the day’s low') ? 'it closed near the low of the day' : null, rs.includes('new 20-day low') ? 'it hit a fresh 20-day low' : null, rs.includes('3 down days in a row') ? 'it fell three days in a row' : null].filter(Boolean);
   const lead = ['First up', 'Next up', 'Third', 'Number four', 'And last but not least'][i] || `Number ${i + 1}`;
-  return `${lead}: ${nm}. It closed ${wd} at ${money(x.close)}, after dropping ${say(x.chg5d)} in five days. But it's still trading ${say(x.vs200)} above its long-term average, so the bigger picture is still healthy. ${tired.length ? `And the sell-off is starting to look tired: ${tired.join(', and ')}.` : ''} So here's the plan: after the ${nx} open, give it a few minutes, and only buy if it's still within 2 percent of ${money(x.close)}. The target is ${money(p.target)}. The safety exit is ${money(p.stop)}, and either way, be out by the close of day three.${i === 0 ? ` I know that safety exit looks a long way down, ${Math.round(stopDist)} percent, but this stock normally swings about ${x.atrPct.toFixed(0)} percent in a day. That's why you keep the size small, and please, never borrow money to trade it.` : ''}`;
+  const rep = x._rep ? ` This one was on my list on ${new Date(`${x._rep.date}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' })}, and it has fallen another ${x._rep.fall.toFixed(0)} percent since. That's the only case where I'd even consider adding to it, and only with a small size.` : '';
+  return `${lead}: ${nm}. It closed ${wd} at ${money(x.close)}, after dropping ${say(x.chg5d)} in five days. But it's still trading ${say(x.vs200)} above its long-term average, so the bigger picture is still healthy. ${tired.length ? `And the sell-off is starting to look tired: ${tired.join(', and ')}.` : ''}${rep}${i === 0 ? ` One thing to know: its safety exit sits ${Math.round(stopDist)} percent below, because this stock normally swings about ${x.atrPct.toFixed(0)} percent in a day. That's why you keep the size small, and please, never borrow money to trade it.` : ''}`;
 }
 
 
