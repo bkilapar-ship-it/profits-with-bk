@@ -243,17 +243,17 @@ function buildEpisodeInner({ mode, setups, config }) {
     : `S&P 500 Daily Briefing for ${nxd}: no signals today`;
   const hookState = isNum(m.chg1d) ? `The S&P 500 ${dayWord} ${say(m.chg1d)} today, and ` : '';
   add('intro', 'intro', 'DAILY BRIEFING',
-    `Welcome back to ${ch}. It's ${date}. Quick summary: ${hookState}${n ? `${n} stock${n === 1 ? '' : 's'} passed my screen for ${nx}.` : 'no stocks passed my screen for ' + nx + '.'} Here's the plan for the next few minutes: what the market did today in plain English, how my earlier picks have done, ${n ? `then each pick and the plan for it, ` : ''}and what is coming up ${nx}.`,
+    `Hey everyone, welcome back to ${ch}! It's ${date}. Here's the quick version: ${hookState}${n ? `${n} stock${n === 1 ? '' : 's'} made it through my screen for ${nx}.` : 'nothing made it through my screen for ' + nx + '.'} Over the next few minutes we'll look at what the market did today in plain English, check how my earlier picks have done, ${n ? `go through each pick and the plan for it, ` : ''}and see what's coming up ${nx}.`,
     { date: dayShort(asOf), kicker: `Briefing for ${nxd}`, chips: [isNum(m.chg1d) ? `S&P 500 ${m.chg1d >= 0 ? '+' : '−'}${Math.abs(m.chg1d).toFixed(1)}% today` : 'Daily briefing', `${n} stock${n === 1 ? '' : 's'} for ${nx}`, 'Scorecard included'], market: m });
 
   // 1) the market today
   const mkt = [];
-  if (isNum(m.chg1d)) mkt.push(`The S&P 500, which tracks 500 of America's biggest companies, ${dayWord} ${say(m.chg1d)} today.`);
-  if (isNum(m.chg5d)) mkt.push(`Over the last five trading days it is ${m.chg5d >= 0 ? 'up' : 'down'} ${say(m.chg5d)}.`);
+  if (isNum(m.chg1d)) mkt.push(`So, what did the market do today? The S&P 500, that's the index of 500 of America's biggest companies, ${dayWord} ${say(m.chg1d)}.`);
+  if (isNum(m.chg5d)) mkt.push(`Zoom out to the last five trading days, and it's ${m.chg5d >= 0 ? 'up' : 'down'} ${say(m.chg5d)}.`);
   const heads = news && Array.isArray(news.headlines) ? news.headlines.filter(Boolean).slice(0, 4) : [];
-  mkt.push(isNum(m.chg5d) && m.chg5d <= -3 ? "When markets fall like this, even strong companies get sold along with the weak ones. That is exactly the situation my screen is built to look at." : "On a calmer day, the screen simply looks for strong companies that had a short, sharp sell-off.");
+  mkt.push(isNum(m.chg5d) && m.chg5d <= -3 ? "When the market drops like this, even good companies get dragged down along with the weak ones. And that is exactly where my screen goes hunting." : "On a calmer day, the screen just looks for strong companies that had a short, sharp sell-off.");
   add('market', 'market', "TODAY'S MARKET", mkt.join(' '), { market: m });
-  if (heads.length) add('news', 'bullets', 'WHAT MOVED THE MARKET', `So what was behind it? ${heads.map(h => h.replace(/[.]$/, '') + '.').join(' ')}`, { kick: 'WHAT WAS BEHIND IT', title: 'What moved the market', items: heads });
+  if (heads.length) add('news', 'bullets', 'WHAT MOVED THE MARKET', `So what was going on behind the scenes? ${heads.map(h => h.replace(/[.]$/, '') + '.').join(' ')}`, { kick: 'WHAT WAS BEHIND IT', title: 'What moved the market', items: heads });
 
   // 2) scorecard of earlier picks
   const tracked = (setups.dip || []).filter(x => x.sp500 && x.sessionsAgo >= 1 && x.sessionsAgo <= 8 && x.track && ['target', 'stop', 'closed'].includes(x.track.state));
@@ -261,14 +261,14 @@ function buildEpisodeInner({ mode, setups, config }) {
     const tn = tracked.length, hit = tracked.filter(x => x.track.state === 'target').length, stp = tracked.filter(x => x.track.state === 'stop').length, up = tracked.filter(x => x.track.pct > 0).length, lossEnd = tracked.filter(x => x.track.state === 'closed' && x.track.pct < 0).length;
     const avg = tracked.reduce((a, x) => a + x.track.pct, 0) / tn;
     add('scorecard', 'outcomes', 'SCORECARD: HOW EARLIER PICKS DID',
-      `Before today's picks, a quick scorecard, because I think you should see the misses as well as the hits. Of the ${tn} earlier picks that have finished their three days, ${hit} reached the 4 percent target and ${stp} hit the safety exit${lossEnd ? `, while ${lossEnd} reached day three at a loss and were closed out` : ''}. ${up} finished in profit overall, and the average result was ${avg >= 0 ? 'a gain' : 'a loss'} of ${say(avg, 2)} per trade, before costs. Losses are part of this, so keep each trade small.`,
+      `Before we get to today's picks, let's do the honest bit: the scorecard. I'd rather show you the misses as well as the hits. Of the ${tn} earlier picks that have finished their three days, ${hit} reached the 4 percent target and ${stp} hit the safety exit${lossEnd ? `, and ${lossEnd} got to day three at a loss and were closed out` : ''}. ${up} finished in profit overall, and the average result was ${avg >= 0 ? 'a gain' : 'a loss'} of ${say(avg, 2)} per trade, before costs. Losses happen, so keep each trade small.`,
       { n: tn, hit, stop: stp, avg, kick: 'THE SCORECARD', title: 'How our earlier picks did', rows: tracked.sort((a, b) => b.track.pct - a.track.pct).slice(0, 10).map(x => ({ ticker: x.ticker, sub: x.signalDate ? new Date(`${x.signalDate}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : '', pct: x.track.pct, state: x.track.state })) });
   }
 
   if (n) {
     // 3) the plan in four steps, once
     add('plan', 'bullets', 'THE PLAN IN FOUR STEPS',
-      `Here is how each pick works, in four steps, so I don't repeat it every time. One: after the market opens ${nx}, wait three to five minutes. Two: only buy if the price is still within 2 percent of ${wd}'s closing price. Three: aim to sell at 4 percent above that close, and set a safety exit below, in case the stock keeps falling. Four: whatever happens, be out by the close of day three.`,
+      `Quick reminder of how every pick works, so I don't repeat myself on each stock. One: after the market opens ${nx}, give it three to five minutes. Two: only buy if the price is still within 2 percent of ${wd}'s closing price. Three: aim to sell at 4 percent above that close, and set a safety exit below, just in case the stock keeps falling. Four: whatever happens, be out by the close of day three. Simple as that.`,
       { kick: 'EVERY PICK, SAME PLAN', title: 'The plan in four steps', items: [`Wait 3–5 minutes after the ${nx} open`, `Buy only if the price is within 2% of ${wd}'s close`, 'Aim to sell at +4%. Set a safety exit below', 'Be out by the close of day 3, whatever happens'] });
     // 4) the picks
     featured.forEach((x, i) => add(`setup-${x.ticker}`, 'setup', x.ticker, dailyPick(x, i, wd, nx), { setup: x, plan: plan(x), rank: i + 1, total: dipSp.length }));
@@ -283,17 +283,17 @@ function buildEpisodeInner({ mode, setups, config }) {
     const tr = pp.trades.slice().sort((x, y) => String(y.exitDate).localeCompare(String(x.exitDate))), tn2 = tr.length, win = tr.filter(t => t.pct > 0).length;
     const recent = tr.slice(0, 8).map(t => ({ ticker: t.ticker, pct: t.pct, how: t.how, d: t.exitDate ? new Date(`${t.exitDate}T12:00:00Z`).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', timeZone: 'UTC' }) : '' }));
     add('paper', 'paper', 'THE PAPER ACCOUNT: RECENT TRADES',
-      `Now my paper trading account. That is simulated money, not real money, and it follows the same rules. It has closed ${tn2} trades so far, and ${win} of them finished in profit. Here are the most recent ones, wins and losses alike. Simulated results are not a promise of what will happen with real money.`,
+      `Now, my paper trading account. That's pretend money, so no real cash is on the line, but it follows the exact same rules. It has closed ${tn2} trades so far, and ${win} of them finished in profit. Here are the latest ones, the good and the not so good. And remember, pretend money results are no promise of what happens with real money.`,
       { n: tn2, win, recent });
   }
 
   // 5) tomorrow's calendar (only verified items)
   if (ev.items.length) {
     add('calendar', 'bullets', "TOMORROW'S CALENDAR",
-      `Finally, what is coming up. ${ev.items.map(t => t.replace(/[.]$/, '') + '.').join(' ')} Big scheduled events can move the whole market, so they are worth knowing about before you trade.`,
+      `Last thing, what's coming up. ${ev.items.map(t => t.replace(/[.]$/, '') + '.').join(' ')} Big scheduled events can move the whole market, so it's good to know about them before you trade.`,
       { kick: `COMING UP: ${nxd.toUpperCase()}`, title: 'On the calendar', items: ev.items.slice(0, 5) });
   }
-  add('outro', 'outro', 'THANKS FOR WATCHING', `${n ? `That's it for tonight: ${n} stock${n === 1 ? '' : 's'} on the list for ${nx}, with the same plan for each. ` : ''}${cfg.disclaimer} If this was useful, subscribe to ${ch} and I'll see you after the next close.`, { disclaimer: cfg.disclaimer });
+  add('outro', 'outro', 'THANKS FOR WATCHING', `${n ? `And that's it for tonight! ${n} stock${n === 1 ? '' : 's'} on the list for ${nx}, with the same simple plan for each. ` : ''}${cfg.disclaimer} If this was useful, hit subscribe to ${ch}, and I'll see you after the next close. Take care!`, { disclaimer: cfg.disclaimer });
   return { mode, title, date: dayShort(asOf), asOf, nxd, scenes, tickers: featured.map(x => x.ticker), cfg, calSource: ev.source };
 }
 
@@ -301,8 +301,8 @@ function dailyPick(x, i, wd, nx) {
   const p = plan(x), nm = NAMES[x.ticker] ? `${NAMES[x.ticker]}, ticker ${x.ticker}` : x.ticker;
   const stopDist = Math.abs((p.stop / x.close - 1) * 100), rs = x.reasons || [];
   const tired = [rs.includes('closed near the day’s low') ? 'it closed near the low of the day' : null, rs.includes('new 20-day low') ? 'it hit a fresh 20-day low' : null, rs.includes('3 down days in a row') ? 'it fell three days in a row' : null].filter(Boolean);
-  const lead = i === 0 ? 'Number one' : `Number ${ORD[i]}`;
-  return `${lead}: ${nm}. It closed ${wd} at ${money(x.close)}, after falling ${say(x.chg5d)} in five days. But it's still trading ${say(x.vs200)} above its long-term average, so the bigger trend is still up. ${tired.length ? `The sell-off looks tired: ${tired.join(', and ')}.` : ''} The plan: after the ${nx} open, wait a few minutes and only buy if it's within 2 percent of ${money(x.close)}. The target is ${money(p.target)}. The safety exit is ${money(p.stop)}, and you should be out by the close of day three.${i === 0 ? ` That safety exit looks far away, ${Math.round(stopDist)} percent, because this stock normally swings about ${x.atrPct.toFixed(0)} percent a day. That's why you keep the size small and never borrow money to trade it.` : ''}`;
+  const lead = ['First up', 'Next up', 'Third', 'Number four', 'And last but not least'][i] || `Number ${i + 1}`;
+  return `${lead}: ${nm}. It closed ${wd} at ${money(x.close)}, after dropping ${say(x.chg5d)} in five days. But it's still trading ${say(x.vs200)} above its long-term average, so the bigger picture is still healthy. ${tired.length ? `And the sell-off is starting to look tired: ${tired.join(', and ')}.` : ''} So here's the plan: after the ${nx} open, give it a few minutes, and only buy if it's still within 2 percent of ${money(x.close)}. The target is ${money(p.target)}. The safety exit is ${money(p.stop)}, and either way, be out by the close of day three.${i === 0 ? ` I know that safety exit looks a long way down, ${Math.round(stopDist)} percent, but this stock normally swings about ${x.atrPct.toFixed(0)} percent in a day. That's why you keep the size small, and please, never borrow money to trade it.` : ''}`;
 }
 
 function chapName(s) {
