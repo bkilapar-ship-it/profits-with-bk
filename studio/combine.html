@@ -169,10 +169,15 @@ $('make').onclick=async()=>{
       g.fillStyle='rgba(38,208,255,.9)';g.shadowColor='#26D0FF';g.shadowBlur=H*.02;g.fillRect(W*.012,H*.035,W*.2,H*.004);g.fillStyle='rgba(255,194,26,.9)';g.shadowColor='#FFC21A';g.fillRect(W*.012,H*.96,W*.2,H*.004);g.shadowBlur=0;
       const fl=g.createLinearGradient(0,H*.86,0,H);fl.addColorStop(0,'rgba(38,208,255,0)');fl.addColorStop(1,'rgba(38,208,255,.08)');g.fillStyle=fl;g.fillRect(0,H*.86,W,H*.14);})();
     let raf=0,running=true;
+    function beatThr(text,B){const t=String(text||'').replace(/\s+/g,' ').trim();if(!t||B<1)return Array.from({length:B},(_,k)=>(k+1)/(B+1));
+      const ss=t.split(/(?<=[.!?])\s+(?=[A-Z0-9'"“$])/).filter(Boolean),w=ss.map(x=>x.split(' ').length),tot=w.reduce((a,b)=>a+b,0),st=[];let c=0;w.forEach(x=>{st.push(c/tot);c+=x;});
+      const S=ss.length;return Array.from({length:B},(_,k)=>{const u=(k+1)*S/(B+1),j=Math.min(S-1,Math.floor(u));return Math.min(0.97,st[j]+(u-j)*(w[j]/tot));});}
+    
+    const thrCache={};
     const drawV=(c,x,y,w,h,t,i)=>{if(!BEATS){c.drawImage(vis,x,y,w,h);return;}
       const oi=all.indexOf(scenes[i]),B=BEATS[oi]||0,im=FIM[oi]||[],st=mk[i],en=(i+1<n&&isFinite(mk[i+1]))?mk[i+1]:(rv.duration||st+30),D=Math.max(1,en-st),el=Math.max(0,t-st);
       if(!B||!im[0]){const f=STILL[oi]||im[B]||im[0];if(f)c.drawImage(f,x,y,w,h);return;}
-      const span=0.85*D/(B+1),pos=Math.min(el/(0.85*D),1)*(B+1),k=Math.min(B,Math.floor(pos)),tb=k>=B?9:(pos-k)*span*(B+1)/(B+1),q0=Math.min(1,tb/0.6),q=q0*q0*(3-2*q0);
+      const th=thrCache[oi]||(thrCache[oi]=beatThr(scenes[i].narration,B)),fr=Math.min(1,el/D);let k=0;th.forEach(x=>{if(fr>=x)k++;});k=Math.min(B,k);const tb=k===0?el:Math.max(0,el-th[k-1]*D),q0=Math.min(1,tb/0.6),q=q0*q0*(3-2*q0);
       const cur=im[k]||STILL[oi]||im[0],base=k>0?(im[k-1]||null):null;
       if(base){c.drawImage(base,x,y,w,h);c.globalAlpha=q;c.drawImage(cur,x,y,w,h);c.globalAlpha=1;}else{c.globalAlpha=Math.min(1,el/0.4);c.drawImage(cur,x,y,w,h);c.globalAlpha=1;}};
     const draw=()=>{

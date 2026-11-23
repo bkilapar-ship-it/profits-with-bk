@@ -164,7 +164,10 @@ function drawVis(ctx,x,y,w,h){const now=performance.now(),i=lvIdx;if(i<0){return
   if(pv){ctx.drawImage(lvPrevScene,x,y,w,h);ctx.globalAlpha=k;}
   if(img)ctx.drawImage(img,x,y,w,h);
   if(img2&&fa>0.02){ctx.globalAlpha=(pv?k:1)*fa;ctx.drawImage(img2,x,y,w,h);}ctx.globalAlpha=1;lvLast=(img2&&fa>0.5)?img2:(img||lvLast);}
-function setTarget(cur,v,mid){if(!live||lvIdx<0)return;const b=v[cur];if(!b||b.dataset.id!==liveId)return;const r=b.getBoundingClientRect(),f=Math.max(0,Math.min(1,(mid-r.top)/Math.max(1,r.height))),B=lvB[lvIdx]||0;const t=Math.min(B,Math.floor(Math.min(1,f/0.85)*(B+1)));if(t>lvTgt)lvTgt=t;}
+function beatThr(text,B){const t=String(text||'').replace(/\s+/g,' ').trim();if(!t||B<1)return Array.from({length:B},(_,k)=>(k+1)/(B+1));
+  const ss=t.split(/(?<=[.!?])\s+(?=[A-Z0-9'"“$])/).filter(Boolean),w=ss.map(x=>x.split(' ').length),tot=w.reduce((a,b)=>a+b,0),st=[];let c=0;w.forEach(x=>{st.push(c/tot);c+=x;});
+  const S=ss.length;return Array.from({length:B},(_,k)=>{const u=(k+1)*S/(B+1),j=Math.min(S-1,Math.floor(u));return Math.min(0.97,st[j]+(u-j)*(w[j]/tot));});}
+function setTarget(cur,v,mid){if(!live||lvIdx<0)return;const b=v[cur];if(!b||b.dataset.id!==liveId)return;const r=b.getBoundingClientRect(),f=Math.max(0,Math.min(1,(mid-r.top)/Math.max(1,r.height))),B=lvB[lvIdx]||0;const fe=b.querySelector('p.full'),txt=fe?fe.textContent:b.textContent;const th=beatThr(txt,B);let t=0;th.forEach(x=>{if(f>=x)t++;});t=Math.min(B,t);if(t>lvTgt)lvTgt=t;}
 function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
 function cover(c,v,x,y,w,h){const vw=v.videoWidth,vh=v.videoHeight;if(!vw)return;const k=Math.max(w/vw,h/vh),sw=w/k,sh=h/k;c.drawImage(v,(vw-sw)/2,(vh-sh)/2,sw,sh,x,y,w,h);}
 function liveDraw(W,H2,ctx,mode){
