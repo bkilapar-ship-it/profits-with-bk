@@ -55,7 +55,8 @@ a.btn.dl{display:block;background:#2563EB;border-color:#2563EB;margin-top:10px}
   <input type="file" id="thF" accept="image/*" capture="user" style="display:none">
   <input type="range" id="thS" style="display:none" min="0" max="100" step="0.1" value="3" style="width:100%">
   <canvas id="thC" width="1280" height="720" style="display:block;width:100%;border-radius:12px;margin-top:10px;background:#000"></canvas>
-  <div class="row"><button id="thSave" class="go">Save thumbnail</button></div><div id="thOut"></div></div>
+  <div class="row"><button id="thSave" class="go">Save thumbnail</button></div><div id="thOut"></div>
+  <h3 style="margin:18px 0 6px;font-size:16px">Scene thumbnails (no photo)</h3><p class="mut">One per scene, built from that scene's own visual. Tap to open, then save or share.</p><div id="scTh" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px"></div></div>
 
 <div class="card" id="ytcard"><h2>8. Publish to YouTube</h2>
   <p class="mut">Uploads the video you just created (or a file you choose) straight from this page, with the title, description, tags and thumbnail filled in. It goes up as <b>private</b> or <b>unlisted</b>; you make it public yourself in YouTube Studio after watching it.</p>
@@ -69,8 +70,9 @@ a.btn.dl{display:block;background:#2563EB;border-color:#2563EB;margin-top:10px}
 </div>
 
 <div class="card" id="shcard"><h2>9. Make a Short</h2>
-  <p class="mut">Turns one scene of your recording into a vertical 9:16 video (visual on top, your face below, captions, disclaimer). Works with an older recording too: choose the file in section 2 and set the scene marks. A Short can be up to 3 minutes; under 60 seconds works best.</p>
-  <div class="row"><select id="shSc" style="width:100%"></select></div>
+  <p class="mut">Turns one or more scenes of your recording into a vertical 9:16 video (scenes play in order) (visual on top, your face below, captions, disclaimer). Works with an older recording too: choose the file in section 2 and set the scene marks. A Short can be up to 3 minutes; under 60 seconds works best.</p>
+  <div class="row"><button id="shAll" type="button">Tick all</button><button id="shNone" type="button">Clear</button></div>
+  <div id="shList"></div><div id="shTot" class="mut" style="margin:8px 0"></div>
   <div class="row"><button id="shGo" class="go">Create the Short</button></div>
   <p class="warn">Like the full video, it plays that part of your recording in real time. Keep the page open.</p>
   <div id="shBar" style="display:none"><i></i></div><div id="shSt" class="mut" style="margin-top:8px"></div>
@@ -283,12 +285,13 @@ function ytChapters(){
   return scenes.map((s,i)=>{const t=Math.floor(ts[i]);return (t>=3600?String(Math.floor(t/3600))+':':'')+String(Math.floor(t%3600/60)).padStart(t>=3600?2:1,'0')+':'+String(t%60).padStart(2,'0')+' '+s.heading.charAt(0)+s.heading.slice(1).toLowerCase();}).join('\n');
 }
 async function ytFill(){
-  const md=await ytMeta();if(!md)return;
+  scThumbs();const md=await ytMeta();if(!md)return;
   $('ytT').value=md.title.slice(0,100);
   const ch=ytChapters();
   $('ytD').value=[md.head,ch,md.tail].filter(Boolean).join('\n\n');
   $('ytD').dataset.tags=JSON.stringify(md.tags);
 }
+function scThumbs(){const el=$('scTh');if(!el||!ep)return;el.innerHTML=ep.j.scenes.map((sc,i)=>'<a href="'+ep.m+'/thumbs/scene-'+i+'.png" download="trade-with-bk-scene-'+(i+1)+'.png" target="_blank" rel="noopener" style="display:block;text-decoration:none;color:#8FA3C7;font-size:12px"><img loading="lazy" src="'+ep.m+'/thumbs/scene-'+i+'.png" style="width:100%;border-radius:8px;display:block" onerror="this.parentNode.style.display=\'none\'">'+(i+1)+'. '+sc.heading.charAt(0)+sc.heading.slice(1).toLowerCase()+'</a>').join('');}
 try{$('ytId').value=localStorage.getItem('bkstudio-ytid')||'';}catch(e){}
 function ytSt(h){$('ytSt').innerHTML=h;}
 function ytAuth(cid){return new Promise((res,rej)=>{
@@ -334,9 +337,14 @@ $('ytGo').onclick=async()=>{
 
 /* ---- Shorts: one scene, 9:16, face + visual + captions ---- */
 let shortBlob=null;
-function shFill(){const el=$('shSc'),cur=el.value;if(!el)return;const opts=scenes.map((sc,i)=>({i,sc,t:i===0?0:marks[i]})).filter(o=>o.t!=null);
-  el.innerHTML=opts.length?opts.map(o=>{const en=(o.i+1<scenes.length&&marks[o.i+1]!=null)?marks[o.i+1]:recDur;const d=Math.max(0,(en||0)-o.t);return '<option value="'+o.i+'">'+(o.i+1)+'. '+o.sc.heading.charAt(0)+o.sc.heading.slice(1).toLowerCase()+(d?' ('+Math.round(d)+'s)':'')+'</option>';}).join(''):'<option value="">Choose your recording and set the scene marks first</option>';
-  if(cur&&[...el.options].some(x=>x.value===cur))el.value=cur;}
+function shSel(){return [...document.querySelectorAll('#shList input:checked')].map(x=>+x.value);}
+function shSegs(){return shSel().map(i=>{const st=i===0?0:marks[i],en=(i+1<scenes.length&&marks[i+1]!=null)?marks[i+1]:recDur;return {i,st,en,d:Math.max(0,(en||0)-st)};});}
+function shTotal(){const sg=shSegs(),t=sg.reduce((a,x)=>a+x.d,0);$('shTot').innerHTML=sg.length?('Total '+Math.round(t)+' s'+(t>180?' <span class="err">(over 3 minutes: untick something)</span>':t>60?' (over 60 s: YouTube will not file it under Shorts)':' (fits a Short)')):'Tick at least one scene.';}
+function shFill(){const el=$('shList');if(!el)return;const keep=new Set(shSel());
+  const opts=scenes.map((sc,i)=>({i,sc,t:i===0?0:marks[i]})).filter(o=>o.t!=null);
+  el.innerHTML=opts.length?opts.map(o=>{const en=(o.i+1<scenes.length&&marks[o.i+1]!=null)?marks[o.i+1]:recDur;const d=Math.max(0,(en||0)-o.t);return '<label class="mrow" style="display:flex;gap:10px;align-items:center;padding:8px 0"><input type="checkbox" value="'+o.i+'"'+(keep.has(o.i)?' checked':'')+'><span>'+(o.i+1)+'. '+o.sc.heading.charAt(0)+o.sc.heading.slice(1).toLowerCase()+(d?' <span class="mut">('+Math.round(d)+' s)</span>':'')+'</span></label>';}).join(''):'<div class="mut">Choose your recording and set the scene marks first.</div>';
+  shTotal();}
+$('shList').onchange=shTotal;$('shAll').onclick=()=>{document.querySelectorAll('#shList input').forEach(x=>x.checked=true);shTotal();};$('shNone').onclick=()=>{document.querySelectorAll('#shList input').forEach(x=>x.checked=false);shTotal();};
 const _ready=ready;ready=function(){_ready();try{shFill();}catch(e){}};
 function shChunks(text){const w=String(text||'').replace(/\s+/g,' ').trim().split(' ').filter(Boolean);const out=[];let cur=[];w.forEach(x=>{cur.push(x);if(cur.length>=5||/[.!?]$/.test(x)||(cur.length>=3&&/[,;:]$/.test(x))){out.push(cur.join(' '));cur=[];}});if(cur.length)out.push(cur.join(' '));return out;}
 function shWrap(g,t,maxW){const w=t.split(' '),L=[];let c='';w.forEach(x=>{const n=c?c+' '+x:x;if(g.measureText(n).width>maxW&&c){L.push(c);c=x;}else c=n;});if(c)L.push(c);return L;}
@@ -345,17 +353,20 @@ $('shGo').onclick=async()=>{
   try{
     if(!window.MediaRecorder)throw new Error('This browser cannot create videos in the page.');
     if(!ep||!recUrl||!recDur)throw new Error('Choose your recording in section 2 first.');
-    const i=parseInt($('shSc').value,10);if(!(i>=0))throw new Error('Pick a scene (set the scene marks first).');
-    const sc=scenes[i],st=i===0?0:marks[i],en=(i+1<scenes.length&&marks[i+1]!=null)?marks[i+1]:recDur,D=en-st;
-    if(!(D>=3))throw new Error('That scene is too short or its marks are wrong.');
-    if(D>180)throw new Error('A Short can be at most 3 minutes; this scene is '+Math.round(D)+' seconds. Pick a shorter scene.');
+    const segs=shSegs();if(!segs.length)throw new Error('Tick at least one scene.');
+    if(segs.some(x=>!(x.d>=3)))throw new Error('A ticked scene is too short or its marks are wrong.');
+    const D=segs.reduce((a,x)=>a+x.d,0);if(D>180)throw new Error('A Short can be at most 3 minutes; your selection is '+Math.round(D)+' seconds. Untick a scene.');
     const rv=$('rv'),vis=$('vis'),ac=getAC();ac.resume();rv.play().then(()=>rv.pause()).catch(()=>{});
-    const oi=all.indexOf(sc);let B=0;const im=[];let still=null,cues=null;
-    S('Loading the visuals…');
-    try{const bj=await fetch(ep.m+'/frames/beats.json').then(r=>r.ok?r.json():null);cues=await fetch(ep.m+'/frames/cues.json').then(r=>r.ok?r.json():{}).catch(()=>({}));
-      if(bj){B=bj[oi]||0;await Promise.race([Promise.all([...Array(B+1).keys()].map(k=>new Promise(res=>{const m=new Image();m.onload=()=>{im[k]=m;res();};m.onerror=()=>res();m.src=ep.m+'/frames/s'+oi+'/'+k+'-3.jpg';})).concat([new Promise(res=>{const m=new Image();m.onload=()=>{still=m;res();};m.onerror=()=>res();m.src=ep.m+'/stills/scene-'+oi+'.jpg';})])),new Promise(r=>setTimeout(r,25000))]);}}catch(e){B=0;}
-    const useVid=!(B&&im[0]);if(useVid){vis.src=await getVisuals();vis.load();await new Promise(r=>{if(vis.readyState>=2)return r();vis.addEventListener('loadeddata',()=>r(),{once:true});setTimeout(r,4000);});}
-    await new Promise(r=>{rv.currentTime=Math.max(0,st);rv.addEventListener('seeked',()=>r(),{once:true});setTimeout(r,3000);});
+    // load the reveal frames for every ticked scene
+    S('Loading the visuals…');const SD={};let needVid=false;let bj=null,cues={};
+    try{bj=await fetch(ep.m+'/frames/beats.json').then(r=>r.ok?r.json():null);cues=await fetch(ep.m+'/frames/cues.json').then(r=>r.ok?r.json():{}).catch(()=>({}));}catch(e){}
+    for(const sg of segs){const oi=all.indexOf(scenes[sg.i]),B=bj?(bj[oi]||0):0,im=[];let still=null;
+      if(B){await Promise.race([Promise.all([...Array(B+1).keys()].map(k=>new Promise(res=>{const m=new Image();m.onload=()=>{im[k]=m;res();};m.onerror=()=>res();m.src=ep.m+'/frames/s'+oi+'/'+k+'-3.jpg';})).concat([new Promise(res=>{const m=new Image();m.onload=()=>{still=m;res();};m.onerror=()=>res();m.src=ep.m+'/stills/scene-'+oi+'.jpg';})])),new Promise(r=>setTimeout(r,25000))]);}
+      const ok=!!(B&&im[0]);if(!ok)needVid=true;
+      SD[sg.i]={ok,B,im,still,th:(cues&&cues[oi]&&cues[oi].length===B)?cues[oi]:(B?Array.from({length:B},(_,k)=>(k+1)/(B+1)):[])};}
+    if(needVid){vis.src=await getVisuals();vis.load();await new Promise(r=>{if(vis.readyState>=2)return r();vis.addEventListener('loadeddata',()=>r(),{once:true});setTimeout(r,4000);});}
+    const seek=t=>new Promise(r=>{rv.currentTime=Math.max(0,t);rv.addEventListener('seeked',()=>r(),{once:true});setTimeout(r,3000);});
+    await seek(segs[0].st);
     const W=720,H=1280,cv=$('shCv');cv.width=W;cv.height=H;cv.style.display='block';const g=cv.getContext('2d');
     const hasFace=rv.videoWidth>0;
     const dst=ac.createMediaStreamDestination(),src=rvSrc(ac);src.connect(dst);
@@ -363,40 +374,43 @@ $('shGo').onclick=async()=>{
     const opts=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm'];const mime=opts.find(t=>MediaRecorder.isTypeSupported(t))||'';
     const mr=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:3e6,audioBitsPerSecond:128e3}:undefined);const chunks=[];mr.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};const done=new Promise(res=>{mr.onstop=res;});
     let wake=null;try{if(navigator.wakeLock)wake=await navigator.wakeLock.request('screen');}catch(e){}
-    const chunksT=shChunks(sc.narration),tot=chunksT.reduce((a,b)=>a+b.split(' ').length,0)||1,cs=[];let acc=0;chunksT.forEach(c=>{cs.push(acc/tot);acc+=c.split(' ').length;});
-    const th=(cues&&cues[oi]&&cues[oi].length===B)?cues[oi]:(B?Array.from({length:B},(_,k)=>(k+1)/(B+1)):[]);
-    const handle='@TradeWithBK';let raf=0,running=true;
+    const handle='@TradeWithBK';let raf=0,running=true,cur=0,base=0;
+    const CH=segs.map(sg=>{const c=shChunks(scenes[sg.i].narration),tot=c.reduce((a,b)=>a+b.split(' ').length,0)||1,cs=[];let acc=0;c.forEach(x=>{cs.push(acc/tot);acc+=x.split(' ').length;});return {c,cs};});
     const bg=g.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#08101F');bg.addColorStop(1,'#02050A');
-    const vframe=(x,y,w,h,el)=>{if(useVid){g.drawImage(vis,x,y,w,h);return;}const fr=Math.min(1,el/D);let k=0;th.forEach(t=>{if(fr>=t)k++;});k=Math.min(B,k);const cur=im[k]||still||im[0],base=k>0?im[k-1]:null;
-      const tb=k===0?el:Math.max(0,el-th[k-1]*D),q0=Math.min(1,tb/0.6),q=q0*q0*(3-2*q0);if(!cur)return;
-      if(base){g.drawImage(base,x,y,w,h);g.globalAlpha=q;g.drawImage(cur,x,y,w,h);g.globalAlpha=1;}else g.drawImage(cur,x,y,w,h);};
-    const draw=()=>{if(!running)return;const t=rv.currentTime,el=Math.max(0,t-st),fr=Math.min(1,el/D);
+    const vframe=(x,y,w,h,el,sg)=>{const d=SD[sg.i];if(!d.ok){g.drawImage(vis,x,y,w,h);return;}const fr=Math.min(1,el/sg.d);let k=0;d.th.forEach(t=>{if(fr>=t)k++;});k=Math.min(d.B,k);const c=d.im[k]||d.still||d.im[0],bs=k>0?d.im[k-1]:null;
+      const tb=k===0?el:Math.max(0,el-d.th[k-1]*sg.d),q0=Math.min(1,tb/0.6),q=q0*q0*(3-2*q0);if(!c)return;
+      if(bs){g.drawImage(bs,x,y,w,h);g.globalAlpha=q;g.drawImage(c,x,y,w,h);g.globalAlpha=1;}else g.drawImage(c,x,y,w,h);};
+    const draw=()=>{if(!running)return;const sg=segs[cur],sc=scenes[sg.i],t=rv.currentTime,el=Math.max(0,Math.min(sg.d,t-sg.st)),tot=base+el,fr=Math.min(1,el/sg.d);
       g.fillStyle=bg;g.fillRect(0,0,W,H);
       const gl=g.createRadialGradient(W*.5,H*.35,10,W*.5,H*.35,W);gl.addColorStop(0,'rgba(38,208,255,.14)');gl.addColorStop(1,'rgba(38,208,255,0)');g.fillStyle=gl;g.fillRect(0,0,W,H);
       g.textAlign='center';g.fillStyle='#fff';g.shadowColor='#26D0FF';g.shadowBlur=18;g.font='800 40px Poppins,Arial,sans-serif';g.fillText('TRADE WITH BK',W/2,70);g.shadowBlur=0;
       g.fillStyle='#FFC21A';g.font='700 22px Poppins,Arial,sans-serif';g.fillText(sc.heading.slice(0,34),W/2,104);
       const vx=20,vw=W-40,vh=Math.round(vw*9/16),vy=130;
-      g.save();rr(g,vx,vy,vw,vh,16);g.fillStyle='#000';g.fill();g.clip();vframe(vx,vy,vw,vh,el);g.restore();
+      g.save();rr(g,vx,vy,vw,vh,16);g.fillStyle='#000';g.fill();g.clip();vframe(vx,vy,vw,vh,el,sg);g.restore();
       const fy=vy+vh+18,fh=470;
       g.save();g.shadowColor='rgba(38,208,255,.5)';g.shadowBlur=22;rr(g,vx,fy,vw,fh,22);g.fillStyle='#000';g.fill();g.restore();
       g.save();rr(g,vx,fy,vw,fh,22);g.clip();if(hasFace)cover(g,rv,vx,fy,vw,fh);g.restore();g.strokeStyle='#26D0FF';g.lineWidth=3;rr(g,vx,fy,vw,fh,22);g.stroke();
-      // captions
-      let k=0;cs.forEach((c,j)=>{if(fr>=c)k=j;});const cap=chunksT[k]||'';
+      let k=0;CH[cur].cs.forEach((c,j)=>{if(fr>=c)k=j;});const cap=CH[cur].c[k]||'';
       g.font='800 46px Poppins,Arial,sans-serif';const L=shWrap(g,cap,W-80),cy=fy+fh+60;
       L.slice(0,3).forEach((l,j)=>{const y=cy+j*56;g.lineWidth=9;g.strokeStyle='rgba(0,0,0,.85)';g.strokeText(l,W/2,y);g.fillStyle='#fff';g.fillText(l,W/2,y);});
       g.fillStyle='#8FA3C7';g.font='600 20px Poppins,Arial,sans-serif';g.fillText('Educational only. Not financial advice.',W/2,H-62);
-      if(el>D-4){g.fillStyle='#FFC21A';g.font='800 26px Poppins,Arial,sans-serif';g.fillText('Full video on the channel '+handle,W/2,H-24);}
+      if(tot>D-4){g.fillStyle='#FFC21A';g.font='800 26px Poppins,Arial,sans-serif';g.fillText('Full video on the channel '+handle,W/2,H-24);}
       g.textAlign='left';
-      $('shBar').style.display='block';$('shBar').firstChild.style.width=Math.min(100,el/D*100)+'%';S('Creating… '+Math.round(el)+' of '+Math.round(D)+' s (keep this page open)');
+      $('shBar').style.display='block';$('shBar').firstChild.style.width=Math.min(100,tot/D*100)+'%';S('Creating… '+Math.round(tot)+' of '+Math.round(D)+' s, part '+(cur+1)+' of '+segs.length+' (keep this page open)');
       raf=requestAnimationFrame(draw);};
-    rv.muted=false;rv.volume=1;mr.start(500);await rv.play();if(useVid){vis.currentTime=0;vis.play().catch(()=>{});}draw();
-    await new Promise(r=>{const iv=setInterval(()=>{if(rv.ended||rv.currentTime>=en-0.05||rv.currentTime>=(rv.duration||1e9)-0.25){clearInterval(iv);r();}},100);});
-    running=false;cancelAnimationFrame(raf);rv.pause();vis.pause();try{mr.requestData();}catch(e){}mr.stop();await Promise.race([done,new Promise(r=>setTimeout(r,15000))]);if(wake)try{wake.release();}catch(e){}
+    rv.muted=false;rv.volume=1;mr.start(500);draw();
+    for(cur=0;cur<segs.length;cur++){const sg=segs[cur];
+      if(cur>0){rv.pause();await seek(sg.st);}
+      if(!SD[sg.i].ok){vis.currentTime=starts[sg.i];vis.play().catch(()=>{});}
+      await rv.play();
+      await new Promise(r=>{const iv=setInterval(()=>{if(rv.ended||rv.currentTime>=sg.en-0.05||rv.currentTime>=(rv.duration||1e9)-0.25){clearInterval(iv);r();}},100);});
+      rv.pause();base+=sg.d;}
+    running=false;cancelAnimationFrame(raf);vis.pause();try{mr.requestData();}catch(e){}mr.stop();await Promise.race([done,new Promise(r=>setTimeout(r,15000))]);if(wake)try{wake.release();}catch(e){}
     try{src.disconnect(dst);}catch(e){}
     const type=mr.mimeType||mime||'video/mp4',blob=new Blob(chunks,{type}),ext=/mp4/.test(type)?'mp4':'webm',url=URL.createObjectURL(blob);shortBlob=blob;
     cv.style.display='none';$('shBar').style.display='none';S('<span class="ok">Short ready. '+(blob.size/1048576).toFixed(1)+' MB, '+Math.round(D)+' s'+(D>60?' (over 60 s: it will be a normal video, not a Short, in the Shorts shelf)':'')+'</span>');
-    $('shOut').innerHTML='<video controls playsinline src="'+url+'" style="max-height:60vh"></video><a class="btn dl" href="'+url+'" download="trade-with-bk-short-'+ep.j.asOf+'-'+(i+1)+'.'+ext+'">Save the Short</a>';
-    $('shT').value=(sc.heading.charAt(0)+sc.heading.slice(1).toLowerCase()+' | Trade With BK #Shorts').slice(0,100);$('shUpBox').style.display='block';
+    $('shOut').innerHTML='<video controls playsinline src="'+url+'" style="max-height:60vh"></video><a class="btn dl" href="'+url+'" download="trade-with-bk-short-'+ep.j.asOf+'.'+ext+'">Save the Short</a>';
+    const f0=scenes[segs[0].i].heading;$('shT').value=((segs.length===1?f0.charAt(0)+f0.slice(1).toLowerCase():'Market recap')+' | Trade With BK #Shorts').slice(0,100);$('shUpBox').style.display='block';
   }catch(e){S('<span class="err">'+(e&&e.message?e.message:e)+'</span>');$('shCv').style.display='none';}
   btn.disabled=false;
 };

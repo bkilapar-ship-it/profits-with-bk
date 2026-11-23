@@ -543,6 +543,25 @@ function studioBgHtml(ep, dir) {
     </body></html>`;
 }
 
+
+/** A thumbnail for ONE scene, with no photo: brand, big headline, and the scene's own visual as a framed card. */
+function sceneThumbHtml(ep, i, dir, stillFile) {
+  const sc = ep.scenes[i], raw = String(sc.heading || '').trim().toUpperCase(), words = raw.split(/\s+/);
+  const last = words.length > 1 ? words.pop() : '', first = words.join(' ');
+  const len = raw.length, fs0 = len <= 12 ? 128 : len <= 20 ? 100 : len <= 30 ? 80 : 64;
+  const kick = ep.mode === 'weekly' ? 'WEEKLY REVIEW' : ep.mode === 'bottom' ? 'MARKET BOTTOMS' : ep.mode === 'welcome' ? 'START HERE' : 'S&P 500 DIP SIGNALS';
+  const img = stillFile ? `<div class="abs" style="left:610px;top:150px;width:630px;height:354px;transform:rotate(-2.5deg);border-radius:18px;overflow:hidden;border:4px solid #26D0FF;box-shadow:0 0 50px rgba(38,208,255,.45),0 18px 40px rgba(0,0,0,.6)"><img src="${stillFile}" style="width:100%;height:100%;object-fit:cover"></div>` : '';
+  return `<!doctype html><html><head><meta charset="utf-8"><style>${fontCss(dir)}${CSS.replace(/html,body\{width:1920px;height:1080px/, 'html,body{width:1280px;height:720px')}</style></head><body>
+    ${bgCandles(1280, 720, 11 + i)}
+    <div class="abs" style="inset:0;background:linear-gradient(90deg,rgba(0,0,0,.55) 0%,rgba(0,0,0,.2) 55%,transparent 75%)"></div>
+    <div class="abs" style="left:56px;top:40px;display:flex;align-items:center;gap:14px">${logoSvg(60, { id: 'sth' })}<span style="font-weight:800;letter-spacing:.14em;font-size:24px">TRADE WITH BK</span></div>
+    <div class="abs" style="left:56px;top:136px"><div class="kick" style="font-size:26px;color:var(--amb);text-shadow:0 0 18px rgba(255,194,26,.6)">${esc(kick)}</div></div>
+    <div class="abs" style="left:56px;top:188px;width:560px"><div class="h1" style="font-size:${fs0}px;line-height:1.02">${esc(first)}${last ? ` <span style="color:var(--acc)">${esc(last)}</span>` : ''}</div></div>
+    ${img}
+    <div class="abs" style="left:56px;bottom:34px"><span class="chip" style="font-size:20px;padding:6px 16px;opacity:.85">EDUCATIONAL ONLY · NOT FINANCIAL ADVICE</span></div>
+    </body></html>`;
+}
+
 async function renderBrandAssets(ep, outDir, { chromium }) {
   fs.mkdirSync(outDir, { recursive: true });
   const work = fs.mkdtempSync(path.join(outDir, '_brand')), browser = await chromium.launch();
@@ -552,6 +571,15 @@ async function renderBrandAssets(ep, outDir, { chromium }) {
     await shot(thumbHtml(ep, work, true), 1280, 720, 'thumbnail');
     await shot(thumbHtml(ep, work, false), 1280, 720, 'thumbnail-bg');
     await shot(studioBgHtml(ep, work), 1920, 1080, 'studio-bg');
+    // one photo-free thumbnail per scene (thumbs/scene-N.png), built from that scene's still
+    const td = path.join(outDir, 'thumbs'); fs.mkdirSync(td, { recursive: true });
+    for (let i = 0; i < ep.scenes.length; i++) {
+      const stl = path.join(outDir, 'stills', `scene-${i}.jpg`); let rel = '';
+      if (fs.existsSync(stl)) { fs.copyFileSync(stl, path.join(work, `still-${i}.jpg`)); rel = `still-${i}.jpg`; }
+      const f = path.join(work, `sceneth-${i}.html`); fs.writeFileSync(f, sceneThumbHtml(ep, i, work, rel));
+      await page.setViewportSize({ width: 1280, height: 720 }); await page.goto('file://' + f); await page.evaluate(() => document.fonts.ready);
+      await page.screenshot({ path: path.join(td, `scene-${i}.png`) });
+    }
   } finally { await browser.close(); fs.rmSync(work, { recursive: true, force: true }); }
 }
 
