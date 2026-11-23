@@ -257,6 +257,16 @@ function buildEpisodeInner({ mode, setups, config }) {
   add('market', 'market', "TODAY'S MARKET", mkt.join(' '), { market: m });
   if (heads.length) add('news', 'bullets', 'WHAT MOVED THE MARKET', `So what was going on behind the scenes? ${heads.map(h => h.replace(/[.]$/, '') + '.').join(' ')}`, { kick: 'WHAT WAS BEHIND IT', title: 'What moved the market', items: heads });
 
+  // 1b) when the market has been hit: is this the bottom? the six-sign checklist from the market-bottom video, applied to today's close
+  { const A = setups.__bottom, cur = A && A.cur, dd = A && A.now ? A.now.dd : 0;
+    if (cur && dd <= -0.05 && cur.date === asOf) {
+      const labs = BOTTOM_LABS, meas = cur.items.filter(x => x.ok !== null), nOk = meas.filter(x => x.ok).length, sp = ['One', 'Two', 'Three', 'Four', 'Five', 'Six'];
+      const line = (l, i) => `${sp[i]}: ${l.charAt(0).toLowerCase() + l.slice(1).replace('(VIX)', 'V I X')}. ${cur.items[i].ok === null ? (i === 2 ? "I can't measure this one from here, so look it up yourself." : "No big move to judge today, so watch the headlines.") : cur.items[i].ok ? 'Tick.' : 'Not yet.'}`;
+      add('bottomcheck', 'compare', 'IS THIS THE BOTTOM? THE CHECKLIST, UPDATED',
+        `Now, a question I keep getting: is this the bottom? Nobody can call it exactly, but I have a six-sign checklist from my market-bottom video, so let's hold today's close up against it. The S&P 500 is ${Math.abs(dd * 100).toFixed(0)} percent below its recent high. ${labs.map(line).join(' ')} That's ${nOk} of the ${meas.length} boxes I can measure ticked. ${news && news.highlight ? `Today's jump came on one big headline: ${String(news.highlight).replace(/[.]$/, '')}. The real test is whether it holds over the next few days. ` : ''}One day never makes a bottom, so treat this as a snapshot, not a prediction.`,
+        { kick: `IS THIS THE BOTTOM? ${fdateShort(cur.date).toUpperCase()}`, title: 'The bottom checklist, updated', rows: labs.map((l, i) => ({ label: l, ok: cur.items[i].ok, note: cur.items[i].note })), summary: `${nOk} of ${meas.length} measurable boxes ticked` });
+    } }
+
   // 2) scorecard of earlier picks
   const tracked = (setups.dip || []).filter(x => x.sp500 && x.sessionsAgo >= 1 && x.sessionsAgo <= 8 && x.track && ['target', 'stop', 'closed'].includes(x.track.state));
   if (tracked.length) {
@@ -308,6 +318,8 @@ function dailyPick(x, i, wd, nx) {
 }
 
 
+const BOTTOM_LABS = ['Down 10–20% or more from the high', 'A panic day: heavy volume, then calm', 'Fear gauge (VIX) peaks and starts to fall', 'No new lows: a higher low holds', 'Price back above its 20-day average', 'Bad news ignored, good news holds into the close'];
+const fdateShort = t => require('./bottom').fdate(t);
 function buildBottom({ setups, config }) {
   const cfg = config, scenes = [], asOf = setups.asOf, ch = cfg.channelName, A = setups.__bottom || null, m = setups.market || {};
   const add = (id, type, heading, narration, data = {}) => scenes.push({ id, type, heading, narration, data, dur: Math.max(6, Math.round((words(narration) / cfg.speakingWordsPerSecond + 1.5) * 10) / 10) });
@@ -397,10 +409,10 @@ function buildBottom({ setups, config }) {
     `Here's a real example from last week. On November 17, Nvidia said it expected sales well above what Wall Street was forecasting. The shares jumped nearly 5 percent after the close. But, according to Reuters, the rally soon wavered, because investors were worried about who will be the next CEO. That's great news that did not hold. It doesn't tell us where the bottom is. It tells us the market isn't ready to look past its worries yet. And the opposite is what you watch for: bad headlines that no longer push prices down.${hl ? ` And here's the twist: on ${fdate(hl.asOf)}, ${String(hl.headline).replace(/[.]$/, '')}. Now the same test applies: does that jump hold into the close, or fade?` : ''}`,
     { kick: 'REAL EXAMPLE, 17 NOV 2026', title: 'Nvidia: good news that did not hold', items: ['Nvidia forecast sales well above Wall Street estimates', 'Shares jumped nearly 5% after the close', 'The rally soon wavered: investors worried about who will be the next CEO', 'Good news that fades says the market is not ready yet'].concat(hl ? [`Update, ${fdate(hl.asOf)}: ${hl.headline}. Same test: does it hold into the close?`] : []), note: 'Source: Reuters analysis, 20 Nov 2026. An example of the news test, not a prediction.' });
 
-  const labs = ['Down 10–20% or more from the high', 'A panic day: heavy volume, then calm', 'Fear gauge (VIX) peaks and starts to fall', 'No new lows: a higher low holds', 'Price back above its 20-day average', 'Bad news ignored, good news holds into the close'];
+  const labs = BOTTOM_LABS;
   const cur = A && A.cur ? A.cur : null;
   if (cur) {
-    const meas = cur.items.slice(0, 5).filter(x => x.ok !== null), nOk = meas.filter(x => x.ok).length, asd = fdate(cur.date);
+    const meas = cur.items.filter(x => x.ok !== null), nOk = meas.filter(x => x.ok).length, asd = fdate(cur.date);
     const sp = ['One', 'Two', 'Three', 'Four', 'Five', 'Six'];
     const verdict = x => (x.ok === true ? 'ticked' : x.ok === false ? 'not yet' : 'for you to judge');
     add('checklist', 'compare', 'THE BOTTOM CHECKLIST: NOW VS THE CHECKLIST',

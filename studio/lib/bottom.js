@@ -96,8 +96,11 @@ function current(spy, vix, { c, n, dates, s20, dd }) {
   // 5. back above the 20-day average, 3 closes running
   const up20 = s20[last] && [0, 1, 2].every(k => s20[last - k] && c[last - k] > s20[last - k]);
   out.push({ ok: !!up20, note: up20 ? 'above it three closes running' : 'still below or just crossing' });
-  // 6. news test: cannot be measured from prices
-  out.push({ ok: null, note: 'you judge it from today\'s headlines' });
+  // 6. the news test, from prices alone: did a big move hold into the close? (a proxy: it cannot read the headlines)
+  const lb = spy[last], chg = last > 0 ? c[last] / c[last - 1] - 1 : 0, rng = lb.h - lb.l, loc = rng > 0 ? (lb.c - lb.l) / rng : 0.5;
+  if (chg >= 0.01) out.push({ ok: loc >= 0.7, note: `up ${(chg * 100).toFixed(1)}%, ${loc >= 0.7 ? 'and it held into the close' : 'but it faded by the close'}` });
+  else if (chg <= -0.01) out.push({ ok: false, note: `down ${(Math.abs(chg) * 100).toFixed(1)}%: bad news still pushing it down` });
+  else out.push({ ok: null, note: 'no big move to judge. Watch the headlines' });
   return { items: out, date: dates[last] };
 }
 

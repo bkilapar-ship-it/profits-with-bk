@@ -42,7 +42,7 @@ async function main() {
   try {
     bars = barsFile ? await loadJson(barsFile) : (arg('no-video', false) ? {} : await fetchBars(['SPY'], { keyId: process.env.ALPACA_KEY_ID, secret: process.env.ALPACA_SECRET_KEY }));
   } catch (e) { console.log('Note: could not load S&P 500 history early:', e.message); }
-  if (mode === 'bottom') { // long S&P 500 history (and the VIX) for the market-bottom episode
+  if (mode === 'bottom' || mode === 'daily') { // long S&P 500 history (and the VIX): the market-bottom episode, and the daily video's 'is this the bottom?' check
     try {
       const hf = arg('history', null), env = { keyId: process.env.ALPACA_KEY_ID, secret: process.env.ALPACA_SECRET_KEY };
       const long = hf ? (await loadJson(hf)).SPY : (await fetchBars(['SPY'], { ...env, days: 3800 })).SPY;
