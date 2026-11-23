@@ -9,8 +9,8 @@ const toks = t => norm(t).split(/\s+/).filter(w => w && !STOP.has(w) && !/^(19|2
 const wt = t => (/^\d+$/.test(t) ? 2 : 1);
 const sentences = t => String(t || '').replace(/\s+/g, ' ').trim().split(/(?<=[.!?])\s+(?=[A-Z0-9'"“$])/).filter(Boolean);
 
-/* the visual should be on screen a moment BEFORE it is spoken, in case reading lags: about 1.5 seconds of speech (4 words at 150 wpm) */
-const LEAD = 4;
+/* the visual should be on screen a moment BEFORE it is spoken, in case reading lags: set to 0: visuals appear as their sentence starts. Raise to show them earlier (4 words is about 1.5 s at 150 wpm) */
+const LEAD = 0;
 
 function cues(narration, beatTexts) {
   const B = beatTexts.length, ss = sentences(narration);
