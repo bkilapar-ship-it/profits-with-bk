@@ -44,7 +44,7 @@ function statsText(cfg) {
 }
 
 function outroText(cfg) {
-  return `That is today's screen. ${cfg.disclaimer} If this was useful, subscribe to ${cfg.channelName} for the next one.`;
+  return `That is today's screen. ${cfg.disclaimer} If this was useful, hit like, subscribe to ${cfg.channelName}, and tap the bell for the next one.`;
 }
 
 
@@ -197,7 +197,7 @@ function buildWelcome({ setups, config, news }) {
     ['A new video every weekday after the close', 'Friday: weekly review and what to watch', 'Reasons, charts and levels every time', 'Honest numbers: losses happen and can cluster', 'Not advice: do your own research, small size, no leverage'],
     { kick: 'SETTING EXPECTATIONS', title: 'What to expect', items: ['A video every weekday after the close', 'A weekly review and watch list on Fridays', 'Reasons, charts and levels every time', 'Honest numbers: losses happen, and they can cluster', 'Education only. Never leverage.'] });
 
-  add('outro', 'outro', 'THANKS FOR WATCHING', `Thanks for watching. ${cfg.disclaimer} Subscribe to ${ch}, and see you after the next close.`, ['Thanks for watching', 'Subscribe so you catch the next one', 'See you after the next close'], { disclaimer: cfg.disclaimer });
+  add('outro', 'outro', 'THANKS FOR WATCHING', `Thanks for watching. ${cfg.disclaimer} Hit like, subscribe to ${ch}, and tap the bell. See you after the next close.`, ['Thanks for watching', 'Subscribe so you catch the next one', 'See you after the next close'], { disclaimer: cfg.disclaimer });
 
   return { mode: 'welcome', title: ((setups.market && setups.market.chg5d <= -3 && top.length) ? `${top.length} S&P 500 Survivors: 4% Swing Trade Signals for ${nxd}` : `S&P 500 Dip Signals for ${nxd}: ${top.length || ''} Swing Trade Picks`).replace('  ', ' '), nxd, date: dayShort(asOf), asOf, scenes, tickers: top.map(x => x.ticker).slice(0, 3), cfg, news };
 }
@@ -305,7 +305,7 @@ function buildEpisodeInner({ mode, setups, config }) {
       `Last thing, what's coming up. ${ev.items.map(t => t.replace(/[.]$/, '') + '.').join(' ')} Big scheduled events can move the whole market, so it's good to know about them before you trade.`,
       { kick: `COMING UP: ${nxd.toUpperCase()}`, title: 'On the calendar', items: ev.items.slice(0, 5) });
   }
-  add('outro', 'outro', 'THANKS FOR WATCHING', `${n ? `And that's it for tonight! ${n} stock${n === 1 ? '' : 's'} on the list for ${nx}, with the same simple plan for each. ` : ''}${cfg.disclaimer} If this was useful, hit subscribe to ${ch}, and I'll see you after the next close. Take care!`, { disclaimer: cfg.disclaimer });
+  add('outro', 'outro', 'THANKS FOR WATCHING', `${n ? `And that's it for tonight! ${n} stock${n === 1 ? '' : 's'} on the list for ${nx}, with the same simple plan for each. ` : ''}${cfg.disclaimer} If this was useful, hit like, subscribe to ${ch}, and tap the bell. I'll see you after the next close. Take care!`, { disclaimer: cfg.disclaimer });
   return { mode, title, date: dayShort(asOf), asOf, nxd, scenes, tickers: featured.map(x => x.ticker), cfg, calSource: ev.source };
 }
 
@@ -428,7 +428,7 @@ function buildBottom({ setups, config }) {
     `Now, how to stay safe while you wait for the clues. Never go all in at once. If you buy, build the position in small steps. Never use borrowed money. Decide where you'll get out before you buy, not after. And if you're wrong, get out, don't just keep buying more. This is also why my daily screen doesn't try to call the bottom of the whole market. It looks for strong stocks that fell hard, with a 4 percent target and a safety exit, and that's it.`,
     { kick: 'SURVIVE FIRST', title: 'How to stay safe', items: ['Never go all in: build in small steps', 'Never use borrowed money', 'Decide your exit before you buy', 'Wrong? Get out. Do not just buy more'] });
 
-  add('outro', 'outro', 'THANKS FOR WATCHING', `And that's it! Six clues, no certainty, and a lot of patience. ${cfg.disclaimer} If this helped, hit subscribe to ${ch}, and tell me in the comments which of these six signs you watch. See you in the next one. Take care!`, { disclaimer: cfg.disclaimer });
+  add('outro', 'outro', 'THANKS FOR WATCHING', `And that's it! Six clues, no certainty, and a lot of patience. ${cfg.disclaimer} If this helped, hit like, subscribe to ${ch}, tap the bell, and tell me in the comments which of these six signs you watch. See you in the next one. Take care!`, { disclaimer: cfg.disclaimer });
   return { mode: 'bottom', title, date: dayShort(asOf), asOf, scenes, tickers: [], cfg, sources: ['Nvidia example: Reuters analysis (via The Star), 20 Nov 2026: https://www.thestar.com.my/business/business-news/2026/11/20/nvidias-numbers-impress-but-investors-fret-over-ceo-succession'] };
 }
 

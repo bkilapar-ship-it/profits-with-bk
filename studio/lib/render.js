@@ -550,6 +550,8 @@ function sceneThumbHtml(ep, i, dir, stillFile) {
   const last = words.length > 1 ? words.pop() : '', first = words.join(' ');
   const len = raw.length, fs0 = len <= 12 ? 128 : len <= 20 ? 100 : len <= 30 ? 80 : 64;
   const kick = ep.mode === 'weekly' ? 'WEEKLY REVIEW' : ep.mode === 'bottom' ? 'MARKET BOTTOMS' : ep.mode === 'welcome' ? 'START HERE' : 'S&P 500 DIP SIGNALS';
+  const st = sc.type === 'setup' && sc.data && sc.data.setup, nm = st ? (NAMES_R[st.ticker] || '') : '';
+  const chips = st ? `<div class="abs" style="left:56px;top:${fs0 >= 100 ? 330 : 300}px;display:flex;flex-direction:column;gap:12px;align-items:flex-start">${nm ? `<div style="font-weight:700;font-size:38px;color:#C9D6EE">${esc(nm)}</div>` : ''}${typeof st.chg5d === 'number' ? `<span class="chip r" style="font-size:30px;padding:8px 20px">${st.chg5d < 0 ? '−' : '+'}${Math.abs(st.chg5d).toFixed(1)}% IN 5 DAYS</span>` : ''}${typeof st.vs200 === 'number' ? `<span class="chip g" style="font-size:26px;padding:6px 18px">${st.vs200 >= 0 ? '+' : '−'}${Math.abs(st.vs200).toFixed(1)}% vs 200-DAY AVERAGE</span>` : ''}</div>` : '';
   const img = stillFile ? `<div class="abs" style="left:610px;top:150px;width:630px;height:354px;transform:rotate(-2.5deg);border-radius:18px;overflow:hidden;border:4px solid #26D0FF;box-shadow:0 0 50px rgba(38,208,255,.45),0 18px 40px rgba(0,0,0,.6)"><img src="${stillFile}" style="width:100%;height:100%;object-fit:cover"></div>` : '';
   return `<!doctype html><html><head><meta charset="utf-8"><style>${fontCss(dir)}${CSS.replace(/html,body\{width:1920px;height:1080px/, 'html,body{width:1280px;height:720px')}</style></head><body>
     ${bgCandles(1280, 720, 11 + i)}
@@ -557,7 +559,7 @@ function sceneThumbHtml(ep, i, dir, stillFile) {
     <div class="abs" style="left:56px;top:40px;display:flex;align-items:center;gap:14px">${logoSvg(60, { id: 'sth' })}<span style="font-weight:800;letter-spacing:.14em;font-size:24px">TRADE WITH BK</span></div>
     <div class="abs" style="left:56px;top:136px"><div class="kick" style="font-size:26px;color:var(--amb);text-shadow:0 0 18px rgba(255,194,26,.6)">${esc(kick)}</div></div>
     <div class="abs" style="left:56px;top:188px;width:560px"><div class="h1" style="font-size:${fs0}px;line-height:1.02">${esc(first)}${last ? ` <span style="color:var(--acc)">${esc(last)}</span>` : ''}</div></div>
-    ${img}
+    ${chips}${img}
     <div class="abs" style="left:56px;bottom:34px"><span class="chip" style="font-size:20px;padding:6px 16px;opacity:.85">EDUCATIONAL ONLY · NOT FINANCIAL ADVICE</span></div>
     </body></html>`;
 }

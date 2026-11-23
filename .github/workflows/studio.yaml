@@ -83,7 +83,9 @@ jobs:
           cp studio-out/$m/{visuals.mp4,thumbnail.png,thumbnail-bg.png,studio-bg.png,script.txt,metadata.txt,teleprompter.html,meta.json,scenes.json} "/tmp/pub/$m/"
           [ -d studio-out/$m/stills ] && cp -r studio-out/$m/stills "/tmp/pub/$m/stills"
           [ -d studio-out/$m/frames ] && cp -r studio-out/$m/frames "/tmp/pub/$m/frames"
+          [ -d studio-out/$m/thumbs ] && cp -r studio-out/$m/thumbs "/tmp/pub/$m/thumbs"
           cp studio/combine.html /tmp/pub/combine.html
+          cp studio/popover.js /tmp/pub/popover.js
           node studio/publish-index.js /tmp/pub
           cd /tmp/pub
           rm -rf .git; git init -q -b studio-latest

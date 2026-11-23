@@ -8,7 +8,7 @@ const { FRAME_N } = require('./render');
 function teleprompterHtml(ep) {
   const total = ep.scenes.reduce((s, x) => s + x.dur, 0);
   const blocks = ep.scenes.map((s, i) => `<section class="blk" data-id="${esc(s.id)}" data-i="${i}"><img class="thumb" src="stills/scene-${i}.jpg" alt="" loading="lazy" onerror="this.style.display='none'"><div class="rvc"><button data-a="up">▲ Up</button><button data-a="down">▼ Down</button><button data-a="skip" class="skipbtn">Skip this scene</button></div><div class="cue"></div><ul class="pts">${pointsOf(s).map(x => `<li>${esc(x)}</li>`).join('')}</ul><p class="full">${esc(s.narration)}</p></section>`).join('');
-  let acc = 0; const heads = JSON.stringify(ep.scenes.map(s => { const o = { id: s.id, h: s.heading, d: Math.round(s.dur), st: acc, du: s.dur }; acc += s.dur; return o; }));
+  let acc = 0; const heads = JSON.stringify(ep.scenes.map(s => { const o = { id: s.id, ty: s.type, h: s.heading, d: Math.round(s.dur), st: acc, du: s.dur }; acc += s.dur; return o; }));
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Teleprompter: ${esc(ep.title)}</title>
 <style>
 :root{color-scheme:dark;--bar:128px}*{box-sizing:border-box}html,body{margin:0;height:100%;background:#05080F;color:#F2F6FF;font-family:-apple-system,BlinkMacSystemFont,'Inter',system-ui,sans-serif;-webkit-text-size-adjust:100%}
@@ -62,6 +62,7 @@ label{font-size:11px;color:#8FA3C7;display:flex;flex-direction:column;gap:4px;fo
   <div id="rvbar"><button id="rvdone" class="go">▶ Done: back to the teleprompter</button><button id="rvreset">Reset</button></div>
   <div id="set"><label>SPEED <b id="wpmv">150</b> words/min<input id="spd" type="range" min="50" max="200" step="5" value="150"></label><label>TEXT SIZE<input id="fs" type="range" min="20" max="60" value="26"></label><label>LIVE VIDEO<select id="lv"><option value="side">Combine live: side by side</option><option value="pip">Combine live: face in a corner</option><option value="off">Camera only (combine later)</option></select></label><label>BACKUP COPY<select id="lb"><option value="off">No backup (default)</option><option value="on">Also save a plain camera file</option></select></label><label>QUALITY<select id="lq"><option value="720">720p</option><option value="1080">1080p</option></select></label></div>
 </div>
+<script src="../popover.js"></script>
 <script>
 const MD=${JSON.stringify(metaParts(ep)).replace(/</g, '\\u003c')},HEADS=${heads},KEY='${ep.mode}-${ep.asOf}-${sigOf(ep.scenes)}';
 const $=id=>document.getElementById(id);let rt={},lastMark=0;let y=0,run=false,last=0,stream=null,mr=null,chunks=[],t0=0,mime='';
@@ -150,7 +151,8 @@ const FN=${FRAME_N},ANIMMS=600;let lvImgs=[],lvB={},lvIdx=-1,lvBs=-1,lvAnimK=-1,
 function frLoad(i,k){if(i<0||i>=HEADS.length||k<0||k>(lvB[i]||0))return;lvFr[i]=lvFr[i]||{};if(lvFr[i][k])return;const a=new Array(FN).fill(null);lvFr[i][k]=a;const im=new Image();im.onload=()=>{a[FN-1]=im;if(window.createImageBitmap)createImageBitmap(im).then(bm=>{a[FN-1]=bm;}).catch(()=>{});};im.src='frames/s'+i+'/'+k+'-'+(FN-1)+'.jpg';}
 function frDrop(i,below){const o=lvFr[i];if(!o)return;Object.keys(o).forEach(k=>{if(+k<below)delete o[k];});}
 function frOk(a){return !!(a&&a[FN-1]);}
-function showScene(id){liveId=id;const i=HEADS.findIndex(x=>x.id===id);if(i<0||!lvImgs[i])return;lvPrevScene=lvLast;lvSceneT=performance.now();lvIdx=i;lvBase=null;lvBs=-1;lvAnimK=0;lvAnimT=lvSceneT;lvTgt=0;Object.keys(lvFr).forEach(k=>{if(+k!==i)delete lvFr[k];});frLoad(i,0);frLoad(i,1);}
+let popT0=0;function popLive(ctx,x,y,w,h){if(popT0&&window.bkPop)bkPop(ctx,x,y,w,h,(performance.now()-popT0)/1000);}
+function showScene(id){popT0=0;liveId=id;const i=HEADS.findIndex(x=>x.id===id);if(i<0||!lvImgs[i])return;lvPrevScene=lvLast;lvSceneT=performance.now();lvIdx=i;lvBase=null;lvBs=-1;lvAnimK=0;lvAnimT=lvSceneT;lvTgt=0;Object.keys(lvFr).forEach(k=>{if(+k!==i)delete lvFr[k];});frLoad(i,0);frLoad(i,1);}
 function drawVis(ctx,x,y,w,h){const now=performance.now(),i=lvIdx;if(i<0){return;}
   const B=lvB[i];
   if(B===undefined){const k=Math.min(1,(now-lvSceneT)/300);if(lvPrevScene&&k<1){ctx.drawImage(lvPrevScene,x,y,w,h);ctx.globalAlpha=k;ctx.drawImage(lvImgs[i],x,y,w,h);ctx.globalAlpha=1;}else ctx.drawImage(lvImgs[i],x,y,w,h);lvLast=lvImgs[i];return;}
@@ -167,7 +169,8 @@ function drawVis(ctx,x,y,w,h){const now=performance.now(),i=lvIdx;if(i<0){return
 function beatThr(text,B){const t=String(text||'').replace(/\s+/g,' ').trim();if(!t||B<1)return Array.from({length:B},(_,k)=>(k+1)/(B+1));
   const ss=t.split(/(?<=[.!?])\s+(?=[A-Z0-9'"“$])/).filter(Boolean),w=ss.map(x=>x.split(' ').length),tot=w.reduce((a,b)=>a+b,0),st=[];let c=0;w.forEach(x=>{st.push(c/tot);c+=x;});
   const cu=[];ss.forEach((x,j)=>{if(/^(One|Two|Three|Four|Five|Six|Seven|Eight):/.test(x))cu.push(st[j]);});if(cu.length&&cu.length===B)return cu.map(x=>Math.min(0.97,x));const S=ss.length;return Array.from({length:B},(_,k)=>{const u=(k+1)*S/(B+1),j=Math.min(S-1,Math.floor(u));return Math.min(0.97,st[j]+(u-j)*(w[j]/tot));});}
-function setTarget(cur,v,mid){if(!live||lvIdx<0)return;const b=v[cur];if(!b||b.dataset.id!==liveId)return;const r=b.getBoundingClientRect(),f=Math.max(0,Math.min(1,(mid-r.top)/Math.max(1,r.height))),B=lvB[lvIdx]||0;const fe=b.querySelector('p.full'),txt=fe?fe.textContent:b.textContent;const cc=lvCue&&lvCue[lvIdx],th=(cc&&cc.length===B)?cc:beatThr(txt,B);let t=0;th.forEach(x=>{if(f>=x)t++;});t=Math.min(B,t);if(t>lvTgt)lvTgt=t;}
+function setTarget(cur,v,mid){if(!live||lvIdx<0)return;const b=v[cur];if(!b||b.dataset.id!==liveId)return;const r=b.getBoundingClientRect(),f=Math.max(0,Math.min(1,(mid-r.top)/Math.max(1,r.height))),B=lvB[lvIdx]||0;const fe=b.querySelector('p.full'),txt=fe?fe.textContent:b.textContent;const cc=lvCue&&lvCue[lvIdx],th=(cc&&cc.length===B)?cc:beatThr(txt,B);let t=0;th.forEach(x=>{if(f>=x)t++;});t=Math.min(B,t);if(t>lvTgt)lvTgt=t;
+  if(HEADS[lvIdx]&&HEADS[lvIdx].ty==='outro'&&window.bkPopAt&&!popT0&&f>=bkPopAt(txt))popT0=performance.now();}
 function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
 function cover(c,v,x,y,w,h){const vw=v.videoWidth,vh=v.videoHeight;if(!vw)return;const k=Math.max(w/vw,h/vh),sw=w/k,sh=h/k;c.drawImage(v,(vw-sw)/2,(vh-sh)/2,sw,sh,x,y,w,h);}
 function liveDraw(W,H2,ctx,mode){
@@ -177,13 +180,13 @@ function liveDraw(W,H2,ctx,mode){
     if(studioImg&&studioImg.complete&&studioImg.naturalWidth)ctx.drawImage(studioImg,0,0,W,H2);else{const q=ctx.createLinearGradient(0,0,W,H2);q.addColorStop(0,'#0A1426');q.addColorStop(1,'#02050A');ctx.fillStyle=q;ctx.fillRect(0,0,W,H2);}
     const m=Math.round(W*.012),vw=Math.round(W*.72),vh=Math.round(vw*9/16),vy=Math.round((H2-vh)/2),vx=W-vw-m;
     ctx.save();ctx.shadowColor='rgba(38,208,255,.35)';ctx.shadowBlur=H2*.02;rr(ctx,vx,vy,vw,vh,H2*.012);ctx.fillStyle='#000';ctx.fill();ctx.restore();
-    ctx.save();rr(ctx,vx,vy,vw,vh,H2*.012);ctx.clip();drawVis(ctx,vx,vy,vw,vh);ctx.restore();
+    ctx.save();rr(ctx,vx,vy,vw,vh,H2*.012);ctx.clip();drawVis(ctx,vx,vy,vw,vh);popLive(ctx,vx,vy,vw,vh);ctx.restore();
     const fx=m,fw=vx-m*2,fh=Math.min(Math.round(fw*1.25),vh),fy=Math.round((H2-fh)/2);
     ctx.save();ctx.shadowColor='rgba(38,208,255,.55)';ctx.shadowBlur=H2*.025;rr(ctx,fx,fy,fw,fh,H2*.02);ctx.fillStyle='#000';ctx.fill();ctx.restore();
     ctx.save();rr(ctx,fx,fy,fw,fh,H2*.02);ctx.clip();cover(ctx,cam,fx,fy,fw,fh);ctx.restore();
     ctx.strokeStyle='#26D0FF';ctx.lineWidth=Math.max(2,H2*.003);rr(ctx,fx,fy,fw,fh,H2*.02);ctx.stroke();
   }else{
-    drawVis(ctx,0,0,W,H2);
+    drawVis(ctx,0,0,W,H2);popLive(ctx,0,0,W,H2);
     const d=Math.round(H2*.30),m=Math.round(H2*.05),x=W-d-m,y=H2-d-Math.round(H2*.1);
     ctx.save();ctx.beginPath();ctx.arc(x+d/2,y+d/2,d/2,0,Math.PI*2);ctx.clip();cover(ctx,cam,x,y,d,d);ctx.restore();
     ctx.strokeStyle='#5B8CFF';ctx.lineWidth=Math.max(3,H2*.006);ctx.beginPath();ctx.arc(x+d/2,y+d/2,d/2,0,Math.PI*2);ctx.stroke();
