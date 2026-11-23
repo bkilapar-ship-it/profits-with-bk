@@ -154,8 +154,8 @@ function showScene(id){liveId=id;const i=HEADS.findIndex(x=>x.id===id);if(i<0||!
 function drawVis(ctx,x,y,w,h){const now=performance.now(),i=lvIdx;if(i<0){return;}
   const B=lvB[i];
   if(B===undefined){const k=Math.min(1,(now-lvSceneT)/300);if(lvPrevScene&&k<1){ctx.drawImage(lvPrevScene,x,y,w,h);ctx.globalAlpha=k;ctx.drawImage(lvImgs[i],x,y,w,h);ctx.globalAlpha=1;}else ctx.drawImage(lvImgs[i],x,y,w,h);lvLast=lvImgs[i];return;}
-  if(lvAnimK>=0&&(now-lvAnimT)/ANIMMS>=1){lvBs=lvAnimK;lvAnimK=-1;frDrop(i,lvBs-0);}
-  if(lvAnimK<0&&lvBs<Math.min(lvTgt,B)){if(lvTgt-lvBs>2)lvBs=lvTgt-2;lvAnimK=lvBs+1;lvAnimT=now;frLoad(i,lvAnimK+1);}
+  if(lvAnimK>=0&&(now-lvAnimT)/ANIMMS>=1){const dn=lvFr[i]&&lvFr[i][lvAnimK];if(frOk(dn))lvBase=dn[FN-1];lvBs=lvAnimK;lvAnimK=-1;frDrop(i,lvBs-0);}
+  if(lvAnimK<0&&lvBs<Math.min(lvTgt,B)){if(lvTgt-lvBs>2){lvBs=lvTgt-2;frLoad(i,lvBs);const sf=lvFr[i]&&lvFr[i][lvBs];if(frOk(sf))lvBase=sf[FN-1];}lvAnimK=lvBs+1;lvAnimT=now;frLoad(i,lvAnimK+1);}
   let img=null,img2=null,fa=0;
   if(lvAnimK>=0){const a=lvFr[i]&&lvFr[i][lvAnimK];if(frOk(a)){const q=Math.min(1,(now-lvAnimT)/ANIMMS);img=lvBase;img2=a[FN-1];fa=q*q*(3-2*q);if(q>=1)lvBase=img2;}else lvAnimT=now;}
   else{const a=lvFr[i]&&lvFr[i][lvBs];if(frOk(a))img=a[FN-1];else if(lvBs>=B)img=lvImgs[i];else img=lvBase;}
