@@ -70,7 +70,7 @@ a.btn.dl{display:block;background:#2563EB;border-color:#2563EB;margin-top:10px}
 </div>
 
 <div class="card" id="shcard"><h2>9. Make a Short</h2>
-  <p class="mut">Turns one or more scenes of your recording into a vertical 9:16 video (scenes play in order) (visual on top, your face below, captions, disclaimer). Works with an older recording too: choose the file in section 2 and set the scene marks. A Short can be up to 3 minutes; under 60 seconds works best.</p>
+  <p class="mut">Turns one or more scenes of your recording into a vertical 9:16 video (scenes play in order) (the visual in the middle on a soft background, big captions, your voice only: no face, disclaimer). Works with an older recording too: choose the file in section 2 and set the scene marks. A Short can be up to 3 minutes; under 60 seconds works best.</p>
   <div class="row"><button id="shAll" type="button">Tick all</button><button id="shNone" type="button">Clear</button></div>
   <div id="shList"></div><div id="shTot" class="mut" style="margin:8px 0"></div>
   <div class="row"><button id="shGo" class="go">Create the Short</button></div>
@@ -385,16 +385,18 @@ $('shGo').onclick=async()=>{
     const draw=()=>{if(!running)return;const sg=segs[cur],sc=scenes[sg.i],t=rv.currentTime,el=Math.max(0,Math.min(sg.d,t-sg.st)),tot=base+el,fr=Math.min(1,el/sg.d);
       g.fillStyle=bg;g.fillRect(0,0,W,H);
       const gl=g.createRadialGradient(W*.5,H*.35,10,W*.5,H*.35,W);gl.addColorStop(0,'rgba(38,208,255,.14)');gl.addColorStop(1,'rgba(38,208,255,0)');g.fillStyle=gl;g.fillRect(0,0,W,H);
-      g.textAlign='center';g.fillStyle='#fff';g.shadowColor='#26D0FF';g.shadowBlur=18;g.font='800 40px Poppins,Arial,sans-serif';g.fillText('TRADE WITH BK',W/2,70);g.shadowBlur=0;
-      g.fillStyle='#FFC21A';g.font='700 22px Poppins,Arial,sans-serif';g.fillText(sc.heading.slice(0,34),W/2,104);
-      const vx=20,vw=W-40,vh=Math.round(vw*9/16),vy=130;
-      g.save();rr(g,vx,vy,vw,vh,16);g.fillStyle='#000';g.fill();g.clip();vframe(vx,vy,vw,vh,el,sg);if(window.bkPop){if(sc.type==='outro')bkPop(g,vx,vy,vw,vh,el-bkPopAt(sc.narration)*sg.d);else if(cur===segs.length-1&&tot>D-5)bkPop(g,vx,vy,vw,vh,tot-(D-5));}g.restore();
-      const fy=vy+vh+18,fh=470;
-      g.save();g.shadowColor='rgba(38,208,255,.5)';g.shadowBlur=22;rr(g,vx,fy,vw,fh,22);g.fillStyle='#000';g.fill();g.restore();
-      g.save();rr(g,vx,fy,vw,fh,22);g.clip();if(hasFace)cover(g,rv,vx,fy,vw,fh);g.restore();g.strokeStyle='#26D0FF';g.lineWidth=3;rr(g,vx,fy,vw,fh,22);g.stroke();
+      const vx=0,vw=W,vh=Math.round(vw*9/16),vy=300;
+      /* soft zoomed copy of the visual fills the tall frame behind it */
+      g.save();try{g.filter='blur(22px)';}catch(e){}const bw=Math.round(H*16/9);g.beginPath();g.rect(0,0,W,H);g.clip();vframe((W-bw)/2,0,bw,H,el,sg);g.restore();
+      g.fillStyle='rgba(2,5,10,.80)';g.fillRect(0,0,W,H);
+      g.textAlign='center';g.fillStyle='#fff';g.shadowColor='#26D0FF';g.shadowBlur=18;g.font='800 40px Poppins,Arial,sans-serif';g.fillText('TRADE WITH BK',W/2,90);g.shadowBlur=0;
+      g.fillStyle='#FFC21A';g.font='700 24px Poppins,Arial,sans-serif';g.fillText(sc.heading.slice(0,34),W/2,134);
+      g.save();g.shadowColor='rgba(38,208,255,.45)';g.shadowBlur=26;g.fillStyle='#000';g.fillRect(vx,vy,vw,vh);g.restore();
+      g.save();g.beginPath();g.rect(vx,vy,vw,vh);g.clip();vframe(vx,vy,vw,vh,el,sg);if(window.bkPop){if(sc.type==='outro')bkPop(g,vx,vy,vw,vh,el-bkPopAt(sc.narration)*sg.d);else if(cur===segs.length-1&&tot>D-5)bkPop(g,vx,vy,vw,vh,tot-(D-5));}g.restore();
+      const fy=vy+vh,fh=60;
       let k=0;CH[cur].cs.forEach((c,j)=>{if(fr>=c)k=j;});const cap=CH[cur].c[k]||'';
-      g.font='800 46px Poppins,Arial,sans-serif';const L=shWrap(g,cap,W-80),cy=fy+fh+60;
-      L.slice(0,3).forEach((l,j)=>{const y=cy+j*56;g.lineWidth=9;g.strokeStyle='rgba(0,0,0,.85)';g.strokeText(l,W/2,y);g.fillStyle='#fff';g.fillText(l,W/2,y);});
+      g.font='800 50px Poppins,Arial,sans-serif';const L=shWrap(g,cap,W-70),cy=fy+fh+70;
+      L.slice(0,3).forEach((l,j)=>{const y=cy+j*62;g.lineWidth=9;g.strokeStyle='rgba(0,0,0,.85)';g.strokeText(l,W/2,y);g.fillStyle='#fff';g.fillText(l,W/2,y);});
       g.fillStyle='#8FA3C7';g.font='600 20px Poppins,Arial,sans-serif';g.fillText('Educational only. Not financial advice.',W/2,H-62);
       if(tot>D-4){g.fillStyle='#FFC21A';g.font='800 26px Poppins,Arial,sans-serif';g.fillText('Full video on the channel '+handle,W/2,H-24);}
       g.textAlign='left';
