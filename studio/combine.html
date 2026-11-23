@@ -57,6 +57,18 @@ a.btn.dl{display:block;background:#2563EB;border-color:#2563EB;margin-top:10px}
   <canvas id="thC" width="1280" height="720" style="display:block;width:100%;border-radius:12px;margin-top:10px;background:#000"></canvas>
   <div class="row"><button id="thSave" class="go">Save thumbnail</button></div><div id="thOut"></div></div>
 
+<div class="card" id="ytcard"><h2>8. Publish to YouTube</h2>
+  <p class="mut">Uploads the video you just created (or a file you choose) straight from this page, with the title, description, tags and thumbnail filled in. It goes up as <b>private</b> or <b>unlisted</b>; you make it public yourself in YouTube Studio after watching it.</p>
+  <div class="row"><input id="ytId" placeholder="Google OAuth client ID (one-time setup, see below)" style="width:100%;font:inherit;padding:12px;border-radius:12px;border:1px solid #2A3B61;background:#0B1328;color:#fff"></div>
+  <div class="row"><select id="ytPriv"><option value="private">Private</option><option value="unlisted">Unlisted</option></select><input id="ytF" type="file" accept="video/*"></div>
+  <div class="row"><input id="ytT" placeholder="Title" style="width:100%;font:inherit;padding:12px;border-radius:12px;border:1px solid #2A3B61;background:#0B1328;color:#fff"></div>
+  <div class="row"><textarea id="ytD" rows="8" style="width:100%;font:inherit;font-size:13px;padding:12px;border-radius:12px;border:1px solid #2A3B61;background:#0B1328;color:#fff"></textarea></div>
+  <div class="row"><button id="ytGo" class="go">Sign in with Google and upload</button></div>
+  <div id="ytBar" style="display:none"><i></i></div><div id="ytSt" class="mut" style="margin-top:8px"></div>
+  <details><summary>One-time setup (about 5 minutes)</summary><ol class="mut"><li>Open console.cloud.google.com, create a project, and enable <b>YouTube Data API v3</b>.</li><li>APIs &amp; Services, OAuth consent screen: set it to External and add your own Google account as a test user.</li><li>Credentials, Create credentials, OAuth client ID, type <b>Web application</b>. Under Authorized JavaScript origins add the address of this site (the part before /studio/).</li><li>Paste the client ID above. It is not a secret and is stored only in this browser.</li></ol><p class="mut">Until Google audits the project, YouTube keeps API uploads private. That is fine here: you switch it to public by hand.</p></details>
+</div>
+
+
 <video id="vis" playsinline muted preload="auto" style="position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none"></video>
 <video id="rv" playsinline preload="auto" style="position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none"></video>
 
@@ -72,7 +84,7 @@ async function loadEpisodes(){
   const sel=$('ep');let found=0;
   for(const m of EPS){try{const r=await fetch(m+'/scenes.json',{cache:'no-store'});if(!r.ok)continue;const j=await r.json();const o=document.createElement('option');o.value=m;o.textContent=(label[m]||m)+' · '+j.asOf;o.dataset.j=JSON.stringify(j);sel.appendChild(o);found++;}catch(e){}}
   if(!found){$('epinfo').innerHTML='<span class="err">No episode found yet. Build one first.</span>';return;}
-  sel.onchange=pick;pick();
+  sel.onchange=()=>{pick();ytFill();};pick();ytFill();
 }
 function sigOf(sc){let h=5381;const t=sc.map(x=>x.id).join('|');for(let i=0;i<t.length;i++)h=((h<<5)+h+t.charCodeAt(i))>>>0;return h.toString(36);}
 function mkey(){return ep.j.mode+'-'+ep.j.asOf+'-'+sigOf(ep.j.scenes);}
@@ -213,7 +225,7 @@ $('make').onclick=async()=>{
     $('status').textContent='Finishing the file…';
     running=false;cancelAnimationFrame(raf);vis.pause();try{mr.requestData();}catch(e){}mr.stop();await Promise.race([done,new Promise(r=>setTimeout(r,15000))]);if(wake)try{wake.release();}catch(e){}
     const type=mr.mimeType||mime||'video/mp4',blob=new Blob(chunks,{type}),ext=/mp4/.test(type)?'mp4':'webm',url=URL.createObjectURL(blob);
-    cv.style.display='none';$('bar').style.display='none';
+    lastBlob=blob;ytFill();cv.style.display='none';$('bar').style.display='none';
     $('status').innerHTML='<span class="ok">Done. '+(blob.size/1048576).toFixed(0)+' MB</span>';
     $('out').innerHTML='<video controls playsinline src="'+url+'"></video><a class="btn dl" href="'+url+'" download="trade-with-bk-'+ep.j.asOf+'.'+ext+'">Save the video</a><p class="mut">If Save does not start a download, press and hold the video above, or tap Share and choose Save Video. Check it plays well before uploading.</p>';
   }catch(e){$('status').innerHTML='<span class="err">'+(e&&e.message?e.message:e)+'</span>';}
@@ -239,4 +251,66 @@ $('thM1').onclick=()=>thSet('photo');$('thM2').onclick=()=>thSet('video');$('thM
 $('thF').onchange=()=>{const f=$('thF').files[0];if(!f)return;const im=new Image();im.onload=()=>{thSelf=im;thSet('pick');};im.src=URL.createObjectURL(f);};
 $('thSave').onclick=()=>{thDraw();$('thC').toBlob(b=>{const u=URL.createObjectURL(b);$('thOut').innerHTML='<a class="btn dl" href="'+u+'" download="trade-with-bk-thumbnail-'+(ep?ep.j.asOf:'')+'.jpg">Download thumbnail</a><p class="mut">If it does not download, press and hold the picture above and choose Save image.</p>';},'image/jpeg',.92);};
 loadEpisodes();thDraw();
+/* ---- YouTube upload (browser, Google Identity Services + resumable upload) ---- */
+let lastBlob=null,ytTok=null,ytTokExp=0;
+function ytMeta(){ // build title/description/tags from metadata.txt and the real scene marks
+  const m=ep&&ep.m;if(!m)return Promise.resolve(null);
+  return fetch(m+'/metadata.txt',{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{
+    const sec=(a,b)=>{const i=t.indexOf(a);if(i<0)return '';const j=b?t.indexOf(b,i+a.length):-1;return t.slice(i+a.length,j<0?undefined:j).trim();};
+    const title=sec('TITLE\n','\n\nDESCRIPTION');const head=sec('DESCRIPTION\n','\n\nCHAPTERS');
+    const afterCh=t.indexOf('\n\n',t.indexOf('CHAPTERS'));const tags=sec('TAGS\n',null).split('\n')[0];
+    const tail=t.slice(afterCh,t.lastIndexOf('TAGS\n')).trim();
+    return {title,head,tail,tags:tags.split(',').map(x=>x.trim()).filter(Boolean)};});
+}
+function ytChapters(){
+  if(!scenes.length||marks.length<scenes.length)return '';
+  const ts=scenes.map((s,i)=>i===0?0:marks[i]);
+  if(ts.some((x,i)=>x==null||(i>0&&x-ts[i-1]<10)))return '';
+  if(scenes.length<3)return '';
+  return scenes.map((s,i)=>{const t=Math.floor(ts[i]);return (t>=3600?String(Math.floor(t/3600))+':':'')+String(Math.floor(t%3600/60)).padStart(t>=3600?2:1,'0')+':'+String(t%60).padStart(2,'0')+' '+s.heading.charAt(0)+s.heading.slice(1).toLowerCase();}).join('\n');
+}
+async function ytFill(){
+  const md=await ytMeta();if(!md)return;
+  $('ytT').value=md.title.slice(0,100);
+  const ch=ytChapters();
+  $('ytD').value=[md.head,ch,md.tail].filter(Boolean).join('\n\n');
+  $('ytD').dataset.tags=JSON.stringify(md.tags);
+}
+try{$('ytId').value=localStorage.getItem('bkstudio-ytid')||'';}catch(e){}
+function ytSt(h){$('ytSt').innerHTML=h;}
+function ytAuth(cid){return new Promise((res,rej)=>{
+  if(ytTok&&Date.now()<ytTokExp)return res(ytTok);
+  const go=()=>{try{google.accounts.oauth2.initTokenClient({client_id:cid,scope:'https://www.googleapis.com/auth/youtube.upload',callback:r=>{if(r.error)return rej(new Error('Google sign-in: '+r.error));ytTok=r.access_token;ytTokExp=Date.now()+(r.expires_in-60)*1000;res(ytTok);}}).requestAccessToken();}catch(e){rej(e);}};
+  if(window.google&&google.accounts)return go();
+  const sc=document.createElement('script');sc.src='https://accounts.google.com/gsi/client';sc.onload=go;sc.onerror=()=>rej(new Error('Could not load Google sign-in. Check your connection or ad blocker.'));document.head.appendChild(sc);
+});}
+function ytPut(url,blob,type){return new Promise((res,rej)=>{
+  const x=new XMLHttpRequest();x.open('PUT',url);x.setRequestHeader('Content-Type',type);
+  x.upload.onprogress=e=>{if(e.lengthComputable){$('ytBar').style.display='block';$('ytBar').firstElementChild.style.width=(e.loaded/e.total*100)+'%';ytSt('Uploading '+(e.loaded/1048576).toFixed(0)+' of '+(e.total/1048576).toFixed(0)+' MB. Keep this page open.');}};
+  x.onload=()=>x.status>=200&&x.status<300?res(JSON.parse(x.responseText)):rej(new Error('YouTube said '+x.status+': '+x.responseText.slice(0,200)));
+  x.onerror=()=>rej(new Error('The upload connection dropped. Press the button again to retry.'));x.send(blob);});}
+$('ytGo').onclick=async()=>{
+  const btn=$('ytGo');btn.disabled=true;
+  try{
+    const cid=$('ytId').value.trim();if(!/\.apps\.googleusercontent\.com$/.test(cid))throw new Error('Paste your Google OAuth client ID first (see the one-time setup below).');
+    try{localStorage.setItem('bkstudio-ytid',cid);}catch(e){}
+    const f=$('ytF').files[0],blob=f||lastBlob;if(!blob)throw new Error('Create the video above first, or choose a video file.');
+    const title=$('ytT').value.trim().slice(0,100);if(!title)throw new Error('Add a title.');
+    let desc=$('ytD').value.slice(0,4900),tags=[];try{tags=JSON.parse($('ytD').dataset.tags||'[]');}catch(e){}
+    let tl=0;tags=tags.filter(t=>(tl+=t.length+1)<=450);
+    ytSt('Signing in with Google…');const tok=await ytAuth(cid);
+    const type=blob.type||'video/mp4';
+    ytSt('Starting the upload…');
+    const r=await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status',{method:'POST',headers:{Authorization:'Bearer '+tok,'Content-Type':'application/json; charset=UTF-8','X-Upload-Content-Type':type,'X-Upload-Content-Length':String(blob.size)},body:JSON.stringify({snippet:{title,description:desc,tags,categoryId:'27'},status:{privacyStatus:$('ytPriv').value,selfDeclaredMadeForKids:false}})});
+    if(!r.ok)throw new Error('YouTube refused to start the upload ('+r.status+'): '+(await r.text()).slice(0,200));
+    const loc=r.headers.get('Location');if(!loc)throw new Error('YouTube did not return an upload address.');
+    const v=await ytPut(loc,blob,type);
+    let thNote='';
+    try{const tr=await fetch(ep.m+'/thumbnail.png',{cache:'no-store'});if(tr.ok){const tb=await tr.blob();const up=await fetch('https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId='+v.id,{method:'POST',headers:{Authorization:'Bearer '+tok,'Content-Type':'image/png'},body:tb});thNote=up.ok?' Thumbnail set.':' The thumbnail was not accepted (YouTube needs a verified channel for custom thumbnails); add it in YouTube Studio.';}}catch(e){thNote=' Thumbnail not set; add it in YouTube Studio.';}
+    $('ytBar').style.display='none';
+    ytSt('<span class="ok">Uploaded as '+$('ytPriv').value+'.</span>'+thNote+' <a href="https://studio.youtube.com/video/'+v.id+'/edit" target="_blank" rel="noopener">Open it in YouTube Studio</a> to watch it, then make it public.');
+  }catch(e){ytSt('<span class="err">'+(e&&e.message?e.message:e)+'</span>');}
+  btn.disabled=false;
+};
+
 </script></body></html>
