@@ -11,6 +11,15 @@ const { loadJson, fetchBars, fetchVix } = require('./lib/data');
 const { buildEpisode, metadata, pointsOf } = require('./lib/script');
 const { prepareCharts, renderEpisode, renderStills, renderBrandAssets } = require('./lib/render');
 const { analyze } = require('./lib/bottom');
+
+/** Today's daily bar is unfinished until the US close, so it must never be read as a closing price. Drops it unless the market closed (after 16:30 Eastern). */
+function dropUnfinishedToday(arr) {
+  if (!Array.isArray(arr) || !arr.length) return arr;
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(new Date()).map(x => [x.type, x.value]));
+  const today = `${p.year}-${p.month}-${p.day}`, mins = Number(p.hour) * 60 + Number(p.minute);
+  const last = String(arr[arr.length - 1].t).slice(0, 10);
+  return last === today && mins < 16 * 60 + 30 ? arr.slice(0, -1) : arr;
+}
 const { teleprompterHtml } = require('./lib/teleprompter');
 
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > -1 ? (process.argv[i + 1] && !process.argv[i + 1].startsWith('--') ? process.argv[i + 1] : true) : d; };
@@ -39,10 +48,11 @@ async function main() {
       const long = hf ? (await loadJson(hf)).SPY : (await fetchBars(['SPY'], { ...env, days: 3800 })).SPY;
       let vix = null; const vf = arg('vix', null);
       try { vix = vf ? await loadJson(vf) : await fetchVix(); } catch (e) { console.log('Note: VIX history unavailable, the fear-gauge slide is left out:', e.message); }
-      setups.__bottom = analyze(long, vix);
-      if (!bars.SPY && long) bars.SPY = long.slice(-300);
+      setups.__bottom = analyze(dropUnfinishedToday(long), vix);
+      if (!bars.SPY && long) bars.SPY = dropUnfinishedToday(long).slice(-300);
     } catch (e) { console.log('Note: could not load long S&P 500 history, the data slides are left out:', e.message); }
   }
+  if (bars.SPY) bars.SPY = dropUnfinishedToday(bars.SPY);
   if (bars.SPY && bars.SPY.length > 21) {
     const c = bars.SPY.map(b => b.c), n = c.length - 1;
     setups.market = { ...(setups.market || {}), chg1d: (c[n] / c[n - 1] - 1) * 100, close: c[n], chg5d: (c[n] / c[n - 5] - 1) * 100, chg20d: (setups.market && typeof setups.market.chg20d === 'number') ? setups.market.chg20d : (c[n] / c[n - 20] - 1) * 100 };
