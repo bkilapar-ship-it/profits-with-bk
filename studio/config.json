@@ -1,8 +1,13 @@
 {
   "channelName": "Trade With BK",
   "handle": "@TradeWithBK",
-  "backtest": { "winRate": 65, "avgPct": 0.8, "period": "S&P 500 stocks, Oct 2016 to Nov 2026, before costs and slippage" },
+  "backtest": {
+    "winRate": 65,
+    "avgPct": 0.8,
+    "period": "S&P 500 stocks, Oct 2016 to Nov 2026, before costs and slippage"
+  },
   "disclaimer": "This video is educational. It is not financial advice or a personal recommendation, and it is not an offer to buy or sell any security. Trading involves risk, including loss of capital. Backtested results are not a guide to future performance.",
   "speakingWordsPerSecond": 2.5,
-  "maxSetups": 5
+  "maxSetups": 5,
+  "callsFrom": "2026-11-20"
 }

@@ -15,7 +15,7 @@ const sortLive = (a, b) => (a.priority - b.priority) || (b.vs200 - a.vs200);
 /** The calls the channel gave on earlier sessions (days 1-3 of their three-day window): the top maxSetups S&P 500 signals of each session. */
 function callRows(setups, cfg) {
   const by = {};
-  (setups.dip || []).filter(x => x.sp500 && x.sessionsAgo >= 1 && x.sessionsAgo <= 3).forEach(x => (by[x.sessionsAgo] = by[x.sessionsAgo] || []).push(x));
+  (setups.dip || []).filter(x => x.sp500 && x.sessionsAgo >= 1 && x.sessionsAgo <= 3 && (!cfg.callsFrom || String(x.signalDate) >= cfg.callsFrom)).forEach(x => (by[x.sessionsAgo] = by[x.sessionsAgo] || []).push(x));
   return Object.keys(by).map(Number).sort((a, b) => a - b).flatMap(k => by[k].sort(sortLive).slice(0, cfg.maxSetups).map(x => ({ ...x, day: k })));
 }
 
