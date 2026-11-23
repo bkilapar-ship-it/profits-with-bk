@@ -85,7 +85,8 @@ function current(spy, vix, { c, n, dates, s20, dd }) {
   out.push({ ok: panic > 0 && calm, note: panic < 0 ? 'no heavy-volume washout yet' : calm ? `${best.toFixed(1)}× volume on ${fdate(dates[panic])}, then calmer` : 'heavy selling, but no calm yet' });
   // 3. fear gauge peaked and falling
   let v3 = { ok: null, note: 'look it up (next slide)' };
-  if (vix && vix.length > 40) {
+  const vixToday = vix && vix.find(y => y.t === dates[last]);   // the free VIX files can lag a day: with no value for today's date this sign cannot be judged
+  if (vix && vix.length > 40 && vixToday) {
     const vs = dates.slice(a).map(d => { const x = vix.find(y => y.t === d); return x ? x.c : null; }).filter(x => x !== null);
     if (vs.length > 10) { const pk = Math.max(...vs), cur = vs[vs.length - 1], prev = vs[Math.max(0, vs.length - 6)]; v3 = { ok: cur <= pk * 0.85 && cur < prev, note: `VIX ${cur.toFixed(0)}, recent peak ${pk.toFixed(0)}` }; }
   }
