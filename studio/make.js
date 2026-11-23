@@ -8,7 +8,7 @@
 const fs = require('fs');
 const path = require('path');
 const { loadJson, fetchBars, fetchVix } = require('./lib/data');
-const { buildEpisode, metadata, pointsOf } = require('./lib/script');
+const { buildEpisode, metadata, pointsOf, callRows } = require('./lib/script');
 const { prepareCharts, renderEpisode, renderStills, renderBrandAssets } = require('./lib/render');
 const { analyze } = require('./lib/bottom');
 
@@ -64,9 +64,42 @@ async function main() {
     const hf = path.join(__dirname, 'content', `highlight-${setups.asOf}.json`);
     if (fs.existsSync(hf)) { const h = JSON.parse(fs.readFileSync(hf, 'utf8')), n0 = setups.__news && setups.__news.asOf === setups.asOf ? setups.__news : { asOf: setups.asOf, headlines: [], sources: [] };
       const have = new Set((n0.headlines || []).map(x => String(x).toLowerCase()));
-      setups.__news = { ...n0, asOf: setups.asOf, highlight: h.headline, headlines: [...(h.points || []), ...(n0.headlines || []).filter(x => !(h.points || []).some(p => String(p).toLowerCase() === String(x).toLowerCase()))], sources: [...(h.sources || []), ...(n0.sources || [])] }; }
+      setups.__news = { ...n0, asOf: setups.asOf, highlight: h.headline, hook: h.hook, thumbHead: h.thumbHead, tags: h.tags, headlines: [...(h.points || []), ...(n0.headlines || []).filter(x => !(h.points || []).some(p => String(p).toLowerCase() === String(x).toLowerCase()))], sources: [...(h.sources || []), ...(n0.sources || [])] }; }
     const ef = path.join(__dirname, 'content', 'events.json');
     if (fs.existsSync(ef)) setups.__events = JSON.parse(fs.readFileSync(ef, 'utf8')); }
+  if (mode === 'daily') { // (a) how the AI/chip names did today, (b) what happened to the calls given on earlier sessions
+    const AI = ['NVDA', 'AMD', 'AVGO', 'MU', 'SMCI', 'PLTR', 'TSM', 'ARM', 'ANET', 'LRCX', 'AMAT', 'KLAC', 'QCOM', 'INTC'];
+    const keys = { keyId: process.env.ALPACA_KEY_ID, secret: process.env.ALPACA_SECRET_KEY };
+    try {
+      const rows = callRows(setups, config), tk = [...new Set(rows.map(r => r.ticker))];
+      const ab = barsFile ? bars : await fetchBars(AI.concat(tk), keys);
+      const ch = AI.map(t => ab[t] && dropUnfinishedToday(ab[t])).filter(b => b && b.length > 2).map(b => b[b.length - 1].c / b[b.length - 2].c - 1);
+      if (ch.length >= 6) { setups.__aiDay = ch.reduce((a, b) => a + b, 0) / ch.length * 100; console.log(`AI/chip names: average ${setups.__aiDay.toFixed(2)}% today (${ch.length} names)`); }
+      const repo2 = process.env.GITHUB_REPOSITORY || 'bkilapar-ship-it/profits-with-bk', ob = {};
+      const calls = [];
+      for (const r of rows) {
+        const b = ab[r.ticker] ? dropUnfinishedToday(ab[r.ticker]).filter(x => x.t <= setups.asOf) : [];
+        const si = b.findIndex(x => x.t === r.signalDate); if (si < 0 || si + 1 >= b.length) continue;
+        const ed = b[si + 1].t; if (!(ed in ob)) { try { ob[ed] = await loadJson(`https://raw.githubusercontent.com/${repo2}/open-bars/${ed}.json`); } catch (e) { ob[ed] = null; } }
+        const rec = ob[ed] && (ob[ed].setups || ob[ed]).find && (ob[ed].setups || ob[ed]).find(x => x.ticker === r.ticker && x.strategy === 'dip');
+        const lv = r.levels || {}, cap = lv.entryLimit, openPx = rec && typeof rec.open === 'number' ? rec.open : b[si + 1].o;
+        const past = rec ? rec.openedPastCap === true : (cap != null && openPx > cap);
+        const entry = past ? null : (rec && typeof rec.simulatedFill === 'number' ? rec.simulatedFill : openPx);
+        let state = 'open', pct = null, exitIdx = null;
+        if (entry != null) {
+          for (let j = si + 1; j < b.length && j <= si + 3; j++) {
+            if (lv.stop != null && b[j].l <= lv.stop) { state = 'stop'; pct = (lv.stop / entry - 1) * 100; exitIdx = j; break; }
+            if (lv.target != null && b[j].h >= lv.target) { state = 'target'; pct = (lv.target / entry - 1) * 100; exitIdx = j; break; }
+          }
+          const last = b[b.length - 1];
+          if (state === 'open') { pct = (last.c / entry - 1) * 100; if (b.length - 1 - si >= 3) state = 'closed'; }
+        }
+        const last = b[b.length - 1];
+        calls.push({ ticker: r.ticker, signalDate: r.signalDate, day: Math.min(3, b.length - 1 - si), entry, open: openPx, close: last.c, pct: entry == null ? (last.c / openPx - 1) * 100 : pct, state });
+      }
+      if (calls.length) { setups.__calls = calls; console.log('Calls: ' + calls.map(c => `${c.ticker} ${c.entry == null ? 'skipped' : c.state + ' ' + c.pct.toFixed(1) + '%'}`).join(', ')); }
+    } catch (e) { console.log('Note: could not work out the earlier calls:', e.message); }
+  }
   if (mode === 'welcome') {
     const AI = ['NVDA', 'AMD', 'AVGO', 'MU', 'SMCI', 'PLTR', 'MSFT', 'GOOGL', 'META', 'AMZN', 'ORCL', 'TSM', 'ARM', 'ANET', 'VRT', 'DELL', 'CRWV', 'COHR', 'LRCX', 'AMAT', 'KLAC', 'INTC', 'QCOM', 'NOW', 'CEG', 'VST'];
     try {
