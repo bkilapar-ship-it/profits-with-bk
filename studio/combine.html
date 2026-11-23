@@ -25,7 +25,7 @@ a.btn.dl{display:block;background:#2563EB;border-color:#2563EB;margin-top:10px}
   <select id="ep" style="width:100%"></select><div id="epinfo" class="mut" style="margin-top:8px"></div></div>
 
 <div class="card"><h2>2. Your recording</h2>
-  <input id="rec" type="file" accept="video/*,audio/*">
+  <input id="rec" type="file" accept="video/*,audio/*,.mp4,.mov,.m4v,.webm,.m4a,.mp3,.wav">
   <div id="recinfo" class="mut" style="margin-top:8px"></div></div>
 
 <div class="card"><h2>3. Scenes in this video</h2><div class="mut">Untick a scene to leave it out, or move it up or down. These are the same choices as in the teleprompter review.</div><div id="plan" style="margin-top:8px"></div></div>
@@ -60,7 +60,7 @@ a.btn.dl{display:block;background:#2563EB;border-color:#2563EB;margin-top:10px}
 <div class="card" id="ytcard"><h2>8. Publish to YouTube</h2>
   <p class="mut">Uploads the video you just created (or a file you choose) straight from this page, with the title, description, tags and thumbnail filled in. It goes up as <b>private</b> or <b>unlisted</b>; you make it public yourself in YouTube Studio after watching it.</p>
   <div class="row"><input id="ytId" placeholder="Google OAuth client ID (one-time setup, see below)" style="width:100%;font:inherit;padding:12px;border-radius:12px;border:1px solid #2A3B61;background:#0B1328;color:#fff"></div>
-  <div class="row"><select id="ytPriv"><option value="private">Private</option><option value="unlisted">Unlisted</option></select><input id="ytF" type="file" accept="video/*"></div>
+  <div class="row"><select id="ytPriv"><option value="private">Private</option><option value="unlisted">Unlisted</option></select><input id="ytF" type="file"></div>
   <div class="row"><input id="ytT" placeholder="Title" style="width:100%;font:inherit;padding:12px;border-radius:12px;border:1px solid #2A3B61;background:#0B1328;color:#fff"></div>
   <div class="row"><textarea id="ytD" rows="8" style="width:100%;font:inherit;font-size:13px;padding:12px;border-radius:12px;border:1px solid #2A3B61;background:#0B1328;color:#fff"></textarea></div>
   <div class="row"><button id="ytGo" class="go">Sign in with Google and upload</button></div>
@@ -294,7 +294,7 @@ $('ytGo').onclick=async()=>{
   try{
     const cid=$('ytId').value.trim();if(!/\.apps\.googleusercontent\.com$/.test(cid))throw new Error('Paste your Google OAuth client ID first (see the one-time setup below).');
     try{localStorage.setItem('bkstudio-ytid',cid);}catch(e){}
-    const f=$('ytF').files[0],blob=f||lastBlob;if(!blob)throw new Error('Create the video above first, or choose a video file.');
+    const f=$('ytF').files[0],blob=f||lastBlob;if(f&&!/video|octet-stream|^$/.test(f.type||'')&&!/\.(mp4|mov|m4v|webm)$/i.test(f.name))throw new Error('That does not look like a video file (.mp4, .mov, .m4v or .webm).');if(!blob)throw new Error('Create the video above first, or choose a video file.');
     const title=$('ytT').value.trim().slice(0,100);if(!title)throw new Error('Add a title.');
     let desc=$('ytD').value.slice(0,4900),tags=[];try{tags=JSON.parse($('ytD').dataset.tags||'[]');}catch(e){}
     let tl=0;tags=tags.filter(t=>(tl+=t.length+1)<=450);
