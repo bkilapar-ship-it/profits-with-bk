@@ -68,6 +68,17 @@ a.btn.dl{display:block;background:#2563EB;border-color:#2563EB;margin-top:10px}
   <details><summary>One-time setup (about 5 minutes)</summary><ol class="mut"><li>Open console.cloud.google.com, create a project, and enable <b>YouTube Data API v3</b>.</li><li>APIs &amp; Services, OAuth consent screen: set it to External and add your own Google account as a test user.</li><li>Credentials, Create credentials, OAuth client ID, type <b>Web application</b>. Under Authorized JavaScript origins add the address of this site (the part before /studio/).</li><li>Paste the client ID above. It is not a secret and is stored only in this browser.</li></ol><p class="mut">Until Google audits the project, YouTube keeps API uploads private. That is fine here: you switch it to public by hand.</p></details>
 </div>
 
+<div class="card" id="shcard"><h2>9. Make a Short</h2>
+  <p class="mut">Turns one scene of your recording into a vertical 9:16 video (visual on top, your face below, captions, disclaimer). Works with an older recording too: choose the file in section 2 and set the scene marks. A Short can be up to 3 minutes; under 60 seconds works best.</p>
+  <div class="row"><select id="shSc" style="width:100%"></select></div>
+  <div class="row"><button id="shGo" class="go">Create the Short</button></div>
+  <p class="warn">Like the full video, it plays that part of your recording in real time. Keep the page open.</p>
+  <div id="shBar" style="display:none"><i></i></div><div id="shSt" class="mut" style="margin-top:8px"></div>
+  <canvas id="shCv" style="display:none;max-width:100%;max-height:60vh;margin:10px auto"></canvas><div id="shOut"></div>
+  <div id="shUpBox" style="display:none"><div class="row"><input id="shT" style="width:100%;font:inherit;padding:12px;border-radius:12px;border:1px solid #2A3B61;background:#0B1328;color:#fff"></div>
+  <div class="row"><select id="shPriv"><option value="private">Private</option><option value="unlisted">Unlisted</option></select><button id="shUp" class="go">Upload the Short to YouTube</button></div></div>
+</div>
+
 
 <video id="vis" playsinline muted preload="auto" style="position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none"></video>
 <video id="rv" playsinline preload="auto" style="position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none"></video>
@@ -148,7 +159,7 @@ $('make').onclick=async()=>{
   try{
     if(!window.MediaRecorder)throw new Error('This browser cannot create videos in the page. Use the CapCut route instead.');
     const vis=$('vis'),rv=$('rv');
-    const AC0=window.AudioContext||window.webkitAudioContext;const ac=new AC0();ac.resume();
+    const ac=getAC();ac.resume();
     rv.play().then(()=>rv.pause()).catch(()=>{});vis.play().then(()=>vis.pause()).catch(()=>{});   // unlock playback while still inside the tap
     $('status').textContent='Getting ready…';vis.src=await getVisuals();vis.load();
     const ready1=v=>new Promise(r=>{if(v.readyState>=2)return r();const d=()=>r();v.addEventListener('loadeddata',d,{once:true});v.addEventListener('canplay',d,{once:true});setTimeout(r,4000);});
@@ -165,7 +176,7 @@ $('make').onclick=async()=>{
     const n=scenes.length,mk=[];for(let i=0;i<n;i++)mk[i]=i===0?0:(marks[i]!=null?marks[i]:Infinity);
     let idx=-1;
     await ac.resume();
-    const src=ac.createMediaElementSource(rv),dst=ac.createMediaStreamDestination();src.connect(dst);
+    const dst=ac.createMediaStreamDestination(),src=rvSrc(ac);src.connect(dst);
     const stream=cv.captureStream(30);dst.stream.getAudioTracks().forEach(t=>stream.addTrack(t));
     const opts=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm'];const mime=opts.find(t=>MediaRecorder.isTypeSupported(t))||'';
     const mr=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:H>=1080?8e6:3.5e6,audioBitsPerSecond:128e3}:undefined);
@@ -225,7 +236,7 @@ $('make').onclick=async()=>{
     $('status').textContent='Finishing the file…';
     running=false;cancelAnimationFrame(raf);vis.pause();try{mr.requestData();}catch(e){}mr.stop();await Promise.race([done,new Promise(r=>setTimeout(r,15000))]);if(wake)try{wake.release();}catch(e){}
     const type=mr.mimeType||mime||'video/mp4',blob=new Blob(chunks,{type}),ext=/mp4/.test(type)?'mp4':'webm',url=URL.createObjectURL(blob);
-    lastBlob=blob;ytFill();cv.style.display='none';$('bar').style.display='none';
+    try{src.disconnect(dst);}catch(e){}lastBlob=blob;ytFill();cv.style.display='none';$('bar').style.display='none';
     $('status').innerHTML='<span class="ok">Done. '+(blob.size/1048576).toFixed(0)+' MB</span>';
     $('out').innerHTML='<video controls playsinline src="'+url+'"></video><a class="btn dl" href="'+url+'" download="trade-with-bk-'+ep.j.asOf+'.'+ext+'">Save the video</a><p class="mut">If Save does not start a download, press and hold the video above, or tap Share and choose Save Video. Check it plays well before uploading.</p>';
   }catch(e){$('status').innerHTML='<span class="err">'+(e&&e.message?e.message:e)+'</span>';}
@@ -252,7 +263,9 @@ $('thF').onchange=()=>{const f=$('thF').files[0];if(!f)return;const im=new Image
 $('thSave').onclick=()=>{thDraw();$('thC').toBlob(b=>{const u=URL.createObjectURL(b);$('thOut').innerHTML='<a class="btn dl" href="'+u+'" download="trade-with-bk-thumbnail-'+(ep?ep.j.asOf:'')+'.jpg">Download thumbnail</a><p class="mut">If it does not download, press and hold the picture above and choose Save image.</p>';},'image/jpeg',.92);};
 loadEpisodes();thDraw();
 /* ---- YouTube upload (browser, Google Identity Services + resumable upload) ---- */
-let lastBlob=null,ytTok=null,ytTokExp=0;
+let lastBlob=null,ytTok=null,ytTokExp=0,_ac=null,_rvs=null;
+function getAC(){if(!_ac){const A=window.AudioContext||window.webkitAudioContext;_ac=new A();}return _ac;}
+function rvSrc(ac){if(!_rvs)_rvs=ac.createMediaElementSource($('rv'));return _rvs;}
 function ytMeta(){ // build title/description/tags from metadata.txt and the real scene marks
   const m=ep&&ep.m;if(!m)return Promise.resolve(null);
   return fetch(m+'/metadata.txt',{cache:'no-store'}).then(r=>r.ok?r.text():'').then(t=>{
@@ -284,33 +297,115 @@ function ytAuth(cid){return new Promise((res,rej)=>{
   if(window.google&&google.accounts)return go();
   const sc=document.createElement('script');sc.src='https://accounts.google.com/gsi/client';sc.onload=go;sc.onerror=()=>rej(new Error('Could not load Google sign-in. Check your connection or ad blocker.'));document.head.appendChild(sc);
 });}
-function ytPut(url,blob,type){return new Promise((res,rej)=>{
+function ytPut(url,blob,type,bar,st){bar=bar||$('ytBar');st=st||ytSt;return new Promise((res,rej)=>{
   const x=new XMLHttpRequest();x.open('PUT',url);x.setRequestHeader('Content-Type',type);
-  x.upload.onprogress=e=>{if(e.lengthComputable){$('ytBar').style.display='block';$('ytBar').firstElementChild.style.width=(e.loaded/e.total*100)+'%';ytSt('Uploading '+(e.loaded/1048576).toFixed(0)+' of '+(e.total/1048576).toFixed(0)+' MB. Keep this page open.');}};
+  x.upload.onprogress=e=>{if(e.lengthComputable){bar.style.display='block';bar.firstElementChild.style.width=(e.loaded/e.total*100)+'%';st('Uploading '+(e.loaded/1048576).toFixed(0)+' of '+(e.total/1048576).toFixed(0)+' MB. Keep this page open.');}};
   x.onload=()=>x.status>=200&&x.status<300?res(JSON.parse(x.responseText)):rej(new Error('YouTube said '+x.status+': '+x.responseText.slice(0,200)));
   x.onerror=()=>rej(new Error('The upload connection dropped. Press the button again to retry.'));x.send(blob);});}
+async function ytUpload(o){ // o: blob,title,desc,tags,priv,thumbUrl,st(fn),bar(el),btn
+  const st=o.st;const cid=$('ytId').value.trim();
+  if(!/\.apps\.googleusercontent\.com$/.test(cid))throw new Error('Paste your Google OAuth client ID first (see the one-time setup in section 8).');
+  try{localStorage.setItem('bkstudio-ytid',cid);}catch(e){}
+  const blob=o.blob;if(!blob)throw new Error('Create the video first, or choose a video file.');
+  const title=String(o.title||'').trim().slice(0,100);if(!title)throw new Error('Add a title.');
+  const desc=String(o.desc||'').slice(0,4900);let tl=0;const tags=(o.tags||[]).filter(t=>(tl+=t.length+1)<=450);
+  st('Signing in with Google…');const tok=await ytAuth(cid);
+  const type=blob.type||'video/mp4';st('Starting the upload…');
+  const r=await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status',{method:'POST',headers:{Authorization:'Bearer '+tok,'Content-Type':'application/json; charset=UTF-8','X-Upload-Content-Type':type,'X-Upload-Content-Length':String(blob.size)},body:JSON.stringify({snippet:{title,description:desc,tags,categoryId:'27'},status:{privacyStatus:o.priv,selfDeclaredMadeForKids:false}})});
+  if(!r.ok)throw new Error('YouTube refused to start the upload ('+r.status+'): '+(await r.text()).slice(0,200));
+  const loc=r.headers.get('Location');if(!loc)throw new Error('YouTube did not return an upload address.');
+  const v=await ytPut(loc,blob,type,o.bar,st);let note='';
+  if(o.thumbUrl){try{const tr=await fetch(o.thumbUrl,{cache:'no-store'});if(tr.ok){const tb=await tr.blob();const up=await fetch('https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId='+v.id,{method:'POST',headers:{Authorization:'Bearer '+tok,'Content-Type':'image/png'},body:tb});note=up.ok?' Thumbnail set.':' The thumbnail was not accepted (YouTube needs a verified channel for custom thumbnails); add it in YouTube Studio.';}}catch(e){note=' Thumbnail not set; add it in YouTube Studio.';}}
+  return {id:v.id,note};
+}
 $('ytGo').onclick=async()=>{
   const btn=$('ytGo');btn.disabled=true;
   try{
-    const cid=$('ytId').value.trim();if(!/\.apps\.googleusercontent\.com$/.test(cid))throw new Error('Paste your Google OAuth client ID first (see the one-time setup below).');
-    try{localStorage.setItem('bkstudio-ytid',cid);}catch(e){}
-    const f=$('ytF').files[0],blob=f||lastBlob;if(f&&!/video|octet-stream|^$/.test(f.type||'')&&!/\.(mp4|mov|m4v|webm)$/i.test(f.name))throw new Error('That does not look like a video file (.mp4, .mov, .m4v or .webm).');if(!blob)throw new Error('Create the video above first, or choose a video file.');
-    const title=$('ytT').value.trim().slice(0,100);if(!title)throw new Error('Add a title.');
-    let desc=$('ytD').value.slice(0,4900),tags=[];try{tags=JSON.parse($('ytD').dataset.tags||'[]');}catch(e){}
-    let tl=0;tags=tags.filter(t=>(tl+=t.length+1)<=450);
-    ytSt('Signing in with Google…');const tok=await ytAuth(cid);
-    const type=blob.type||'video/mp4';
-    ytSt('Starting the upload…');
-    const r=await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status',{method:'POST',headers:{Authorization:'Bearer '+tok,'Content-Type':'application/json; charset=UTF-8','X-Upload-Content-Type':type,'X-Upload-Content-Length':String(blob.size)},body:JSON.stringify({snippet:{title,description:desc,tags,categoryId:'27'},status:{privacyStatus:$('ytPriv').value,selfDeclaredMadeForKids:false}})});
-    if(!r.ok)throw new Error('YouTube refused to start the upload ('+r.status+'): '+(await r.text()).slice(0,200));
-    const loc=r.headers.get('Location');if(!loc)throw new Error('YouTube did not return an upload address.');
-    const v=await ytPut(loc,blob,type);
-    let thNote='';
-    try{const tr=await fetch(ep.m+'/thumbnail.png',{cache:'no-store'});if(tr.ok){const tb=await tr.blob();const up=await fetch('https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId='+v.id,{method:'POST',headers:{Authorization:'Bearer '+tok,'Content-Type':'image/png'},body:tb});thNote=up.ok?' Thumbnail set.':' The thumbnail was not accepted (YouTube needs a verified channel for custom thumbnails); add it in YouTube Studio.';}}catch(e){thNote=' Thumbnail not set; add it in YouTube Studio.';}
+    const f=$('ytF').files[0];
+    if(f&&!/video|octet-stream|^$/.test(f.type||'')&&!/\.(mp4|mov|m4v|webm)$/i.test(f.name))throw new Error('That does not look like a video file (.mp4, .mov, .m4v or .webm).');
+    let tags=[];try{tags=JSON.parse($('ytD').dataset.tags||'[]');}catch(e){}
+    const r=await ytUpload({blob:f||lastBlob,title:$('ytT').value,desc:$('ytD').value,tags,priv:$('ytPriv').value,thumbUrl:ep.m+'/thumbnail.png',st:ytSt,bar:$('ytBar')});
     $('ytBar').style.display='none';
-    ytSt('<span class="ok">Uploaded as '+$('ytPriv').value+'.</span>'+thNote+' <a href="https://studio.youtube.com/video/'+v.id+'/edit" target="_blank" rel="noopener">Open it in YouTube Studio</a> to watch it, then make it public.');
+    ytSt('<span class="ok">Uploaded as '+$('ytPriv').value+'.</span>'+r.note+' <a href="https://studio.youtube.com/video/'+r.id+'/edit" target="_blank" rel="noopener">Open it in YouTube Studio</a> to watch it, then make it public.');
   }catch(e){ytSt('<span class="err">'+(e&&e.message?e.message:e)+'</span>');}
   btn.disabled=false;
 };
+
+
+/* ---- Shorts: one scene, 9:16, face + visual + captions ---- */
+let shortBlob=null;
+function shFill(){const el=$('shSc'),cur=el.value;if(!el)return;const opts=scenes.map((sc,i)=>({i,sc,t:i===0?0:marks[i]})).filter(o=>o.t!=null);
+  el.innerHTML=opts.length?opts.map(o=>{const en=(o.i+1<scenes.length&&marks[o.i+1]!=null)?marks[o.i+1]:recDur;const d=Math.max(0,(en||0)-o.t);return '<option value="'+o.i+'">'+(o.i+1)+'. '+o.sc.heading.charAt(0)+o.sc.heading.slice(1).toLowerCase()+(d?' ('+Math.round(d)+'s)':'')+'</option>';}).join(''):'<option value="">Choose your recording and set the scene marks first</option>';
+  if(cur&&[...el.options].some(x=>x.value===cur))el.value=cur;}
+const _ready=ready;ready=function(){_ready();try{shFill();}catch(e){}};
+function shChunks(text){const w=String(text||'').replace(/\s+/g,' ').trim().split(' ').filter(Boolean);const out=[];let cur=[];w.forEach(x=>{cur.push(x);if(cur.length>=5||/[.!?]$/.test(x)||(cur.length>=3&&/[,;:]$/.test(x))){out.push(cur.join(' '));cur=[];}});if(cur.length)out.push(cur.join(' '));return out;}
+function shWrap(g,t,maxW){const w=t.split(' '),L=[];let c='';w.forEach(x=>{const n=c?c+' '+x:x;if(g.measureText(n).width>maxW&&c){L.push(c);c=x;}else c=n;});if(c)L.push(c);return L;}
+$('shGo').onclick=async()=>{
+  const btn=$('shGo');btn.disabled=true;$('shOut').innerHTML='';$('shUpBox').style.display='none';shortBlob=null;const S=h=>$('shSt').innerHTML=h;
+  try{
+    if(!window.MediaRecorder)throw new Error('This browser cannot create videos in the page.');
+    if(!ep||!recUrl||!recDur)throw new Error('Choose your recording in section 2 first.');
+    const i=parseInt($('shSc').value,10);if(!(i>=0))throw new Error('Pick a scene (set the scene marks first).');
+    const sc=scenes[i],st=i===0?0:marks[i],en=(i+1<scenes.length&&marks[i+1]!=null)?marks[i+1]:recDur,D=en-st;
+    if(!(D>=3))throw new Error('That scene is too short or its marks are wrong.');
+    if(D>180)throw new Error('A Short can be at most 3 minutes; this scene is '+Math.round(D)+' seconds. Pick a shorter scene.');
+    const rv=$('rv'),vis=$('vis'),ac=getAC();ac.resume();rv.play().then(()=>rv.pause()).catch(()=>{});
+    const oi=all.indexOf(sc);let B=0;const im=[];let still=null,cues=null;
+    S('Loading the visuals…');
+    try{const bj=await fetch(ep.m+'/frames/beats.json').then(r=>r.ok?r.json():null);cues=await fetch(ep.m+'/frames/cues.json').then(r=>r.ok?r.json():{}).catch(()=>({}));
+      if(bj){B=bj[oi]||0;await Promise.race([Promise.all([...Array(B+1).keys()].map(k=>new Promise(res=>{const m=new Image();m.onload=()=>{im[k]=m;res();};m.onerror=()=>res();m.src=ep.m+'/frames/s'+oi+'/'+k+'-3.jpg';})).concat([new Promise(res=>{const m=new Image();m.onload=()=>{still=m;res();};m.onerror=()=>res();m.src=ep.m+'/stills/scene-'+oi+'.jpg';})])),new Promise(r=>setTimeout(r,25000))]);}}catch(e){B=0;}
+    const useVid=!(B&&im[0]);if(useVid){vis.src=await getVisuals();vis.load();await new Promise(r=>{if(vis.readyState>=2)return r();vis.addEventListener('loadeddata',()=>r(),{once:true});setTimeout(r,4000);});}
+    await new Promise(r=>{rv.currentTime=Math.max(0,st);rv.addEventListener('seeked',()=>r(),{once:true});setTimeout(r,3000);});
+    const W=720,H=1280,cv=$('shCv');cv.width=W;cv.height=H;cv.style.display='block';const g=cv.getContext('2d');
+    const hasFace=rv.videoWidth>0;
+    const dst=ac.createMediaStreamDestination(),src=rvSrc(ac);src.connect(dst);
+    const stream=cv.captureStream(30);dst.stream.getAudioTracks().forEach(t=>stream.addTrack(t));
+    const opts=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm'];const mime=opts.find(t=>MediaRecorder.isTypeSupported(t))||'';
+    const mr=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:3e6,audioBitsPerSecond:128e3}:undefined);const chunks=[];mr.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};const done=new Promise(res=>{mr.onstop=res;});
+    let wake=null;try{if(navigator.wakeLock)wake=await navigator.wakeLock.request('screen');}catch(e){}
+    const chunksT=shChunks(sc.narration),tot=chunksT.reduce((a,b)=>a+b.split(' ').length,0)||1,cs=[];let acc=0;chunksT.forEach(c=>{cs.push(acc/tot);acc+=c.split(' ').length;});
+    const th=(cues&&cues[oi]&&cues[oi].length===B)?cues[oi]:(B?Array.from({length:B},(_,k)=>(k+1)/(B+1)):[]);
+    const handle='@TradeWithBK';let raf=0,running=true;
+    const bg=g.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#08101F');bg.addColorStop(1,'#02050A');
+    const vframe=(x,y,w,h,el)=>{if(useVid){g.drawImage(vis,x,y,w,h);return;}const fr=Math.min(1,el/D);let k=0;th.forEach(t=>{if(fr>=t)k++;});k=Math.min(B,k);const cur=im[k]||still||im[0],base=k>0?im[k-1]:null;
+      const tb=k===0?el:Math.max(0,el-th[k-1]*D),q0=Math.min(1,tb/0.6),q=q0*q0*(3-2*q0);if(!cur)return;
+      if(base){g.drawImage(base,x,y,w,h);g.globalAlpha=q;g.drawImage(cur,x,y,w,h);g.globalAlpha=1;}else g.drawImage(cur,x,y,w,h);};
+    const draw=()=>{if(!running)return;const t=rv.currentTime,el=Math.max(0,t-st),fr=Math.min(1,el/D);
+      g.fillStyle=bg;g.fillRect(0,0,W,H);
+      const gl=g.createRadialGradient(W*.5,H*.35,10,W*.5,H*.35,W);gl.addColorStop(0,'rgba(38,208,255,.14)');gl.addColorStop(1,'rgba(38,208,255,0)');g.fillStyle=gl;g.fillRect(0,0,W,H);
+      g.textAlign='center';g.fillStyle='#fff';g.shadowColor='#26D0FF';g.shadowBlur=18;g.font='800 40px Poppins,Arial,sans-serif';g.fillText('TRADE WITH BK',W/2,70);g.shadowBlur=0;
+      g.fillStyle='#FFC21A';g.font='700 22px Poppins,Arial,sans-serif';g.fillText(sc.heading.slice(0,34),W/2,104);
+      const vx=20,vw=W-40,vh=Math.round(vw*9/16),vy=130;
+      g.save();rr(g,vx,vy,vw,vh,16);g.fillStyle='#000';g.fill();g.clip();vframe(vx,vy,vw,vh,el);g.restore();
+      const fy=vy+vh+18,fh=470;
+      g.save();g.shadowColor='rgba(38,208,255,.5)';g.shadowBlur=22;rr(g,vx,fy,vw,fh,22);g.fillStyle='#000';g.fill();g.restore();
+      g.save();rr(g,vx,fy,vw,fh,22);g.clip();if(hasFace)cover(g,rv,vx,fy,vw,fh);g.restore();g.strokeStyle='#26D0FF';g.lineWidth=3;rr(g,vx,fy,vw,fh,22);g.stroke();
+      // captions
+      let k=0;cs.forEach((c,j)=>{if(fr>=c)k=j;});const cap=chunksT[k]||'';
+      g.font='800 46px Poppins,Arial,sans-serif';const L=shWrap(g,cap,W-80),cy=fy+fh+60;
+      L.slice(0,3).forEach((l,j)=>{const y=cy+j*56;g.lineWidth=9;g.strokeStyle='rgba(0,0,0,.85)';g.strokeText(l,W/2,y);g.fillStyle='#fff';g.fillText(l,W/2,y);});
+      g.fillStyle='#8FA3C7';g.font='600 20px Poppins,Arial,sans-serif';g.fillText('Educational only. Not financial advice.',W/2,H-62);
+      if(el>D-4){g.fillStyle='#FFC21A';g.font='800 26px Poppins,Arial,sans-serif';g.fillText('Full video on the channel '+handle,W/2,H-24);}
+      g.textAlign='left';
+      $('shBar').style.display='block';$('shBar').firstChild.style.width=Math.min(100,el/D*100)+'%';S('Creating… '+Math.round(el)+' of '+Math.round(D)+' s (keep this page open)');
+      raf=requestAnimationFrame(draw);};
+    rv.muted=false;rv.volume=1;mr.start(500);await rv.play();if(useVid){vis.currentTime=0;vis.play().catch(()=>{});}draw();
+    await new Promise(r=>{const iv=setInterval(()=>{if(rv.ended||rv.currentTime>=en-0.05||rv.currentTime>=(rv.duration||1e9)-0.25){clearInterval(iv);r();}},100);});
+    running=false;cancelAnimationFrame(raf);rv.pause();vis.pause();try{mr.requestData();}catch(e){}mr.stop();await Promise.race([done,new Promise(r=>setTimeout(r,15000))]);if(wake)try{wake.release();}catch(e){}
+    try{src.disconnect(dst);}catch(e){}
+    const type=mr.mimeType||mime||'video/mp4',blob=new Blob(chunks,{type}),ext=/mp4/.test(type)?'mp4':'webm',url=URL.createObjectURL(blob);shortBlob=blob;
+    cv.style.display='none';$('shBar').style.display='none';S('<span class="ok">Short ready. '+(blob.size/1048576).toFixed(1)+' MB, '+Math.round(D)+' s'+(D>60?' (over 60 s: it will be a normal video, not a Short, in the Shorts shelf)':'')+'</span>');
+    $('shOut').innerHTML='<video controls playsinline src="'+url+'" style="max-height:60vh"></video><a class="btn dl" href="'+url+'" download="trade-with-bk-short-'+ep.j.asOf+'-'+(i+1)+'.'+ext+'">Save the Short</a>';
+    $('shT').value=(sc.heading.charAt(0)+sc.heading.slice(1).toLowerCase()+' | Trade With BK #Shorts').slice(0,100);$('shUpBox').style.display='block';
+  }catch(e){S('<span class="err">'+(e&&e.message?e.message:e)+'</span>');$('shCv').style.display='none';}
+  btn.disabled=false;
+};
+$('shUp').onclick=async()=>{
+  const btn=$('shUp');btn.disabled=true;const S=h=>$('shSt').innerHTML=h;
+  try{const md=await ytMeta();const desc=['Full video on the channel: @TradeWithBK',md&&md.tail,'#Shorts'].filter(Boolean).join('\n\n');
+    const r=await ytUpload({blob:shortBlob,title:$('shT').value,desc,tags:(md?md.tags:[]).concat(['shorts']),priv:$('shPriv').value,st:S,bar:$('shBar')});
+    $('shBar').style.display='none';S('<span class="ok">Short uploaded as '+$('shPriv').value+'.</span> <a href="https://studio.youtube.com/video/'+r.id+'/edit" target="_blank" rel="noopener">Open it in YouTube Studio</a> to check it, then make it public.');
+  }catch(e){S('<span class="err">'+(e&&e.message?e.message:e)+'</span>');}
+  btn.disabled=false;};
 
 </script></body></html>
