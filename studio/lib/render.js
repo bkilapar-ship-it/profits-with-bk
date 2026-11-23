@@ -269,6 +269,30 @@ const SCENES = {
       <div class="card abs" data-a="0.02,0.3" style="left:80px;top:270px;width:1760px;height:580px;padding:0"><div class="abs" style="left:30px;top:64px">${svg}</div>${d.ma20 ? '<div class="abs" style="left:34px;top:12px;font-size:21px;font-weight:700;display:flex;gap:26px"><span style="color:#FFC21A">━ 20-day average</span><span style="color:#B36BFF">━ 50-day average</span></div>' : ''}${mk}</div>
       ${cards}`, ep.date);
   },
+  search: (s, ep) => {
+    const d = s.data, q = d.query || 'VIX index today';
+    const band = (x, w, col, t1, t2, st) => `<div class="abs" data-a="${st},${(st + 0.2).toFixed(2)}" style="left:${x}px;top:0;width:${w}px"><div style="height:34px;border-radius:10px;background:${col};box-shadow:0 0 24px ${col}88"></div><div style="margin-top:14px;font-weight:800;font-size:30px;color:${col}">${t1}</div><div style="font-weight:600;font-size:22px;color:var(--mut)">${t2}</div></div>`;
+    const step = (n, t, st, col) => `<div class="abs" data-a="${st},${(st + 0.2).toFixed(2)}" style="left:0;top:${(n - 1) * 128}px;width:740px;display:flex;align-items:center;gap:24px"><div style="flex:none;width:62px;height:62px;border-radius:50%;border:3px solid ${col};display:flex;align-items:center;justify-content:center;font-weight:800;font-size:32px;color:${col}">${n}</div><div style="font-weight:700;font-size:31px;line-height:1.25">${t}</div></div>`;
+    return frame(`<div class="abs" data-a="0,0.3" style="left:80px;top:130px"><div class="kick">${esc(d.kick || '')}</div><div class="h2" style="margin-top:10px;font-size:68px">${esc(d.title || '')}</div></div>
+      <div class="abs" data-a="0.1,0.3" style="left:80px;top:318px;width:1280px;height:116px;border-radius:58px;background:#F4F8FF;box-shadow:0 0 60px rgba(38,208,255,.35)"></div>
+      <svg class="abs" data-a="0.1,0.3" style="left:122px;top:350px" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="#5B6B86" stroke-width="2.4" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><path d="M15.5 15.5L21 21"/></svg>
+      <div class="abs" style="left:206px;top:338px;height:76px;overflow:hidden;white-space:nowrap" data-w="0.3,0.6" data-max="1100"><div style="font-weight:600;font-size:54px;line-height:76px;color:#14213B">${esc(q)}</div></div>
+      <div class="abs" data-a="0.62,0.82" style="left:1390px;top:352px"><span class="chip" style="font-size:22px;padding:8px 20px">ANY SEARCH ENGINE OR APP</span></div>
+      <div class="card abs" data-a="0.45,0.65" style="left:80px;top:480px;width:960px;height:480px;padding:34px 40px"><div class="lab">ROUGH RULE OF THUMB</div>
+        <div class="abs" style="left:40px;top:110px;width:880px">${band(0, 270, '#1FE5A5', 'CALM', 'under about 20', 0.55)}${band(300, 270, '#FFC21A', 'NERVOUS', 'about 20 to 30', 0.62)}${band(600, 280, '#FF3B6B', 'FEAR', '30 or more', 0.69)}</div>
+        <div class="abs" data-a="0.78,0.98" style="left:40px;top:300px;width:880px;font-weight:600;font-size:30px;line-height:1.35;color:var(--text)">The exact number matters less than the <span style="color:var(--amb)">direction</span>.</div>
+        <div class="abs" data-a="0.85,1" style="left:40px;top:400px"><span class="chip" style="font-size:18px;padding:5px 16px">GENERAL GUIDE, NOT A SIGNAL</span></div></div>
+      <div class="abs" style="left:1100px;top:500px;width:740px;height:440px">${step(1, 'Search <span style="color:var(--acc)">' + esc(q) + '</span>', 0.6, '#26D0FF')}${step(2, 'Line spiking up? <span style="color:#FF3B6B">Not calm yet</span>', 0.72, '#FF3B6B')}${step(3, 'Peaked, now falling? <span style="color:#1FE5A5">Fear is easing</span>', 0.84, '#1FE5A5')}</div>`, ep.date);
+  },
+  compare: (s, ep) => {
+    const d = s.data, rows = d.rows || [];
+    const ico = (ok, st) => ok === true ? `<div data-a="${st},${(st + 0.15).toFixed(2)}" style="flex:none;width:76px;height:76px;border-radius:50%;background:#062A1F;border:4px solid #1FE5A5;box-shadow:0 0 26px rgba(31,229,165,.7);display:flex;align-items:center;justify-content:center"><svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#1FE5A5" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg></div>`
+      : ok === false ? `<div data-a="${st},${(st + 0.15).toFixed(2)}" style="flex:none;width:76px;height:76px;border-radius:50%;background:#2A0A14;border:4px solid #FF3B6B;box-shadow:0 0 26px rgba(255,59,107,.7);display:flex;align-items:center;justify-content:center"><svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="#FF3B6B" stroke-width="3.4" stroke-linecap="round"><path d="M5 5l14 14M19 5L5 19"/></svg></div>`
+      : `<div data-a="${st},${(st + 0.15).toFixed(2)}" style="flex:none;width:76px;height:76px;border-radius:50%;background:#2A2208;border:4px solid #FFC21A;box-shadow:0 0 26px rgba(255,194,26,.6);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:44px;color:#FFC21A">?</div>`;
+    return frame(`<div class="abs" data-a="0,0.3" style="left:80px;top:128px"><div class="kick">${esc(d.kick || '')}</div><div class="h2" style="margin-top:8px;font-size:64px">${esc(d.title || '')}</div></div>
+      <div class="abs" data-a="0.05,0.3" style="left:1180px;top:196px"><span class="chip g" style="font-size:26px;padding:8px 22px">${esc(d.summary || '')}</span></div>
+      <div class="abs" style="left:80px;top:284px;width:1760px;display:grid;gap:10px">${rows.map((o, i) => { const st = 0.14 + i * 0.12; return `<div class="card" data-a="${st.toFixed(2)},${(st + 0.2).toFixed(2)}" style="display:flex;align-items:center;gap:30px;padding:6px 36px;height:100px;border-color:${o.ok === true ? '#1FE5A5aa' : o.ok === false ? '#FF3B6Baa' : '#FFC21Aaa'}">${ico(o.ok, st + 0.1)}<div style="flex:1"><div style="font-weight:700;font-size:33px;line-height:1.15">${esc(o.label)}</div><div style="font-weight:600;font-size:24px;color:var(--mut);margin-top:2px">${esc(o.note)}</div></div><div style="font-weight:800;font-size:26px;letter-spacing:.12em;color:${o.ok === true ? '#1FE5A5' : o.ok === false ? '#FF3B6B' : '#FFC21A'}">${o.ok === true ? 'TICK' : o.ok === false ? 'NOT YET' : 'YOUR CALL'}</div></div>`; }).join('')}</div>`, ep.date);
+  },
   newstest: (s, ep) => {
     const P = { fg: 'M10 90 L40 90 L64 34 L120 30 L190 52 L260 84 L330 112 L390 126', fb: 'M10 70 L50 70 L80 112 L150 124 L230 138 L310 142 L390 148', bb: 'M10 70 L50 70 L80 112 L120 126 L190 108 L270 84 L340 74 L390 68', bg: 'M10 92 L40 92 L64 38 L120 34 L190 30 L260 30 L330 24 L390 22' };
     const cell = (k, x0, y0, head, cap, col, st, tag) => `<div class="card abs" data-a="${st},${(st + 0.2).toFixed(2)}" style="left:${x0}px;top:${y0}px;width:830px;height:300px;padding:18px 26px;border-color:${col}88"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-weight:800;font-size:30px">${head}</div><span class="chip" style="font-size:16px;opacity:.7">ILLUSTRATION</span></div><div class="abs" style="left:26px;top:62px"><svg width="780" height="190" viewBox="0 0 400 160" preserveAspectRatio="none"><line x1="10" x2="390" y1="${k === 'fg' || k === 'bg' ? 90 : 70}" y2="${k === 'fg' || k === 'bg' ? 90 : 70}" stroke="rgba(255,255,255,.3)" stroke-width="1.4" stroke-dasharray="5 5"/><path data-d="${st},${(st + 0.28).toFixed(2)}" d="${P[k]}" fill="none" stroke="${col}" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round" style="filter:drop-shadow(0 0 8px ${col})"/></svg></div><div class="abs" style="left:26px;bottom:14px;font-size:26px;font-weight:700;color:${col}">${cap}</div></div>`;
@@ -445,15 +469,38 @@ function photoHtml(dir, plain) {
 function thumbHtml(ep, dir, art) {
   const setupsSc = ep.scenes.filter(x => x.type === 'setup'), n = setupsSc.length, t = setupsSc.map(x => x.heading).slice(0, 5);
   if (ep.mode === 'bottom') {
-    const pts = '0,60 40,58 80,62 120,56 160,70 200,110 240,150 280,190 320,215 350,232 380,226 420,236 460,214 500,198 540,205 580,170 620,150';
+    // a falling run of red candles on the left, a rising run of green on the right, with the low circled
+    let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+    const N = 38, cw = 1280 / N; let cs = '';
+    for (let i = 0; i < N; i++) {
+      const t = i / (N - 1), mid = 0.5, base = t < mid ? 80 + (t / mid) * 540 : 620 - ((t - mid) / (1 - mid)) * 520, o = base + (rnd() - 0.5) * 50, cl = base + (rnd() - 0.5) * 50;
+      const down = t < mid ? true : rnd() < 0.2, col = down ? '#FF3B2F' : '#1FE55A', x = i * cw + cw / 2, hi = Math.min(o, cl) - 14 - rnd() * 22, lo = Math.max(o, cl) + 14 + rnd() * 22;
+      cs += `<line x1="${x}" x2="${x}" y1="${hi}" y2="${lo}" stroke="${col}" stroke-width="3"/><rect x="${x - cw * 0.3}" y="${Math.min(o, cl)}" width="${cw * 0.6}" height="${Math.max(10, Math.abs(o - cl))}" fill="${col}"/>`;
+    }
+    const brush = (x, y, w, h, col, id) => `<svg class="abs" style="left:${x - 30}px;top:${y - 30}px" width="${w + 60}" height="${h + 60}"><defs><filter id="${id}" x="-10%" y="-10%" width="120%" height="120%"><feTurbulence type="fractalNoise" baseFrequency="0.035 0.09" numOctaves="2" seed="4" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="26"/></filter></defs><rect x="30" y="30" width="${w}" height="${h}" fill="${col}" filter="url(#${id})" transform="skewX(-6) translate(${h * 0.1},0)"/></svg>`;
+    const fat = (t, sz, col, extra) => `<div style="font-weight:800;font-style:italic;font-size:${sz}px;line-height:1;color:${col};-webkit-text-stroke:${Math.round(sz / 22)}px ${col};letter-spacing:-.01em;${extra || ''}">${t}</div>`;
+    const cut = path.join(__dirname, '..', 'assets', 'bk-cutout.png');
+    let face = '';
+    if (art) {
+      if (fs.existsSync(cut)) { fs.copyFileSync(cut, path.join(dir, 'bk-cutout.png')); face = `<img class="abs" src="bk-cutout.png" style="right:0;bottom:0;height:640px;filter:drop-shadow(0 0 30px rgba(38,208,255,.45))">`; }
+      else { const src = path.join(__dirname, '..', 'assets', 'bk.png'); if (fs.existsSync(src)) { fs.copyFileSync(src, path.join(dir, 'bk.png')); face = `<div class="abs" style="left:770px;top:70px;width:480px;height:480px;border-radius:50%;box-shadow:0 0 0 8px #FFC21A,0 0 70px 12px rgba(255,194,26,.55),0 0 140px rgba(31,229,90,.35);overflow:hidden"><img src="bk.png" style="width:480px;height:480px;object-fit:cover"></div>`; } }
+    }
+    const tick = t => `<div style="display:flex;align-items:center;gap:14px"><svg width="46" height="46" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#0E2A12" stroke="#1FE55A" stroke-width="1.6"/><path d="M6.5 12.5l4 4 7-8" fill="none" stroke="#1FE55A" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg><div style="font-weight:800;font-style:italic;font-size:32px;color:#fff;text-shadow:0 2px 6px #000">${t}</div></div>`;
     return `<!doctype html><html><head><meta charset="utf-8"><style>${fontCss(dir)}${CSS.replace(/html,body\{width:1920px;height:1080px/, 'html,body{width:1280px;height:720px')}</style></head><body>
-    ${bgCandles(1280, 720, 9)}
-    <div class="abs" style="left:56px;top:40px;display:flex;align-items:center;gap:14px">${logoSvg(60, { id: 'th' })}<span style="font-weight:800;letter-spacing:.14em;font-size:24px">TRADE WITH BK</span></div>
-    <div class="abs" style="left:56px;top:150px"><div class="kick" style="font-size:28px;color:var(--amb);text-shadow:0 0 18px rgba(255,194,26,.6)">6 SIMPLE SIGNS</div></div>
-    <div class="abs" style="left:56px;top:196px;width:760px"><div class="h1" style="font-size:118px;line-height:1.02">IS THE<br><span style="color:var(--acc)">BOTTOM</span><br>IN?</div></div>
-    <div class="abs" style="left:56px;top:600px"><span class="chip g" style="font-size:32px;padding:10px 26px;border-width:3px">NO JARGON NEEDED</span></div>
-    <svg class="abs" style="left:40px;top:560px;opacity:0" width="10" height="10" viewBox="0 0 640 260"><defs><filter id="gw"><feGaussianBlur stdDeviation="5"/></filter></defs><polyline points="${pts}" fill="none" stroke="#26D0FF" stroke-width="9" stroke-linejoin="round" filter="url(#gw)" opacity=".7"/><polyline points="${pts}" fill="none" stroke="#26D0FF" stroke-width="6" stroke-linejoin="round"/><circle cx="350" cy="232" r="16" fill="#1FE5A5"/><text x="372" y="262" fill="#fff" font-size="34" font-weight="800" font-family="Poppins,sans-serif">?</text></svg>
-    ${art ? photoHtml(dir, true) : ''}</body></html>`;
+    <div class="abs" style="inset:0;background:radial-gradient(ellipse at 12% 85%,rgba(255,40,30,.35),transparent 55%),radial-gradient(ellipse at 90% 15%,rgba(31,229,90,.38),transparent 55%),#05080C"></div>
+    <svg class="abs" style="left:0;top:0" width="1280" height="720"><g stroke="rgba(255,255,255,.07)" stroke-width="1">${Array.from({ length: 12 }, (_, i) => `<line x1="${i * 110}" x2="${i * 110}" y1="0" y2="720"/>`).join('')}${Array.from({ length: 8 }, (_, i) => `<line y1="${i * 100}" y2="${i * 100}" x1="0" x2="1280"/>`).join('')}</g><g opacity=".95" style="filter:drop-shadow(0 0 8px rgba(255,255,255,.3))">${cs}</g>
+      <circle cx="640" cy="652" r="50" fill="none" stroke="#FFC21A" stroke-width="8" style="filter:drop-shadow(0 0 14px #FFC21A)"/>
+      <path d="M690 626 C 740 600 800 560 860 500" fill="none" stroke="#1FE55A" stroke-width="12" stroke-linecap="round" style="filter:drop-shadow(0 0 12px #1FE55A)"/><path d="M812 506 L866 494 L856 548" fill="none" stroke="#1FE55A" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 12px #1FE55A)"/></svg>
+    <div class="abs" style="inset:0;background:linear-gradient(90deg,rgba(0,0,0,.5) 0%,rgba(0,0,0,.22) 52%,transparent 70%)"></div>
+    ${face}
+    <div class="abs" style="left:40px;top:34px;display:flex;align-items:center;gap:14px">${logoSvg(52, { id: 'th' })}<span style="font-weight:800;letter-spacing:.14em;font-size:21px">TRADE WITH BK</span></div>
+    <div class="abs" style="left:44px;top:112px">${fat('HOW TO SPOT A', 76, '#fff', 'text-shadow:0 5px 0 #000,0 0 24px rgba(0,0,0,.8)')}</div>
+    ${brush(34, 198, 700, 150, '#FFD21A', 'bk1')}
+    <div class="abs" style="left:58px;top:206px">${fat('MARKET', 148, '#050505')}</div>
+    ${brush(34, 376, 800, 150, '#E21B1B', 'bk2')}
+    <div class="abs" style="left:58px;top:384px">${fat('BOTTOM?', 148, '#fff', 'text-shadow:0 6px 0 rgba(0,0,0,.45)')}</div>
+    <div class="abs" style="left:44px;top:556px;display:grid;gap:8px">${tick('6 SIMPLE SIGNS')}${tick('NO JARGON')}${tick('REAL MARKET HISTORY')}</div>
+    </body></html>`;
   }
   const weekly = ep.mode === 'weekly', surv = typeof ep.chg5d === 'number' && ep.chg5d <= -3 && n > 0;
   const kick = weekly ? 'WEEKLY REVIEW' : ep.nxd ? 'SIGNALS FOR ' + ep.nxd.toUpperCase() : 'DAILY SCREEN';

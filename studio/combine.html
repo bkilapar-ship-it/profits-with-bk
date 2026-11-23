@@ -62,9 +62,9 @@ a.btn.dl{display:block;background:#2563EB;border-color:#2563EB;margin-top:10px}
 
 <script>
 const $=id=>document.getElementById(id);
-const EPS=(new URLSearchParams(location.search).get('eps')||'welcome,daily,weekly').split(',');
+const EPS=(new URLSearchParams(location.search).get('eps')||'welcome,bottom,daily,weekly').split(',');
 let studioImg=null,thImg=null,thPh=null,thMode='photo',thSelf=null;let ep=null,all=[],planOrder=[],skipSet=new Set(),markById={},scenes=[],starts=[],visUrl=null,recUrl=null,recDur=0,marks=[],layout='side',pos='br';
-const label={welcome:'Welcome video',daily:'Daily video',weekly:'Weekly review'};
+const label={welcome:'Welcome video',bottom:'Market bottoms (special)',daily:'Daily video',weekly:'Weekly review'};
 const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0');
 const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 

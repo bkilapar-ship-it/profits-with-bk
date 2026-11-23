@@ -321,7 +321,7 @@ function buildBottom({ setups, config }) {
   const title = 'How to Spot a Market Bottom: 6 Signs Anyone Can Check (No Jargon)';
 
   add('intro', 'intro', 'FINDING MARKET BOTTOMS',
-    `Hey everyone, welcome back to ${ch}! Today's question is the one everybody asks when the market falls: where is the bottom? Here's the honest answer up front: nobody can call it exactly, and anyone who says they can is guessing. But there are clues that the selling may be running out of steam, and you don't need fancy technical analysis to spot them. I'll show you six of them, with real market history, and one of them is a trick most beginners miss. Let's go.`,
+    `Hey everyone, welcome back to ${ch}! Today's question is the one everybody asks when the market falls: where is the bottom? Here's the honest answer up front: nobody can call it exactly, and anyone who says they can is guessing. But there are clues that the selling may be running out of steam, and you don't need fancy technical analysis to spot them. I'll show you six of them, with real market history. And if you have very little knowledge about technicals, don't miss the last clue of this video. It's just a common sense prediction, with no complex technicals at all. Let's go.`,
     { date: dayShort(asOf), kicker: "A beginner's guide, no jargon", chips: ['6 simple signs', 'Real market history', 'No predictions'], market: m });
 
   if (w) {
@@ -347,7 +347,7 @@ function buildBottom({ setups, config }) {
     const hl = [{ v: top * 0.9, label: '−10%  CORRECTION' }, { v: top * 0.8, label: '−20%  BEAR MARKET' }].filter(h => h.v >= Math.min(...ser) * 0.96);
     const st = A.stats;
     add('sign1', 'chartnote', 'SIGN 1: HOW FAR HAS IT FALLEN?',
-      `Sign one: how far has it fallen? Traders call a fall of 10 percent from the high a correction, and 20 percent a bear market. Right now the S&P 500 is ${pc(now.dd)} percent below its high. ${st ? `Since 2016, there have been ${st.n} falls of 10 percent or more. After the first hit of minus 10, the typical extra fall before the low was about ${pc(st.medFurther)} percent, and three months later the market was higher in ${st.fwdUp} of ${st.fwdN} cases. ` : ''}So a bigger fall means the odds of a bottom getting closer go up. But it's only one clue, never a signal on its own.`,
+      `Sign one: how far has it fallen? Traders call a fall of 10 percent from the high a correction, and 20 percent a bear market. Right now the S&P 500 is ${pc(now.dd)} percent below its high. ${st ? `Since 2016, there have been ${st.n} falls of 10 percent or more. After the first hit of minus 10, the typical extra fall before the low was about ${pc(st.medFurther)} percent, and three months later the market was higher in ${st.fwdUp} of ${st.fwdN} cases. ` : ''}So a bigger fall means the odds of a bottom getting closer go up. But it's only one clue, never a signal on its own. Down 10 percent, surely that's the bottom, right? Down 20 percent, okay, surely now? Still falling? Maybe 30 percent is the magic number? Plenty of people have burnt their hands thinking every step down was the bottom. Cheap can always get cheaper.`,
       { kick: 'SIGN 1', title: 'How far has it fallen?', dates: sl(dts, start, n - 1), c: ser, marks, hl, col: '#26D0FF', cards: [{ lab: 'NOW, FROM THE HIGH', val: `${(now.dd * 100).toFixed(1).replace('-', '−')}%`, c: now.dd < 0 ? 'down' : '' }, { lab: 'CORRECTION STARTS AT', val: '−10%', c: '' }, { lab: 'BEAR MARKET STARTS AT', val: '−20%', c: '' }] });
   }
 
@@ -366,6 +366,10 @@ function buildBottom({ setups, config }) {
       `Sign three: the fear gauge. It's called the VIX, and it measures how nervous investors are. When fear peaks and then starts to fall, that's often at, or just before, the market's low. In this fall the VIX peaked at ${vp.toFixed(0)} on ${fd(win.a + pk)}, ${diff > 0 ? `and the S&P 500 made its low ${diff} sessions later` : diff < 0 ? `and the S&P 500 had already made its low ${Math.abs(diff)} sessions before` : 'the very same day the S&P 500 made its low'}. Falling fear doesn't prove a bottom, but rising fear definitely says it's not calm yet.`,
       { kick: 'SIGN 3', title: 'Fear peaks, then falls', dates: sl(dts, win.a, win.b), c: clean, marks: [{ i: pk, label: `Fear peaks: VIX ${vp.toFixed(0)}`, sub: fd(win.a + pk), kind: 'warn' }, { i: ix(w.low), label: 'S&P 500 low', sub: fd(w.low), kind: 'good' }], col: '#FF3B6B', cards: [{ lab: 'VIX AT ITS PEAK', val: vp.toFixed(0), c: 'down' }, { lab: 'S&P LOW CAME', val: diff === 0 ? 'same day' : `${Math.abs(diff)} ${Math.abs(diff) === 1 ? 'day' : 'days'} ${diff > 0 ? 'later' : 'earlier'}`, c: '' }] });
   }
+
+  add('vixfind', 'search', 'WHERE TO FIND THE VIX',
+    `Quick tip, because people always ask: where do you actually find the VIX? It's easy. Open any search engine or finance app, and type: VIX index today. You'll see a number and a little chart. Don't worry about the exact number. As a rough rule of thumb, under about 15 or 20 means things are calm, and 30 or more means investors are properly scared. What matters is the direction. Is the line spiking up, or has it peaked and started to fall? Look at the last few months and compare today with the recent high.`,
+    { kick: 'DO IT YOURSELF IN 10 SECONDS', title: 'How to check the fear gauge', query: 'VIX index today' });
 
   if (w && w.hl > 0) {
     const bw = baseWin();
@@ -391,9 +395,20 @@ function buildBottom({ setups, config }) {
     `Here's a real example from this week. On November 17, Nvidia said it expected sales well above what Wall Street was forecasting. The shares jumped nearly 5 percent after the close. But, according to Reuters, the rally soon wavered, because investors were worried about who will be the next CEO. That's great news that did not hold. It doesn't tell us where the bottom is. It tells us the market isn't ready to look past its worries yet. And the opposite is what you watch for: bad headlines that no longer push prices down.`,
     { kick: 'REAL EXAMPLE, 17 NOV 2026', title: 'Nvidia: good news that did not hold', items: ['Nvidia forecast sales well above Wall Street estimates', 'Shares jumped nearly 5% after the close', 'The rally soon wavered: investors worried about who will be the next CEO', 'Good news that fades says the market is not ready yet'], note: 'Source: Reuters analysis, 20 Nov 2026. An example of the news test, not a prediction.' });
 
-  add('checklist', 'bullets', 'THE BOTTOM CHECKLIST',
-    `So here's your checklist. One: down 10 to 20 percent or more from the high. Two: a panic day with huge volume, then calm. Three: the fear gauge peaks and starts to fall. Four: no new lows, with a higher low that holds. Five: price back above its 20-day average. Six: bad news ignored, and good news holding into the close. Ticking one box means very little. Ticking four or five means the odds are improving. It never means certainty.`,
-    { kick: 'TICK THE BOXES', title: 'The bottom checklist', items: ['Down 10–20% or more from the high', 'A panic day: heavy volume, then calm', 'Fear gauge (VIX) peaks and starts to fall', 'No new lows: a higher low holds', 'Price back above its 20-day average', 'Bad news ignored, good news holds into the close'] });
+  const labs = ['Down 10–20% or more from the high', 'A panic day: heavy volume, then calm', 'Fear gauge (VIX) peaks and starts to fall', 'No new lows: a higher low holds', 'Price back above its 20-day average', 'Bad news ignored, good news holds into the close'];
+  const cur = A && A.cur ? A.cur : null;
+  if (cur) {
+    const meas = cur.items.slice(0, 5).filter(x => x.ok !== null), nOk = meas.filter(x => x.ok).length, asd = fdate(cur.date);
+    const sp = ['One', 'Two', 'Three', 'Four', 'Five', 'Six'];
+    const verdict = x => (x.ok === true ? 'ticked' : x.ok === false ? 'not yet' : 'for you to judge');
+    add('checklist', 'compare', 'THE BOTTOM CHECKLIST: NOW VS THE CHECKLIST',
+      `So here's your checklist, and let's hold today's market up against it, using prices up to ${asd}. ${labs.map((l, i) => `${sp[i]}: ${l.charAt(0).toLowerCase() + l.slice(1).replace('(VIX)', 'V I X')}. ${cur.items[i].ok === null ? (i === 2 ? "I can't measure this one from here, so look it up yourself" : 'This one is for you to judge from the headlines') : cur.items[i].ok ? 'Tick.' : 'Not yet.'}`).join(' ')} That's ${nOk} of the ${meas.length} boxes I can measure ticked. Ticking one box means very little. Ticking four or five means the odds are improving. It never means certainty, and this is a snapshot, not a prediction.`,
+      { kick: `THE MARKET AS OF ${asd.toUpperCase()}`, title: 'Ticking the boxes today', rows: labs.map((l, i) => ({ label: l, ok: cur.items[i].ok, note: cur.items[i].note })), summary: `${nOk} of ${meas.length} measurable boxes ticked` });
+  } else {
+    add('checklist', 'bullets', 'THE BOTTOM CHECKLIST',
+      `So here's your checklist. One: down 10 to 20 percent or more from the high. Two: a panic day with huge volume, then calm. Three: the fear gauge peaks and starts to fall. Four: no new lows, with a higher low that holds. Five: price back above its 20-day average. Six: bad news ignored, and good news holding into the close. Ticking one box means very little. Ticking four or five means the odds are improving. It never means certainty.`,
+      { kick: 'TICK THE BOXES', title: 'The bottom checklist', items: labs });
+  }
 
   add('safe', 'bullets', 'HOW TO STAY SAFE',
     `Now, how to stay safe while you wait for the clues. Never go all in at once. If you buy, build the position in small steps. Never use borrowed money. Decide where you'll get out before you buy, not after. And if you're wrong, get out, don't just keep buying more. This is also why my daily screen doesn't try to call the bottom of the whole market. It looks for strong stocks that fell hard, with a 4 percent target and a safety exit, and that's it.`,

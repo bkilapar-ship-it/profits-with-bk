@@ -60,7 +60,7 @@ label{font-size:11px;color:#8FA3C7;display:flex;flex-direction:column;gap:4px;fo
   <div id="row2"><button id="mode">Full script</button><button id="mir">Mirror</button><button id="gear">Settings</button></div>
   <div id="row3" style="margin-top:8px"><button id="review" style="width:100%">Review scenes and edit</button></div>
   <div id="rvbar"><button id="rvdone" class="go">▶ Done: back to the teleprompter</button><button id="rvreset">Reset</button></div>
-  <div id="set"><label>SPEED <b id="wpmv">160</b> words/min<input id="spd" type="range" min="50" max="200" step="5" value="160"></label><label>TEXT SIZE<input id="fs" type="range" min="20" max="60" value="26"></label><label>LIVE VIDEO<select id="lv"><option value="side">Combine live: side by side</option><option value="pip">Combine live: face in a corner</option><option value="off">Camera only (combine later)</option></select></label><label>BACKUP COPY<select id="lb"><option value="off">No backup (default)</option><option value="on">Also save a plain camera file</option></select></label><label>QUALITY<select id="lq"><option value="720">720p</option><option value="1080">1080p</option></select></label></div>
+  <div id="set"><label>SPEED <b id="wpmv">150</b> words/min<input id="spd" type="range" min="50" max="200" step="5" value="150"></label><label>TEXT SIZE<input id="fs" type="range" min="20" max="60" value="26"></label><label>LIVE VIDEO<select id="lv"><option value="side">Combine live: side by side</option><option value="pip">Combine live: face in a corner</option><option value="off">Camera only (combine later)</option></select></label><label>BACKUP COPY<select id="lb"><option value="off">No backup (default)</option><option value="on">Also save a plain camera file</option></select></label><label>QUALITY<select id="lq"><option value="720">720p</option><option value="1080">1080p</option></select></label></div>
 </div>
 <script>
 const MD=${JSON.stringify(metaParts(ep)).replace(/</g, '\\u003c')},HEADS=${heads},KEY='${ep.mode}-${ep.asOf}-${sigOf(ep.scenes)}';
@@ -233,8 +233,8 @@ $('rec').onclick=async()=>{
   window._fin=fin;mr.onstop=fin;
   rt={};{const v0=vis();if(v0[0])rt[v0[0].dataset.id]=0;}lastMark=0;mr.start(1000);if(bmr)try{bmr.start(2000);}catch(e){}t0=Date.now();hiccups=0;getWake();wCt=-1;wAt=performance.now();if(useLive){live=true;liveId=null;const v1=vis();if(v1[0])showScene(v1[0].dataset.id);liveDraw(window._lg.W,window._lg.H,window._lg.c,lvMode());}$('rec').textContent='■ Stop and save';$('rec').classList.add('on');y=0;apply();
 };
-try{const sv=store.get('bkstudio-wpm');if(sv)$('spd').value=sv;}catch(e){}
-$('wpmv').textContent=$('spd').value;$('spd').addEventListener('input',()=>{$('wpmv').textContent=$('spd').value;try{store.set('bkstudio-wpm',$('spd').value);}catch(e){}});
+try{const sv=store.get('bkstudio-wpm2');if(sv)$('spd').value=sv;}catch(e){}
+$('wpmv').textContent=$('spd').value;$('spd').addEventListener('input',()=>{$('wpmv').textContent=$('spd').value;try{store.set('bkstudio-wpm2',$('spd').value);}catch(e){}});
 loadPlan();calcPpw();requestAnimationFrame(tick);fit();if(location.hash==='#review')$('review').click();
 </script></body></html>`;
 }

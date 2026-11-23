@@ -61,7 +61,43 @@ function analyze(spy, vix) {
   }
   // where the market is now
   const now = { dd: dd[n - 1], peak: peakIdx[n - 1], close: c[n - 1], date: dates[n - 1], chg5: n > 5 ? c[n - 1] / c[n - 6] - 1 : null };
-  return { c, v: spy.map(b => b.v), dates, s20, s50, dd, peakIdx, eps, done, worst: ep, stats, now };
+  return { c, v: spy.map(b => b.v), dates, s20, s50, dd, peakIdx, eps, done, worst: ep, stats, now, cur: current(spy, vix, { c, n, dates, s20, dd }) };
+}
+
+/* The same checklist, applied to the market as it stands at the last close. ok: true / false / null (cannot be measured here). */
+function current(spy, vix, { c, n, dates, s20, dd }) {
+  const out = [], last = n - 1, win = 30;
+  const a = Math.max(1, n - win);
+  // 1. a real fall
+  out.push({ ok: dd[last] <= -0.10, note: `${Math.abs(dd[last] * 100).toFixed(0)}% below its high` });
+  // 2. a panic day in the last 25 sessions, then calm (no fresh low since)
+  let panic = -1, best = 0;
+  for (let j = Math.max(21, n - 25); j <= last; j++) {
+    if (c[j] >= c[j - 1]) continue;
+    const base = spy.slice(j - 20, j).reduce((s, x) => s + x.v, 0) / 20, r = spy[j].v / base;
+    if (r >= 1.5 && r > best) { best = r; panic = j; }
+  }
+  let calm = false;
+  if (panic > 0) { let lo = panic; for (let j = panic; j <= last; j++) if (c[j] < c[lo]) lo = j; calm = lo < last - 1; }
+  out.push({ ok: panic > 0 && calm, note: panic < 0 ? 'no heavy-volume washout yet' : calm ? `${best.toFixed(1)}× volume on ${fdate(dates[panic])}, then calmer` : 'heavy selling, but no calm yet' });
+  // 3. fear gauge peaked and falling
+  let v3 = { ok: null, note: 'look it up (next slide)' };
+  if (vix && vix.length > 40) {
+    const vs = dates.slice(a).map(d => { const x = vix.find(y => y.t === d); return x ? x.c : null; }).filter(x => x !== null);
+    if (vs.length > 10) { const pk = Math.max(...vs), cur = vs[vs.length - 1], prev = vs[Math.max(0, vs.length - 6)]; v3 = { ok: cur <= pk * 0.85 && cur < prev, note: `VIX ${cur.toFixed(0)}, recent peak ${pk.toFixed(0)}` }; }
+  }
+  out.push(v3);
+  // 4. a higher low: lowest close of the window, a bounce of 3%+, and the last 5 closes still above that low
+  let lo = a; for (let j = a; j <= last; j++) if (c[j] < c[lo]) lo = j;
+  let top = lo; for (let j = lo; j <= last; j++) if (c[j] > c[top]) top = j;
+  const bounced = c[top] / c[lo] - 1 >= 0.03, held = Math.min(...c.slice(last - 4)) > c[lo] * 1.0 && lo < last - 7;
+  out.push({ ok: bounced && held, note: lo >= last - 7 ? 'the low is very recent' : held && bounced ? 'pullbacks are holding above the low' : 'not confirmed yet' });
+  // 5. back above the 20-day average, 3 closes running
+  const up20 = s20[last] && [0, 1, 2].every(k => s20[last - k] && c[last - k] > s20[last - k]);
+  out.push({ ok: !!up20, note: up20 ? 'above it three closes running' : 'still below or just crossing' });
+  // 6. news test: cannot be measured from prices
+  out.push({ ok: null, note: 'you judge it from today\'s headlines' });
+  return { items: out, date: dates[last] };
 }
 
 module.exports = { analyze, sma, fdate };
