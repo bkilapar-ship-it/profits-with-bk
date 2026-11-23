@@ -50,6 +50,11 @@ async function main() {
   // Episode 1 extras: market news facts file (if present) and the AI/chip health check from real prices
   { const nf = path.join(__dirname, 'content', `news-${setups.asOf}.json`);
     if (fs.existsSync(nf)) setups.__news = JSON.parse(fs.readFileSync(nf, 'utf8'));
+    // a hand-checked highlight of the day (content/highlight-<date>.json) goes first and survives the daily research task rewriting the news file
+    const hf = path.join(__dirname, 'content', `highlight-${setups.asOf}.json`);
+    if (fs.existsSync(hf)) { const h = JSON.parse(fs.readFileSync(hf, 'utf8')), n0 = setups.__news && setups.__news.asOf === setups.asOf ? setups.__news : { asOf: setups.asOf, headlines: [], sources: [] };
+      const have = new Set((n0.headlines || []).map(x => String(x).toLowerCase()));
+      setups.__news = { ...n0, asOf: setups.asOf, highlight: h.headline, headlines: [...(h.points || []), ...(n0.headlines || []).filter(x => !(h.points || []).some(p => String(p).toLowerCase() === String(x).toLowerCase()))], sources: [...(h.sources || []), ...(n0.sources || [])] }; }
     const ef = path.join(__dirname, 'content', 'events.json');
     if (fs.existsSync(ef)) setups.__events = JSON.parse(fs.readFileSync(ef, 'utf8')); }
   if (mode === 'welcome') {

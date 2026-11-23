@@ -250,6 +250,7 @@ function buildEpisodeInner({ mode, setups, config }) {
   // 1) the market today
   const mkt = [];
   if (isNum(m.chg1d)) mkt.push(`So, what did the market do today? The S&P 500, that's the index of 500 of America's biggest companies, ${dayWord} ${say(m.chg1d)}.`);
+  if (news && news.highlight) mkt.push(`And the big story today: ${String(news.highlight).replace(/[.]$/, '')}.`);
   if (isNum(m.chg5d)) mkt.push(`Zoom out to the last five trading days, and it's ${m.chg5d >= 0 ? 'up' : 'down'} ${say(m.chg5d)}.`);
   const heads = news && Array.isArray(news.headlines) ? news.headlines.filter(Boolean).slice(0, 4) : [];
   mkt.push(isNum(m.chg5d) && m.chg5d <= -3 ? "When the market drops like this, even good companies get dragged down along with the weak ones. And that is exactly where my screen goes hunting." : "On a calmer day, the screen just looks for strong companies that had a short, sharp sell-off.");
