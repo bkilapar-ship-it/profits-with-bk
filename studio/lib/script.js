@@ -203,6 +203,7 @@ function buildWelcome({ setups, config, news }) {
 }
 
 function buildEpisodeInner({ mode, setups, config }) {
+  if (mode === 'bottom') return buildBottom({ setups, config });
   if (mode === 'welcome') return buildWelcome({ setups, config, news: setups.__news });
   const cfg = config, scenes = [], asOf = setups.asOf;
   const live = (setups.dip || []).concat(setups.rip || []).filter(x => x.sessionsAgo === 0);
@@ -305,6 +306,103 @@ function dailyPick(x, i, wd, nx) {
   return `${lead}: ${nm}. It closed ${wd} at ${money(x.close)}, after dropping ${say(x.chg5d)} in five days. But it's still trading ${say(x.vs200)} above its long-term average, so the bigger picture is still healthy. ${tired.length ? `And the sell-off is starting to look tired: ${tired.join(', and ')}.` : ''} So here's the plan: after the ${nx} open, give it a few minutes, and only buy if it's still within 2 percent of ${money(x.close)}. The target is ${money(p.target)}. The safety exit is ${money(p.stop)}, and either way, be out by the close of day three.${i === 0 ? ` I know that safety exit looks a long way down, ${Math.round(stopDist)} percent, but this stock normally swings about ${x.atrPct.toFixed(0)} percent in a day. That's why you keep the size small, and please, never borrow money to trade it.` : ''}`;
 }
 
+
+function buildBottom({ setups, config }) {
+  const cfg = config, scenes = [], asOf = setups.asOf, ch = cfg.channelName, A = setups.__bottom || null, m = setups.market || {};
+  const add = (id, type, heading, narration, data = {}) => scenes.push({ id, type, heading, narration, data, dur: Math.max(6, Math.round((words(narration) / cfg.speakingWordsPerSecond + 1.5) * 10) / 10) });
+  const { fdate } = require('./bottom');
+  const w = A && A.worst, c = A && A.c, dts = A && A.dates;
+  const win = w ? { a: w.win.a, b: w.win.b } : null;
+  const fd = i => fdate(dts[i]);
+  const sl = (arr, a, b) => arr.slice(a, b + 1);
+  const baseWin = () => ({ dates: sl(dts, win.a, win.b), c: sl(c, win.a, win.b) });
+  const ix = i => i - win.a;
+  const pc = x => `${Math.abs(x * 100).toFixed(0)}`;
+  const title = 'How to Spot a Market Bottom: 6 Signs Anyone Can Check (No Jargon)';
+
+  add('intro', 'intro', 'FINDING MARKET BOTTOMS',
+    `Hey everyone, welcome back to ${ch}! Today's question is the one everybody asks when the market falls: where is the bottom? Here's the honest answer up front: nobody can call it exactly, and anyone who says they can is guessing. But there are clues that the selling may be running out of steam, and you don't need fancy technical analysis to spot them. I'll show you six of them, with real market history, and one of them is a trick most beginners miss. Let's go.`,
+    { date: dayShort(asOf), kicker: "A beginner's guide, no jargon", chips: ['6 simple signs', 'Real market history', 'No predictions'], market: m });
+
+  if (w) {
+    const k10 = w.cross[0.10], k20 = w.cross[0.20], k30 = w.cross[0.30];
+    const f = (k) => c[w.low] / c[k] - 1;
+    const marks = [];
+    if (k10) marks.push({ i: ix(k10), label: '−10%: "looks cheap"', sub: `then fell ${pc(f(k10))}% more`, kind: 'warn' });
+    if (k20) marks.push({ i: ix(k20), label: '−20%: "even cheaper?"', sub: `then fell ${pc(f(k20))}% more`, kind: 'warn' });
+    if (k30) marks.push({ i: ix(k30), label: '−30%: "surely now?"', sub: `then fell ${pc(f(k30))}% more`, kind: 'warn' });
+    marks.push({ i: ix(w.low), label: `The real bottom: ${fd(w.low)}`, sub: 'obvious only afterwards', kind: 'good' });
+    const bw = baseWin();
+    add('myth', 'chartnote', 'THE EXACT BOTTOM IS A MYTH',
+      `Let's start with a reality check. This is the S&P 500 in the biggest fall of the last ten years, from ${fd(w.p)} to ${fd(w.low)}. It dropped ${pc(w.depth)} percent in total. Now look at every step down. At minus 10 percent it looked cheap${k10 ? `, and then it fell another ${pc(f(k10))} percent` : ''}. ${k20 ? `At minus 20 it looked even cheaper, and it still fell another ${pc(f(k20))} percent. ` : ''}The real bottom was ${fd(w.low)}, and the only way to know for sure was to wait until it was over. So we don't try to catch the exact bottom. We look for clues that the odds are getting better.`,
+      { kick: 'A REAL FALL, STEP BY STEP', title: 'Every step down looked like the bottom', ...bw, marks, col: '#26D0FF', cards: [{ lab: 'TOTAL FALL', val: `−${pc(w.depth)}%`, c: 'down' }, { lab: 'SESSIONS, HIGH TO LOW', val: String(w.low - w.p), c: '' }, ...(k10 ? [{ lab: 'FURTHER FALL AFTER −10%', val: `−${pc(f(k10))}%`, c: 'down' }] : [])] });
+  }
+
+  // sign 1: how far has it fallen
+  if (A) {
+    const n = c.length, a = Math.max(0, n - 130), pk = A.peakIdx[n - 1], now = A.now;
+    const start = Math.min(a, Math.max(0, pk - 8));
+    const ser = sl(c, start, n - 1), top = c[pk];
+    const marks = [{ i: pk - start, label: `Recent high: ${fd(pk)}`, sub: '', kind: 'info' }, { i: n - 1 - start, label: `Now: ${(now.dd * 100).toFixed(1).replace('-', '−')}% from the high`, sub: '', kind: now.dd <= -0.1 ? 'warn' : 'key' }];
+    const hl = [{ v: top * 0.9, label: '−10%  CORRECTION' }, { v: top * 0.8, label: '−20%  BEAR MARKET' }].filter(h => h.v >= Math.min(...ser) * 0.96);
+    const st = A.stats;
+    add('sign1', 'chartnote', 'SIGN 1: HOW FAR HAS IT FALLEN?',
+      `Sign one: how far has it fallen? Traders call a fall of 10 percent from the high a correction, and 20 percent a bear market. Right now the S&P 500 is ${pc(now.dd)} percent below its high. ${st ? `Since 2016, there have been ${st.n} falls of 10 percent or more. After the first hit of minus 10, the typical extra fall before the low was about ${pc(st.medFurther)} percent, and three months later the market was higher in ${st.fwdUp} of ${st.fwdN} cases. ` : ''}So a bigger fall means the odds of a bottom getting closer go up. But it's only one clue, never a signal on its own.`,
+      { kick: 'SIGN 1', title: 'How far has it fallen?', dates: sl(dts, start, n - 1), c: ser, marks, hl, col: '#26D0FF', cards: [{ lab: 'NOW, FROM THE HIGH', val: `${(now.dd * 100).toFixed(1).replace('-', '−')}%`, c: now.dd < 0 ? 'down' : '' }, { lab: 'CORRECTION STARTS AT', val: '−10%', c: '' }, { lab: 'BEAR MARKET STARTS AT', val: '−20%', c: '' }] });
+  }
+
+  if (w && w.panic > 0) {
+    const bw = baseWin(), vol = sl(A.v, win.a, win.b);
+    add('sign2', 'chartnote', 'SIGN 2: A PANIC DAY',
+      `Sign two: a panic day. Close to a bottom, there's often one day when everybody rushes for the exit: a big drop, on trading volume far above normal. In this fall, that was ${fd(w.panic)}, with about ${w.panicRatio.toFixed(1)} times the usual volume. And then, the selling calms down. A panic day isn't the bottom itself, but it's often a washout, where the last nervous sellers give up.`,
+      { kick: 'SIGN 2', title: 'A panic day: heavy volume, then calm', ...bw, vol, volMark: ix(w.panic), marks: [{ i: ix(w.panic), label: `Panic day: ${fd(w.panic)}`, sub: `${w.panicRatio.toFixed(1)}× the usual volume`, kind: 'key' }, { i: ix(w.low), label: 'The low', sub: fd(w.low), kind: 'good' }], col: '#26D0FF', cards: [{ lab: 'PANIC-DAY VOLUME', val: `${w.panicRatio.toFixed(1)}×`, c: 'up' }, { lab: 'SESSIONS BEFORE THE LOW', val: String(Math.max(0, w.low - w.panic)), c: '' }] });
+  }
+
+  if (w && w.vixW) {
+    const vv = w.vixW.map(x => (x === null ? undefined : x)), clean = []; let last = vv.find(x => x !== undefined);
+    vv.forEach(x => { if (x !== undefined) last = x; clean.push(last); });
+    const pk = w.vixPeak, diff = w.low - (win.a + pk), vp = clean[pk];
+    add('sign3', 'chartnote', 'SIGN 3: THE FEAR GAUGE',
+      `Sign three: the fear gauge. It's called the VIX, and it measures how nervous investors are. When fear peaks and then starts to fall, that's often at, or just before, the market's low. In this fall the VIX peaked at ${vp.toFixed(0)} on ${fd(win.a + pk)}, ${diff > 0 ? `and the S&P 500 made its low ${diff} sessions later` : diff < 0 ? `and the S&P 500 had already made its low ${Math.abs(diff)} sessions before` : 'the very same day the S&P 500 made its low'}. Falling fear doesn't prove a bottom, but rising fear definitely says it's not calm yet.`,
+      { kick: 'SIGN 3', title: 'Fear peaks, then falls', dates: sl(dts, win.a, win.b), c: clean, marks: [{ i: pk, label: `Fear peaks: VIX ${vp.toFixed(0)}`, sub: fd(win.a + pk), kind: 'warn' }, { i: ix(w.low), label: 'S&P 500 low', sub: fd(w.low), kind: 'good' }], col: '#FF3B6B', cards: [{ lab: 'VIX AT ITS PEAK', val: vp.toFixed(0), c: 'down' }, { lab: 'S&P LOW CAME', val: diff === 0 ? 'same day' : `${Math.abs(diff)} ${Math.abs(diff) === 1 ? 'day' : 'days'} ${diff > 0 ? 'later' : 'earlier'}`, c: '' }] });
+  }
+
+  if (w && w.hl > 0) {
+    const bw = baseWin();
+    add('sign4', 'chartnote', 'SIGN 4: A HIGHER LOW',
+      `Sign four: the market stops making new lows. After the bottom, price bounces, then pulls back again, and this time it holds above the old low. Traders call that a higher low. Here, the low was ${fd(w.low)}, then a bounce, and then a pullback on ${fd(w.hl)} that stayed above it. It means sellers are losing their power, because they can't push it down to a new low any more.`,
+      { kick: 'SIGN 4', title: 'A higher low: sellers lose their power', ...bw, hlines: [{ v: c[w.low], label: 'THE OLD LOW' }], marks: [{ i: ix(w.low), label: 'The low', sub: fd(w.low), kind: 'warn' }, { i: ix(w.bounce), label: 'The bounce', sub: '', kind: 'info' }, { i: ix(w.hl), label: 'Higher low', sub: `${fd(w.hl)}: it holds`, kind: 'good' }], col: '#26D0FF', cards: [{ lab: 'HIGHER LOW VS OLD LOW', val: `+${((c[w.hl] / c[w.low] - 1) * 100).toFixed(1)}%`, c: 'up' }] });
+  }
+
+  if (w && (w.r20 > 0 || w.r50 > 0)) {
+    const bw = baseWin(), marks = [{ i: ix(w.low), label: 'The low', sub: fd(w.low), kind: 'warn' }];
+    if (w.r20 > 0) marks.push({ i: ix(w.r20), label: 'Back above the 20-day average', sub: `${w.r20 - w.low} sessions after the low`, kind: 'info' });
+    if (w.r50 > 0) marks.push({ i: ix(w.r50), label: 'Back above the 50-day average', sub: `${w.r50 - w.low} sessions after the low`, kind: 'good' });
+    add('sign5', 'chartnote', 'SIGN 5: BACK ABOVE THE AVERAGE',
+      `Sign five: price climbs back above its short-term average, and stays there. The 20-day average is simply the average price of the last 20 days, and the 50-day is the same over 50 days. ${w.r20 > 0 ? `Here, the market got back above its 20-day average ${w.r20 - w.low} sessions after the low` : ''}${w.r50 > 0 ? `, and above its 50-day average after ${w.r50 - w.low}` : ''}. Notice that this sign is late. You won't catch the exact bottom with it. But it filters out a lot of false alarms.`,
+      { kick: 'SIGN 5', title: 'Price takes back its averages', ...bw, ma20: sl(A.s20, win.a, win.b), ma50: sl(A.s50, win.a, win.b), marks, col: '#26D0FF', cards: [...(w.r20 > 0 ? [{ lab: 'TO RETAKE THE 20-DAY', val: `${w.r20 - w.low} sessions`, c: 'up' }] : []), ...(w.r50 > 0 ? [{ lab: 'TO RETAKE THE 50-DAY', val: `${w.r50 - w.low} sessions`, c: 'up' }] : [])] });
+  }
+
+  add('sign6', 'newstest', 'SIGN 6: THE NEWS TEST',
+    `Sign six is the one I think matters most, and it's about how the market reacts to news. While the market is still falling, good news doesn't work. A stock pops before the open, and by the close it has faded. And bad news makes things worse. Near a bottom, it flips. Bad news gets shrugged off: stocks dip, then recover. And good news sticks: it pops, and holds all the way to the close, instead of fading. So don't just read the headline. Watch whether the close agrees with it.`,
+    { kick: 'SIGN 6', title: 'The news test' });
+
+  add('example', 'bullets', 'REAL EXAMPLE: NVIDIA, 17 NOVEMBER 2026',
+    `Here's a real example from this week. On November 17, Nvidia said it expected sales well above what Wall Street was forecasting. The shares jumped nearly 5 percent after the close. But, according to Reuters, the rally soon wavered, because investors were worried about who will be the next CEO. That's great news that did not hold. It doesn't tell us where the bottom is. It tells us the market isn't ready to look past its worries yet. And the opposite is what you watch for: bad headlines that no longer push prices down.`,
+    { kick: 'REAL EXAMPLE, 17 NOV 2026', title: 'Nvidia: good news that did not hold', items: ['Nvidia forecast sales well above Wall Street estimates', 'Shares jumped nearly 5% after the close', 'The rally soon wavered: investors worried about who will be the next CEO', 'Good news that fades says the market is not ready yet'], note: 'Source: Reuters analysis, 20 Nov 2026. An example of the news test, not a prediction.' });
+
+  add('checklist', 'bullets', 'THE BOTTOM CHECKLIST',
+    `So here's your checklist. One: down 10 to 20 percent or more from the high. Two: a panic day with huge volume, then calm. Three: the fear gauge peaks and starts to fall. Four: no new lows, with a higher low that holds. Five: price back above its 20-day average. Six: bad news ignored, and good news holding into the close. Ticking one box means very little. Ticking four or five means the odds are improving. It never means certainty.`,
+    { kick: 'TICK THE BOXES', title: 'The bottom checklist', items: ['Down 10–20% or more from the high', 'A panic day: heavy volume, then calm', 'Fear gauge (VIX) peaks and starts to fall', 'No new lows: a higher low holds', 'Price back above its 20-day average', 'Bad news ignored, good news holds into the close'] });
+
+  add('safe', 'bullets', 'HOW TO STAY SAFE',
+    `Now, how to stay safe while you wait for the clues. Never go all in at once. If you buy, build the position in small steps. Never use borrowed money. Decide where you'll get out before you buy, not after. And if you're wrong, get out, don't just keep buying more. This is also why my daily screen doesn't try to call the bottom of the whole market. It looks for strong stocks that fell hard, with a 4 percent target and a safety exit, and that's it.`,
+    { kick: 'SURVIVE FIRST', title: 'How to stay safe', items: ['Never go all in: build in small steps', 'Never use borrowed money', 'Decide your exit before you buy', 'Wrong? Get out. Do not just buy more'] });
+
+  add('outro', 'outro', 'THANKS FOR WATCHING', `And that's it! Six clues, no certainty, and a lot of patience. ${cfg.disclaimer} If this helped, hit subscribe to ${ch}, and tell me in the comments which of these six signs you watch. See you in the next one. Take care!`, { disclaimer: cfg.disclaimer });
+  return { mode: 'bottom', title, date: dayShort(asOf), asOf, scenes, tickers: [], cfg, sources: ['Nvidia example: Reuters analysis (via The Star), 20 Nov 2026: https://www.thestar.com.my/business/business-news/2026/11/20/nvidias-numbers-impress-but-investors-fret-over-ceo-succession'] };
+}
+
 function chapName(s) {
   if (s.type === 'setup') { const t = s.heading; return NAMES[t] ? `${NAMES[t]} (${t}) setup` : `${t} setup`; }
   let h = s.heading.charAt(0) + s.heading.slice(1).toLowerCase();
@@ -326,6 +424,9 @@ function metaParts(ep) {
   if (ep.mode === 'welcome') {
     hook = `${surv ? `The S&P 500 fell ${drop.replace('−', '')} in five sessions. ` : ''}Here are the ${tick.length} S&P 500 stocks the Uptrend Dip screen still flagged for ${ep.nxd}, how to treat them as 4% target swing trades, and the rules that keep the risk sane. Signals are from the ${dayShort(ep.asOf)} close.`;
     rules = `THE RULES\n• Wait 3-5 minutes after the open on ${ep.nxd}\n• Only if the price is within 2% of the signal-day close\n• Target: 4% above the signal-day close (a target, not a promise)\n• Stop: 3x ATR below. It is far away, so NEVER use leverage, margin, leveraged ETFs or options\n• Exit by the close of day 3 at the latest`;
+  } else if (ep.mode === 'bottom') {
+    hook = `Can you spot a market bottom? Nobody can call it exactly, but there are six simple clues that the selling may be running out of steam: how far it has fallen, a panic day, the fear gauge (VIX), a higher low, price taking back its averages, and the news test (bad news stops working, good news holds into the close). Real market history, plain English, no predictions.`;
+    rules = 'THE 6 CLUES\n• 1. How far has it fallen from its high?\n• 2. A panic day: heavy volume, then calm\n• 3. The fear gauge (VIX) peaks and falls\n• 4. A higher low that holds\n• 5. Price back above its 20-day average\n• 6. The news test: bad news ignored, good news holds into the close';
   } else if (ep.mode === 'weekly') hook = 'Weekly review of how the screen signals played out under the tested rules, plus a watch list for next week.';
   else {
     const d1 = typeof ep.chg1d === 'number' ? `The S&P 500 ${ep.chg1d >= 0 ? 'rose' : 'fell'} ${Math.abs(ep.chg1d).toFixed(1)}% today. ` : '';
@@ -334,8 +435,9 @@ function metaParts(ep) {
   }
   const head = [hook, tick.length ? `SIGNALS: ${named}` : '', rules].filter(Boolean).join('\n\n');
   const tail = [sources ? `MARKET SOURCES (checked by me, double-check before relying on them)\n${sources}` : '', ep.cfg.disclaimer, 'AI note: the charts and graphics in this video are generated automatically from market data. The voice and presenter are real.', `#TradeWithBK #SwingTrading #SP500 #StockMarket`].filter(Boolean).join('\n\n');
-  const tags = ['S&P 500', 'S&P 500 stocks', 'swing trading', 'swing trading strategy', '4% swing trade', 'stock screener', 'dip buying', 'uptrend pullback', 'stock market correction', 'stock market today', 'trading signals', 'technical analysis', 'stocks to watch', 'trade with bk', ...tick, ...tick.map(x => NAMES[x]).filter(Boolean)];
-  const pinned = ep.mode === 'weekly' ? 'Which setup did you follow this week, and how did it go? Educational only, not financial advice.' : `Which of these ${tick.length} would you have picked: ${tick.join(', ')}? Tell me below, and I'll reply to every comment. 👇\n\nReminder: these are signals from a screen, not recommendations. 4% is a target, not a promise, and the safety exit is far away, so never use leverage. Educational only, not financial advice.`;
+  const tags0 = ep.mode === 'bottom' ? ['market bottom', 'how to find a market bottom', 'stock market bottom', 'stock market correction', 'stock market crash', 'technical analysis for beginners', 'VIX', 'buy the dip', 'investing for beginners', 'S&P 500', 'trade with bk'] : null;
+  const tags = tags0 || ['S&P 500', 'S&P 500 stocks', 'swing trading', 'swing trading strategy', '4% swing trade', 'stock screener', 'dip buying', 'uptrend pullback', 'stock market correction', 'stock market today', 'trading signals', 'technical analysis', 'stocks to watch', 'trade with bk', ...tick, ...tick.map(x => NAMES[x]).filter(Boolean)];
+  const pinned = ep.mode === 'bottom' ? "Which of the 6 signs do you watch most? And has the 'news test' (bad news ignored, good news holding into the close) worked for you? Tell me below, and I'll reply to every comment. 👇\n\nReminder: nobody can call the exact bottom. This is education, not financial advice. Never use leverage." : ep.mode === 'weekly' ? 'Which setup did you follow this week, and how did it go? Educational only, not financial advice.' : `Which of these ${tick.length} would you have picked: ${tick.join(', ')}? Tell me below, and I'll reply to every comment. 👇\n\nReminder: these are signals from a screen, not recommendations. 4% is a target, not a promise, and the safety exit is far away, so never use leverage. Educational only, not financial advice.`;
   return { title: ep.title, head, tail, chap, tags, pinned };
 }
 function metadata(ep) {
@@ -345,6 +447,7 @@ function metadata(ep) {
 }
 
 function tapeFor(ep, setups) {
+  if (ep.mode === 'bottom') return 'FINDING MARKET BOTTOMS  //  6 SIMPLE SIGNS  //  NOBODY CALLS THE EXACT BOTTOM  //  NEVER USE LEVERAGE  //  EDUCATIONAL ONLY';
   const m = (setups && setups.market) || {}, parts = [];
   if (isNum(m.chg5d)) parts.push(`S&P 500 ${m.chg5d >= 0 ? '+' : '−'}${Math.abs(m.chg5d).toFixed(1)}% over 5 sessions`);
   if (isNum(m.chg20d)) parts.push(`${m.chg20d >= 0 ? '+' : '−'}${Math.abs(m.chg20d).toFixed(1)}% over 20 sessions`);

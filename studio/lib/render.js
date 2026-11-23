@@ -55,12 +55,14 @@ function items(){const L=[];
   document.querySelectorAll('[data-a]').forEach(el=>{const [s,e]=el.dataset.a.split(',').map(Number);L.push({el,s,e,k:'a'});});
   document.querySelectorAll('[data-w]').forEach(el=>{const [s,e]=el.dataset.w.split(',').map(Number);L.push({el,s,e,k:'w'});});
   document.querySelectorAll('[data-count]').forEach(el=>{const q=el.dataset.count.split('|');L.push({el,s:parseFloat(q[5]),e:parseFloat(q[6]),k:'c',q});});
+  document.querySelectorAll('[data-d]').forEach(el=>{const [s,e]=el.dataset.d.split(',').map(Number);L.push({el,s,e,k:'d'});});
   const rv=document.getElementById('rv');if(rv)L.push({el:rv,s:0,e:0.55,k:'r'});
   return L;}
 function paint(it,t){const el=it.el;
   if(it.k==='a'){el.style.opacity=t;el.style.transform='translateY('+((1-t)*26)+'px)';}
   else if(it.k==='w'){el.style.width=(t*parseFloat(el.dataset.max))+'px';}
   else if(it.k==='c'){const [from,to,d,pre,suf]=it.q;el.textContent=fmt(parseFloat(from)+(parseFloat(to)-parseFloat(from))*t,parseInt(d),pre,suf);}
+  else if(it.k==='d'){const l=el.getTotalLength();el.style.strokeDasharray=l+' '+l;el.style.strokeDashoffset=l*(1-t);}
   else if(it.k==='r'){el.setAttribute('width',t*parseFloat(el.dataset.max));}}
 window.setP=function(p){items().forEach(it=>paint(it,it.k==='r'?ease(p/0.55):ease((p-it.s)/(it.e-it.s))));};
 /* beats: header = beat 0, then one beat per distinct start time, so items can appear one by one */
@@ -230,6 +232,53 @@ const SCENES = {
       ${s.data.note ? `<div class="abs" data-a="0.1,0.4" style="left:80px;top:290px"><span class="chip b" style="font-size:24px">${esc(s.data.note)}</span></div>` : ''}
       <div class="card abs" data-a="0.15,0.5" style="left:80px;top:${s.data.note ? 360 : 300}px;width:1760px;padding:30px 40px"><table><thead><tr><th>#</th><th>TICKER</th><th>5-DAY MOVE</th><th>VS 200-DAY</th><th>RSI</th><th>SIGNAL CLOSE</th><th>STOP</th></tr></thead><tbody>${rows.map((r, i) => `<tr><td class="mut">${i + 1}</td><td style="font-weight:800;color:#7FE3FF;text-align:left">${esc(r.ticker)}</td><td class="${cls(r.chg5d)}">${sgn(r.chg5d)}</td><td>${sgn(r.vs200)}</td><td>${isNum(r.rsi) ? r.rsi.toFixed(0) : '–'}</td><td>${money(r.close)}</td><td class="down">${isNum(r.stopDist) ? '−' + Math.abs(r.stopDist).toFixed(0) + '%' : '–'}</td></tr>`).join('')}</tbody></table></div>`, ep.date);
   },
+  chartnote: (s, ep) => {
+    const d = s.data, c = d.c, n = c.length, cw = 1700, H1 = 470, ph = d.vol ? H1 - 120 : H1, col = d.col || '#26D0FF';
+    const hl = d.hl || d.hlines || [];
+    const vals = c.concat(hl.map(h => h.v), d.ma20 ? d.ma20.filter(v => v) : [], d.ma50 ? d.ma50.filter(v => v) : []);
+    const lo0 = Math.min(...vals), hi0 = Math.max(...vals), pad = (hi0 - lo0) * 0.14 || 1, lo = lo0 - pad, hi = hi0 + pad;
+    const x = i => 24 + i * ((cw - 48) / Math.max(1, n - 1)), y = v => 18 + (hi - v) / (hi - lo) * (ph - 36);
+    const path = (arr, w, stroke, dash) => { let p = '', on = false; arr.forEach((v, i) => { if (typeof v !== 'number') { on = false; return; } p += `${on ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`; on = true; }); return `<path d="${p}" fill="none" stroke="${stroke}" stroke-width="${w}" stroke-linejoin="round" stroke-linecap="round" ${dash ? 'stroke-dasharray="12 9"' : ''}/>`; };
+    const area = `<path d="${c.map((v, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)} ${y(v).toFixed(1)}`).join('')}L${x(n - 1).toFixed(1)} ${ph}L${x(0).toFixed(1)} ${ph}Z" fill="url(#cg)"/>`;
+    let vb = '';
+    if (d.vol) { const vm = Math.max(...d.vol), bw = Math.max(2, (cw - 48) / n * 0.62); d.vol.forEach((v, i) => { const h = Math.max(2, v / vm * 96), hot = i === d.volMark; vb += `<rect x="${(x(i) - bw / 2).toFixed(1)}" y="${(H1 - 8 - h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${hot ? '#FFC21A' : col}" opacity="${hot ? 1 : 0.38}"/>`; }); vb += `<text x="26" y="${ph + 14}" fill="#7F93B8" font-size="18" font-weight="700" letter-spacing="2">TRADING VOLUME</text>`; }
+    const hls = hl.map(h => `<line x1="24" x2="${cw - 24}" y1="${y(h.v).toFixed(1)}" y2="${y(h.v).toFixed(1)}" stroke="rgba(255,255,255,.35)" stroke-width="2" stroke-dasharray="10 8"/><text x="${cw - 30}" y="${(y(h.v) - 10).toFixed(1)}" text-anchor="end" fill="#B8C6E0" font-size="20" font-weight="800" letter-spacing="2">${esc(h.label)}</text>`).join('');
+    const svg = `<svg width="${cw}" height="${H1}" viewBox="0 0 ${cw} ${H1}"><defs><linearGradient id="cg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity=".30"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient><clipPath id="rvc"><rect id="rv" x="0" y="0" width="0" height="${H1}" data-max="${cw}"/></clipPath></defs>${hls}<g clip-path="url(#rvc)">${area}${d.ma20 ? path(d.ma20, 4, '#FFC21A') : ''}${d.ma50 ? path(d.ma50, 4, '#B36BFF') : ''}${path(c, 6, col)}${vb}</g></svg>`;
+    const colOf = { warn: '#FF3B6B', good: '#1FE5A5', info: '#26D0FF', key: '#FFC21A' };
+    const marks = (d.marks || []).slice().sort((a, b) => a.i - b.i);
+    const placed = [];
+    const mk = marks.map((m, j) => {
+      const st = (0.2 + j * (0.5 / Math.max(1, marks.length))).toFixed(2), en = (parseFloat(st) + 0.2).toFixed(2), cl = colOf[m.kind] || col;
+      const px = 30 + x(m.i), py = 64 + y(c[m.i]), lw = Math.round(Math.max(String(m.label).length * 15, String(m.sub || '').length * 12.5) + 44), lh = m.sub ? 84 : 54;
+      const cx = Math.max(20, Math.min(1760 - lw, px - lw / 2));
+      const upper = y(c[m.i]) < ph * 0.5;
+      const cands = (upper ? [[cx, py + 30], [cx, py - 30 - lh]] : [[cx, py - 30 - lh], [cx, py + 30]])
+        .concat([[px + 34, py - lh / 2], [px - 34 - lw, py - lh / 2], [px + 34, py + 40], [px + 34, py - 40 - lh], [px - 34 - lw, py + 40], [px - 34 - lw, py - 40 - lh], [cx, py - 30 - lh - 100], [cx, py + 130]]).concat([40, 140, 240, 340, 440].map(t => [Math.min(1766 - lw, Math.max(px + 80, 900)), t]));
+      const dots = marks.map((q, k2) => ({ k2, x: 30 + x(q.i) - 20, y: 64 + y(c[q.i]) - 20 }));
+      const ok = (X, t) => X >= 14 && X + lw <= 1766 && t >= 14 && t + lh <= 566 && !dots.some(q => q.k2 !== j && X < q.x + 40 && X + lw > q.x && t < q.y + 40 && t + lh > q.y) && !placed.some(p => X < p.x + p.w + 10 && X + lw + 10 > p.x && t < p.y + p.h + 8 && t + lh + 8 > p.y);
+      const pick = cands.find(q => ok(q[0], q[1])) || cands[0], lx = pick[0], ly = pick[1];
+      placed.push({ x: lx, y: ly, w: lw, h: lh });
+      const beside = lx >= px + 20 || lx + lw <= px - 20;
+      const lineEl = beside ? `<div class="abs" data-a="${st},${en}" style="left:${lx > px ? px : lx + lw}px;top:${py - 1}px;width:${Math.abs((lx > px ? lx : px) - (lx > px ? px : lx + lw))}px;height:2px;background:${cl};opacity:.8"></div>` : `<div class="abs" data-a="${st},${en}" style="left:${px - 1}px;top:${ly > py ? py : ly + lh}px;width:2px;height:${Math.max(0, ly > py ? ly - py : py - (ly + lh))}px;background:${cl};opacity:.8"></div>`;
+      return `${lineEl}
+      <div class="abs" data-a="${st},${en}" style="left:${px - 12}px;top:${py - 12}px;width:24px;height:24px;border-radius:50%;background:${cl};box-shadow:0 0 26px ${cl},0 0 6px #fff inset"></div>
+      <div class="abs" data-a="${st},${en}" style="left:${lx}px;top:${ly}px;width:${lw}px;line-height:1.2"><div style="background:rgba(6,12,24,.94);border:2px solid ${cl};border-radius:14px;padding:8px 16px;box-shadow:0 0 22px ${cl}55;text-align:center"><div style="font-weight:800;font-size:25px;color:${cl};white-space:nowrap">${esc(m.label)}</div>${m.sub ? `<div style="font-size:21px;font-weight:600;color:#C9D6EE;white-space:nowrap">${esc(m.sub)}</div>` : ''}</div></div>`;
+    }).join('');
+    const cards = (d.cards || []).map((q, j) => { const st = (0.72 + j * 0.07).toFixed(2); return `<div class="card abs" data-a="${st},${(parseFloat(st) + 0.2).toFixed(2)}" style="left:${80 + j * 600}px;top:878px;width:560px;height:104px;padding:14px 26px;display:flex;align-items:center;justify-content:space-between"><div class="lab" style="white-space:nowrap">${esc(q.lab)}</div><div class="num ${q.c || ''}" style="font-size:46px;white-space:nowrap">${esc(q.val)}</div></div>`; }).join('');
+    return frame(`<div class="abs" data-a="0,0.3" style="left:80px;top:130px"><div class="kick">${esc(d.kick || '')}</div><div class="h2" style="margin-top:10px;font-size:68px">${esc(d.title || '')}</div></div>
+      <div class="card abs" data-a="0.02,0.3" style="left:80px;top:270px;width:1760px;height:580px;padding:0"><div class="abs" style="left:30px;top:64px">${svg}</div>${d.ma20 ? '<div class="abs" style="left:34px;top:12px;font-size:21px;font-weight:700;display:flex;gap:26px"><span style="color:#FFC21A">━ 20-day average</span><span style="color:#B36BFF">━ 50-day average</span></div>' : ''}${mk}</div>
+      ${cards}`, ep.date);
+  },
+  newstest: (s, ep) => {
+    const P = { fg: 'M10 90 L40 90 L64 34 L120 30 L190 52 L260 84 L330 112 L390 126', fb: 'M10 70 L50 70 L80 112 L150 124 L230 138 L310 142 L390 148', bb: 'M10 70 L50 70 L80 112 L120 126 L190 108 L270 84 L340 74 L390 68', bg: 'M10 92 L40 92 L64 38 L120 34 L190 30 L260 30 L330 24 L390 22' };
+    const cell = (k, x0, y0, head, cap, col, st, tag) => `<div class="card abs" data-a="${st},${(st + 0.2).toFixed(2)}" style="left:${x0}px;top:${y0}px;width:830px;height:300px;padding:18px 26px;border-color:${col}88"><div style="display:flex;justify-content:space-between;align-items:center"><div style="font-weight:800;font-size:30px">${head}</div><span class="chip" style="font-size:16px;opacity:.7">ILLUSTRATION</span></div><div class="abs" style="left:26px;top:62px"><svg width="780" height="190" viewBox="0 0 400 160" preserveAspectRatio="none"><line x1="10" x2="390" y1="${k === 'fg' || k === 'bg' ? 90 : 70}" y2="${k === 'fg' || k === 'bg' ? 90 : 70}" stroke="rgba(255,255,255,.3)" stroke-width="1.4" stroke-dasharray="5 5"/><path data-d="${st},${(st + 0.28).toFixed(2)}" d="${P[k]}" fill="none" stroke="${col}" stroke-width="4.5" stroke-linejoin="round" stroke-linecap="round" style="filter:drop-shadow(0 0 8px ${col})"/></svg></div><div class="abs" style="left:26px;bottom:14px;font-size:26px;font-weight:700;color:${col}">${cap}</div></div>`;
+    return frame(`<div class="abs" data-a="0,0.3" style="left:80px;top:130px"><div class="kick">${esc(s.data.kick || '')}</div><div class="h2" style="margin-top:10px;font-size:68px">${esc(s.data.title || '')}</div></div>
+      <div class="abs" data-a="0.05,0.3" style="left:80px;top:268px;font-weight:800;font-size:26px;letter-spacing:.12em;color:#FF3B6B">STILL FALLING</div><div class="abs" data-a="0.05,0.3" style="left:1010px;top:262px;font-weight:800;font-size:26px;letter-spacing:.12em;color:#1FE5A5">BOTTOM FORMING</div>
+      ${cell('fg', 80, 305, 'Good news', 'Pops early, fades by the close', '#FF3B6B', 0.2)}
+      ${cell('fb', 80, 625, 'Bad news', 'Drops, and keeps dropping', '#FF3B6B', 0.35)}
+      ${cell('bb', 1010, 625, 'Bad news', 'Dips, then shrugged off', '#1FE5A5', 0.5)}
+      ${cell('bg', 1010, 305, 'Good news', 'Pops, and holds into the close', '#1FE5A5', 0.65)}`, ep.date);
+  },
   paper: (s, ep) => {
     const d = s.data, st = (label, val, py, a2) => `<div class="card abs" data-a="${a2}" style="left:80px;top:${py}px;width:420px;height:200px;padding:26px 30px"><div class="lab">${label}</div><div class="num" style="font-size:84px;line-height:1.1;margin-top:10px">${val}</div></div>`;
     const rows = (d.recent || []).map((t, i) => `<div data-a="${0.25 + i * 0.06},${0.55 + i * 0.06}" style="display:flex;align-items:center;gap:20px;height:62px;border-bottom:1px solid rgba(255,255,255,.08)"><div class="mut" style="width:100px;font-size:22px">${esc(t.d)}</div><div style="width:150px;font-weight:800;font-size:34px">${esc(t.ticker)}</div><div class="${cls(t.pct)}" style="width:160px;font-weight:800;font-size:34px">${sgn(t.pct)}</div><div class="mut" style="font-size:24px">${t.how === 'target' ? 'reached the 4% target' : t.how === 'stop' ? 'hit the safety exit' : 'closed on day 3'}</div></div>`).join('');
@@ -264,7 +313,7 @@ const SCENES = {
   bullets: (s, ep) => {
     const d = s.data, items = d.items || [];
     return frame(`<div class="abs" data-a="0,0.3" style="left:80px;top:140px"><div class="kick">${esc(d.kick || '')}</div><div class="h2" style="margin-top:12px">${esc(d.title || s.heading)}</div></div>
-      <div class="abs" style="left:80px;top:310px;width:1760px;display:grid;gap:${items.length > 4 ? 12 : 22}px">${items.map((t, i) => `<div class="card" data-a="${0.15 + i * 0.1},${0.45 + i * 0.1}" style="display:flex;align-items:center;gap:34px;padding:${items.length > 4 ? 16 : 34}px 44px"><div style="flex:none;width:64px;height:64px;border-radius:20px;background:rgba(38,208,255,.16);border:1px solid rgba(38,208,255,.5);display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800;color:#7FE3FF">${i + 1}</div><div style="font-size:${items.length > 4 ? 38 : 42}px;font-weight:700;line-height:1.25">${esc(t)}</div></div>`).join('')}</div>`, ep.date);
+      <div class="abs" style="left:80px;top:310px;width:1760px;display:grid;gap:${items.length > 4 ? 12 : 22}px">${items.map((t, i) => `<div class="card" data-a="${0.15 + i * 0.1},${0.45 + i * 0.1}" style="display:flex;align-items:center;gap:34px;padding:${items.length > 4 ? 16 : 34}px 44px"><div style="flex:none;width:64px;height:64px;border-radius:20px;background:rgba(38,208,255,.16);border:1px solid rgba(38,208,255,.5);display:flex;align-items:center;justify-content:center;font-size:34px;font-weight:800;color:#7FE3FF">${i + 1}</div><div style="font-size:${items.length > 4 ? 38 : 42}px;font-weight:700;line-height:1.25">${esc(t)}</div></div>`).join('')}</div>${d.note ? `<div class="abs mut" data-a="0.8,0.95" style="left:80px;top:${items.length > 4 ? 948 : 936}px;font-size:22px;font-weight:600">${esc(d.note)}</div>` : ''}`, ep.date);
   },
   steps: (s, ep) => {
     const items = s.data.items || [];
@@ -384,17 +433,28 @@ async function renderStills(ep, outDir, { chromium }) {
   } finally { await browser.close(); fs.rmSync(work, { recursive: true, force: true }); }
 }
 
-function photoHtml(dir) {
+function photoHtml(dir, plain) {
   const src = path.join(__dirname, '..', 'assets', 'bk.png');
   if (!fs.existsSync(src)) return '';
   fs.copyFileSync(src, path.join(dir, 'bk.png'));
   return `<div class="abs" style="left:760px;top:70px;width:500px;height:500px;border-radius:50%;box-shadow:0 0 0 7px #26D0FF,0 0 60px 10px rgba(38,208,255,.55),0 0 140px rgba(38,208,255,.25)"><img src="bk.png" style="width:500px;height:500px;border-radius:50%;display:block"></div>
-    <div class="abs" style="left:730px;top:455px;width:220px;height:220px;border-radius:50%;background:#031A12;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 6px #1FE5A5,0 0 50px rgba(31,229,165,.7);font-weight:800;font-size:80px;color:#1FE5A5;text-shadow:0 0 24px rgba(31,229,165,.8)">+4%</div>
-    <div class="abs" style="left:900px;top:640px;width:370px;text-align:center;font-weight:800;font-size:24px;letter-spacing:.1em;color:var(--amb);text-shadow:0 0 16px rgba(255,194,26,.6)">TARGET, NOT A PROMISE</div>`;
+    ${plain ? '' : `    <div class="abs" style="left:730px;top:455px;width:220px;height:220px;border-radius:50%;background:#031A12;display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 6px #1FE5A5,0 0 50px rgba(31,229,165,.7);font-weight:800;font-size:80px;color:#1FE5A5;text-shadow:0 0 24px rgba(31,229,165,.8)">+4%</div>
+    <div class="abs" style="left:900px;top:640px;width:370px;text-align:center;font-weight:800;font-size:24px;letter-spacing:.1em;color:var(--amb);text-shadow:0 0 16px rgba(255,194,26,.6)">TARGET, NOT A PROMISE</div>`}`;
 }
 
 function thumbHtml(ep, dir, art) {
   const setupsSc = ep.scenes.filter(x => x.type === 'setup'), n = setupsSc.length, t = setupsSc.map(x => x.heading).slice(0, 5);
+  if (ep.mode === 'bottom') {
+    const pts = '0,60 40,58 80,62 120,56 160,70 200,110 240,150 280,190 320,215 350,232 380,226 420,236 460,214 500,198 540,205 580,170 620,150';
+    return `<!doctype html><html><head><meta charset="utf-8"><style>${fontCss(dir)}${CSS.replace(/html,body\{width:1920px;height:1080px/, 'html,body{width:1280px;height:720px')}</style></head><body>
+    ${bgCandles(1280, 720, 9)}
+    <div class="abs" style="left:56px;top:40px;display:flex;align-items:center;gap:14px">${logoSvg(60, { id: 'th' })}<span style="font-weight:800;letter-spacing:.14em;font-size:24px">TRADE WITH BK</span></div>
+    <div class="abs" style="left:56px;top:150px"><div class="kick" style="font-size:28px;color:var(--amb);text-shadow:0 0 18px rgba(255,194,26,.6)">6 SIMPLE SIGNS</div></div>
+    <div class="abs" style="left:56px;top:196px;width:760px"><div class="h1" style="font-size:118px;line-height:1.02">IS THE<br><span style="color:var(--acc)">BOTTOM</span><br>IN?</div></div>
+    <div class="abs" style="left:56px;top:600px"><span class="chip g" style="font-size:32px;padding:10px 26px;border-width:3px">NO JARGON NEEDED</span></div>
+    <svg class="abs" style="left:40px;top:560px;opacity:0" width="10" height="10" viewBox="0 0 640 260"><defs><filter id="gw"><feGaussianBlur stdDeviation="5"/></filter></defs><polyline points="${pts}" fill="none" stroke="#26D0FF" stroke-width="9" stroke-linejoin="round" filter="url(#gw)" opacity=".7"/><polyline points="${pts}" fill="none" stroke="#26D0FF" stroke-width="6" stroke-linejoin="round"/><circle cx="350" cy="232" r="16" fill="#1FE5A5"/><text x="372" y="262" fill="#fff" font-size="34" font-weight="800" font-family="Poppins,sans-serif">?</text></svg>
+    ${art ? photoHtml(dir, true) : ''}</body></html>`;
+  }
   const weekly = ep.mode === 'weekly', surv = typeof ep.chg5d === 'number' && ep.chg5d <= -3 && n > 0;
   const kick = weekly ? 'WEEKLY REVIEW' : ep.nxd ? 'SIGNALS FOR ' + ep.nxd.toUpperCase() : 'DAILY SCREEN';
   const head = weekly ? 'WEEK IN<br><span style="color:var(--acc)">REVIEW</span>' : surv ? `TOP ${n}<br><span style="color:var(--acc)">SURVIVORS</span>` : n ? `TOP ${n}<br><span style="color:var(--acc)">SIGNALS</span>` : 'DIP<br><span style="color:var(--acc)">SIGNALS</span>';
@@ -412,7 +472,7 @@ function thumbHtml(ep, dir, art) {
 }
 
 function studioBgHtml(ep, dir) {
-  const kick = ep.nxd ? 'SIGNALS FOR ' + ep.nxd.toUpperCase() : ep.mode === 'weekly' ? 'WEEKLY REVIEW' : 'DAILY SIGNALS';
+  const kick = ep.mode === 'bottom' ? 'FINDING MARKET BOTTOMS' : ep.nxd ? 'SIGNALS FOR ' + ep.nxd.toUpperCase() : ep.mode === 'weekly' ? 'WEEKLY REVIEW' : 'DAILY SIGNALS';
   return `<!doctype html><html><head><meta charset="utf-8"><style>${fontCss(dir)}${CSS}</style></head><body>
     <div class="abs" style="inset:0;background:radial-gradient(ellipse at 18% 45%,#10213D 0%,#07101E 55%,#02050A 100%)"></div>
     <div class="abs" style="left:-100px;top:600px;width:700px;height:600px;background:radial-gradient(circle,rgba(255,59,107,.22),transparent 65%)"></div>

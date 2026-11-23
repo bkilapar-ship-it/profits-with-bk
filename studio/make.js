@@ -7,9 +7,10 @@
 'use strict';
 const fs = require('fs');
 const path = require('path');
-const { loadJson, fetchBars } = require('./lib/data');
+const { loadJson, fetchBars, fetchVix } = require('./lib/data');
 const { buildEpisode, metadata, pointsOf } = require('./lib/script');
 const { prepareCharts, renderEpisode, renderStills, renderBrandAssets } = require('./lib/render');
+const { analyze } = require('./lib/bottom');
 const { teleprompterHtml } = require('./lib/teleprompter');
 
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > -1 ? (process.argv[i + 1] && !process.argv[i + 1].startsWith('--') ? process.argv[i + 1] : true) : d; };
@@ -32,6 +33,16 @@ async function main() {
   try {
     bars = barsFile ? await loadJson(barsFile) : (arg('no-video', false) ? {} : await fetchBars(['SPY'], { keyId: process.env.ALPACA_KEY_ID, secret: process.env.ALPACA_SECRET_KEY }));
   } catch (e) { console.log('Note: could not load S&P 500 history early:', e.message); }
+  if (mode === 'bottom') { // long S&P 500 history (and the VIX) for the market-bottom episode
+    try {
+      const hf = arg('history', null), env = { keyId: process.env.ALPACA_KEY_ID, secret: process.env.ALPACA_SECRET_KEY };
+      const long = hf ? (await loadJson(hf)).SPY : (await fetchBars(['SPY'], { ...env, days: 3800 })).SPY;
+      let vix = null; const vf = arg('vix', null);
+      try { vix = vf ? await loadJson(vf) : await fetchVix(); } catch (e) { console.log('Note: VIX history unavailable, the fear-gauge slide is left out:', e.message); }
+      setups.__bottom = analyze(long, vix);
+      if (!bars.SPY && long) bars.SPY = long.slice(-300);
+    } catch (e) { console.log('Note: could not load long S&P 500 history, the data slides are left out:', e.message); }
+  }
   if (bars.SPY && bars.SPY.length > 21) {
     const c = bars.SPY.map(b => b.c), n = c.length - 1;
     setups.market = { ...(setups.market || {}), chg1d: (c[n] / c[n - 1] - 1) * 100, close: c[n], chg5d: (c[n] / c[n - 5] - 1) * 100, chg20d: (setups.market && typeof setups.market.chg20d === 'number') ? setups.market.chg20d : (c[n] / c[n - 20] - 1) * 100 };

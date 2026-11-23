@@ -4,11 +4,11 @@
 const fs = require('fs');
 const path = require('path');
 const dir = process.argv[2];
-const LABEL = { welcome: 'Welcome video', daily: 'Daily video', weekly: 'Weekly review' };
+const LABEL = { welcome: 'Welcome video', daily: 'Daily video', weekly: 'Weekly review', bottom: 'Market bottoms (special)' };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const sections = ['welcome', 'daily', 'weekly'].map(m => {
+const sections = ['welcome', 'bottom', 'daily', 'weekly'].map(m => {
   const f = path.join(dir, m, 'meta.json');
-  if (!fs.existsSync(f)) return m === 'welcome' ? '' :  `<section><h2>${LABEL[m]}</h2><p class="mut">None generated yet.</p></section>`;
+  if (!fs.existsSync(f)) return (m === 'welcome' || m === 'bottom') ? '' :  `<section><h2>${LABEL[m]}</h2><p class="mut">None generated yet.</p></section>`;
   const meta = JSON.parse(fs.readFileSync(f, 'utf8'));
   const md = fs.readFileSync(path.join(dir, m, 'metadata.txt'), 'utf8');
   return `<section><h2>${LABEL[m]}</h2><p class="t">${esc(meta.title)}</p><p class="mut">${esc(meta.asOf)} · ${meta.scenes} scenes · about ${Math.floor(meta.seconds / 60)}:${String(Math.round(meta.seconds % 60)).padStart(2, '0')}</p>
