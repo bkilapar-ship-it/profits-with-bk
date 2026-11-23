@@ -3,69 +3,9 @@
  "status": "running",
  "startedAt": "2026-09-26",
  "lastEntryRunDate": "2026-11-23",
- "lastExitRunDate": "2026-11-20",
+ "lastExitRunDate": "2026-11-23",
  "spyBaseline": 764.95,
  "positions": {
-  "HUM": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-11-18",
-   "signalClose": 385.78,
-   "entryDate": "2026-11-19",
-   "entry": 389.86,
-   "shares": 32,
-   "target": 405.45,
-   "stop": 322.03,
-   "ocoOrderId": "67bdbb23-1b71-4a3e-bff6-25603b3c5b75",
-   "now": 383.21
-  },
-  "ACN": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-11-18",
-   "signalClose": 227.49,
-   "entryDate": "2026-11-19",
-   "entry": 229.19,
-   "shares": 55,
-   "target": 238.36,
-   "stop": 200.15,
-   "ocoOrderId": "10dd3f8f-5004-4f94-8131-adcd160d0e4d",
-   "now": 222.65
-  },
-  "CTSH": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-11-18",
-   "signalClose": 57.95,
-   "entryDate": "2026-11-19",
-   "entry": 58.38,
-   "shares": 216,
-   "target": 60.71,
-   "stop": 51.24,
-   "ocoOrderId": "58e651d8-489f-491a-9a0e-78390176bf24",
-   "now": 58.73
-  },
-  "TEAM": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "nonsp",
-   "signalDate": "2026-11-18",
-   "signalClose": 135.05,
-   "entryDate": "2026-11-19",
-   "entry": 137.65,
-   "shares": 92,
-   "target": 143.16,
-   "stop": 105.31,
-   "ocoOrderId": "aebf45ab-816f-4c16-8d97-13af77a751e1",
-   "now": 138.9
-  },
   "MPC": {
    "strategy": "dip",
    "side": "long",
@@ -79,7 +19,7 @@
    "target": 380.55,
    "stop": 306.87,
    "ocoOrderId": "a4623c45-8dd5-41cb-8127-8a22c3fc3ec6",
-   "now": 358.81
+   "now": 357.63
   },
   "VLO": {
    "strategy": "dip",
@@ -94,7 +34,7 @@
    "target": 346.53,
    "stop": 283.07,
    "ocoOrderId": "c341d9ed-a5af-491c-8ba2-17249336811d",
-   "now": 330.67
+   "now": 329.12
   },
   "CNC": {
    "strategy": "dip",
@@ -109,7 +49,7 @@
    "target": 65.63,
    "stop": 51.44,
    "ocoOrderId": "59d50dac-d3ed-4d48-b2ec-fc4d2fc4f0c0",
-   "now": 63.1
+   "now": 63.2
   },
   "PYPL": {
    "strategy": "dip",
@@ -124,7 +64,7 @@
    "target": 56.33,
    "stop": 49.03,
    "ocoOrderId": "f190c982-c28e-4ee0-a2ed-b3ade37fa8d6",
-   "now": 55.13
+   "now": 55.16
   },
   "FISV": {
    "strategy": "dip",
@@ -139,7 +79,7 @@
    "target": 59.2,
    "stop": 48.71,
    "ocoOrderId": "d79d6943-e428-4a61-8561-2eca0a87a1bc",
-   "now": 57.03
+   "now": 57.1
   },
   "WDAY": {
    "strategy": "dip",
@@ -154,7 +94,7 @@
    "target": 182.96,
    "stop": 152.97,
    "ocoOrderId": "56174246-98ad-4d10-9c54-ae2691943068",
-   "now": 175.87
+   "now": 176.18
   }
  },
  "pendingEntries": {},
@@ -1246,6 +1186,74 @@
    "how": "manual",
    "usd": -254.08,
    "pct": -32.2
+  },
+  {
+   "ticker": "HUM",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-11-18",
+   "signalClose": 385.78,
+   "entryDate": "2026-11-19",
+   "exitDate": "2026-11-23",
+   "entry": 389.86,
+   "exit": 383.18,
+   "shares": 32,
+   "how": "time",
+   "usd": -213.76,
+   "pct": -1.71
+  },
+  {
+   "ticker": "ACN",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-11-18",
+   "signalClose": 227.49,
+   "entryDate": "2026-11-19",
+   "exitDate": "2026-11-23",
+   "entry": 229.19,
+   "exit": 222.35,
+   "shares": 55,
+   "how": "time",
+   "usd": -376.2,
+   "pct": -2.98
+  },
+  {
+   "ticker": "CTSH",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-11-18",
+   "signalClose": 57.95,
+   "entryDate": "2026-11-19",
+   "exitDate": "2026-11-23",
+   "entry": 58.38,
+   "exit": 58.61,
+   "shares": 216,
+   "how": "time",
+   "usd": 49.68,
+   "pct": 0.39
+  },
+  {
+   "ticker": "TEAM",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "nonsp",
+   "signalDate": "2026-11-18",
+   "signalClose": 135.05,
+   "entryDate": "2026-11-19",
+   "exitDate": "2026-11-23",
+   "entry": 137.65,
+   "exit": 139.65,
+   "shares": 92,
+   "how": "time",
+   "usd": 184,
+   "pct": 1.45
   }
  ],
  "equity": [
@@ -1539,9 +1547,9 @@
   },
   {
    "d": "2026-11-23",
-   "value": 95445,
-   "pct": -4.55,
-   "spy": -5.42
+   "value": 95558,
+   "pct": -4.44,
+   "spy": -5.33
   }
  ],
  "lastOrders": {
@@ -1676,8 +1684,25 @@
   "queued": false
  },
  "lastExits": {
-  "forDate": "2026-11-20",
-  "exits": []
+  "forDate": "2026-11-23",
+  "exits": [
+   {
+    "ticker": "HUM",
+    "note": "Sold at the market (3rd session)"
+   },
+   {
+    "ticker": "ACN",
+    "note": "Sold at the market (3rd session)"
+   },
+   {
+    "ticker": "CTSH",
+    "note": "Sold at the market (3rd session)"
+   },
+   {
+    "ticker": "TEAM",
+    "note": "Sold at the market (3rd session)"
+   }
+  ]
  },
  "lastQueueFor": "2026-10-13",
  "untrackedKey": null
