@@ -3,7 +3,7 @@
  "status": "running",
  "startedAt": "2026-09-26",
  "lastEntryRunDate": "2026-11-24",
- "lastExitRunDate": "2026-11-23",
+ "lastExitRunDate": "2026-11-24",
  "spyBaseline": 764.95,
  "positions": {
   "MPC": {
@@ -19,7 +19,7 @@
    "target": 380.55,
    "stop": 306.87,
    "ocoOrderId": "a4623c45-8dd5-41cb-8127-8a22c3fc3ec6",
-   "now": 355.45
+   "now": 356.82
   },
   "VLO": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 346.53,
    "stop": 283.07,
    "ocoOrderId": "c341d9ed-a5af-491c-8ba2-17249336811d",
-   "now": 325.53
+   "now": 326.31
   },
   "FISV": {
    "strategy": "dip",
@@ -49,7 +49,7 @@
    "target": 59.2,
    "stop": 48.71,
    "ocoOrderId": "d79d6943-e428-4a61-8561-2eca0a87a1bc",
-   "now": 58.69
+   "now": 58.58
   },
   "PBF": {
    "strategy": "dip",
@@ -64,7 +64,7 @@
    "target": 60.63,
    "stop": 46,
    "ocoOrderId": "d7b2ba9c-0295-4406-a6b1-ff6939a9d77d",
-   "now": 57.97
+   "now": 58
   },
   "VEEV": {
    "strategy": "dip",
@@ -79,7 +79,7 @@
    "target": 281.29,
    "stop": 239.9,
    "ocoOrderId": "3f3408af-1bf8-4f78-8777-f04398ac5d9a",
-   "now": 273.45
+   "now": 273.52
   },
   "W": {
    "strategy": "dip",
@@ -94,7 +94,7 @@
    "target": 98.81,
    "stop": 73.32,
    "ocoOrderId": "9301e4d1-e5a4-48b6-a87c-e55cf99b354f",
-   "now": 94.95
+   "now": 95.18
   }
  },
  "pendingEntries": {},
@@ -1621,9 +1621,9 @@
   },
   {
    "d": "2026-11-24",
-   "value": 96232,
-   "pct": -3.77,
-   "spy": -6.34
+   "value": 96268,
+   "pct": -3.73,
+   "spy": -6.14
   }
  ],
  "lastOrders": {
@@ -1697,25 +1697,8 @@
   "queued": false
  },
  "lastExits": {
-  "forDate": "2026-11-23",
-  "exits": [
-   {
-    "ticker": "HUM",
-    "note": "Sold at the market (3rd session)"
-   },
-   {
-    "ticker": "ACN",
-    "note": "Sold at the market (3rd session)"
-   },
-   {
-    "ticker": "CTSH",
-    "note": "Sold at the market (3rd session)"
-   },
-   {
-    "ticker": "TEAM",
-    "note": "Sold at the market (3rd session)"
-   }
-  ]
+  "forDate": "2026-11-24",
+  "exits": []
  },
  "lastQueueFor": "2026-10-13",
  "untrackedKey": null
