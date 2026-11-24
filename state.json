@@ -2,7 +2,7 @@
  "version": 1,
  "status": "running",
  "startedAt": "2026-09-26",
- "lastEntryRunDate": "2026-11-23",
+ "lastEntryRunDate": "2026-11-24",
  "lastExitRunDate": "2026-11-23",
  "spyBaseline": 764.95,
  "positions": {
@@ -19,7 +19,7 @@
    "target": 380.55,
    "stop": 306.87,
    "ocoOrderId": "a4623c45-8dd5-41cb-8127-8a22c3fc3ec6",
-   "now": 359
+   "now": 352.43
   },
   "VLO": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 346.53,
    "stop": 283.07,
    "ocoOrderId": "c341d9ed-a5af-491c-8ba2-17249336811d",
-   "now": 330.15
+   "now": 324.83
   },
   "CNC": {
    "strategy": "dip",
@@ -49,7 +49,7 @@
    "target": 65.63,
    "stop": 51.44,
    "ocoOrderId": "59d50dac-d3ed-4d48-b2ec-fc4d2fc4f0c0",
-   "now": 63.32
+   "now": 62.76
   },
   "PYPL": {
    "strategy": "dip",
@@ -64,7 +64,7 @@
    "target": 56.33,
    "stop": 49.03,
    "ocoOrderId": "f190c982-c28e-4ee0-a2ed-b3ade37fa8d6",
-   "now": 55.19
+   "now": 55.39
   },
   "FISV": {
    "strategy": "dip",
@@ -79,7 +79,7 @@
    "target": 59.2,
    "stop": 48.71,
    "ocoOrderId": "d79d6943-e428-4a61-8561-2eca0a87a1bc",
-   "now": 57.42
+   "now": 57
   },
   "WDAY": {
    "strategy": "dip",
@@ -94,10 +94,71 @@
    "target": 182.96,
    "stop": 152.97,
    "ocoOrderId": "56174246-98ad-4d10-9c54-ae2691943068",
-   "now": 176
+   "now": 176.65
+  },
+  "ELV": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-11-23",
+   "signalClose": 379.55,
+   "entryDate": "2026-11-24",
+   "entry": 378.78,
+   "shares": 13,
+   "target": 393.93,
+   "stop": 328.35,
+   "ocoOrderId": "bf923f7a-da0e-4146-94bc-0cc2c81617af"
+  },
+  "PBF": {
+   "strategy": "dip",
+   "side": "long",
+   "tag": "bearEngulf",
+   "pool": "nonsp",
+   "signalDate": "2026-11-23",
+   "signalClose": 59.41,
+   "entryDate": "2026-11-24",
+   "entry": 58.3,
+   "shares": 84,
+   "target": 60.63,
+   "stop": 46,
+   "ocoOrderId": "d7b2ba9c-0295-4406-a6b1-ff6939a9d77d"
   }
  },
- "pendingEntries": {},
+ "pendingEntries": {
+  "VEEV": {
+   "orderId": "67f57515-ac44-41b3-9291-8226fa0ce74a",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "size": 5147.34156,
+   "shares": 18,
+   "limit": 274.02,
+   "opg": false,
+   "forDate": "2026-11-24",
+   "signalDate": "2026-11-23",
+   "signalClose": 268.65,
+   "atr": 10.19,
+   "placedAt": "2026-11-24T14:32:15.621Z"
+  },
+  "W": {
+   "orderId": "77c987e9-499c-4a1c-91b2-ea8d9182ffa7",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "nonsp",
+   "size": 5147.34156,
+   "shares": 52,
+   "limit": 98.77,
+   "opg": false,
+   "forDate": "2026-11-24",
+   "signalDate": "2026-11-23",
+   "signalClose": 96.83,
+   "atr": 7.23,
+   "placedAt": "2026-11-24T14:32:16.010Z"
+  }
+ },
  "pendingCloses": {},
  "trades": [
   {
@@ -1553,138 +1614,77 @@
   },
   {
    "d": "2026-11-24",
-   "value": 95530,
-   "pct": -4.47,
-   "spy": null
+   "value": 95320,
+   "pct": -4.68,
+   "spy": -6.81
   }
  ],
  "lastOrders": {
-  "forDate": "2026-11-23",
+  "forDate": "2026-11-24",
   "entries": [
    {
-    "rank": 2,
-    "ticker": "VLO",
+    "rank": 1,
+    "ticker": "VEEV",
     "strategy": "dip",
     "tag": "normal",
     "pool": "sp500",
     "opg": false,
-    "size": 5139.37,
-    "shares": 15,
-    "limit": 340.86,
-    "vs200": 11.85,
-    "chg5d": -12.02
+    "size": 5147.34,
+    "shares": 18,
+    "limit": 274.02,
+    "vs200": 24.34,
+    "chg5d": -10.23
+   },
+   {
+    "rank": 2,
+    "ticker": "ELV",
+    "strategy": "dip",
+    "tag": "normal",
+    "pool": "sp500",
+    "opg": false,
+    "size": 5147.34,
+    "shares": 13,
+    "limit": 387.14,
+    "vs200": 0.53,
+    "chg5d": -14.95
    },
    {
     "rank": 3,
-    "ticker": "CNC",
+    "ticker": "PBF",
     "strategy": "dip",
-    "tag": "normal",
-    "pool": "sp500",
+    "tag": "bearEngulf",
+    "pool": "nonsp",
     "opg": false,
-    "size": 5139.37,
-    "shares": 78,
-    "limit": 65.06,
-    "vs200": 11.3,
-    "chg5d": -10.51
-   },
-   {
-    "rank": 7,
-    "ticker": "PYPL",
-    "strategy": "dip",
-    "tag": "normal",
-    "pool": "sp500",
-    "opg": false,
-    "size": 5139.37,
-    "shares": 94,
-    "limit": 54.36,
-    "vs200": 5.68,
-    "chg5d": -10.1
-   },
-   {
-    "rank": 10,
-    "ticker": "FISV",
-    "strategy": "dip",
-    "tag": "normal",
-    "pool": "sp500",
-    "opg": false,
-    "size": 5139.37,
-    "shares": 90,
-    "limit": 57,
-    "vs200": 2.61,
-    "chg5d": -12.39
+    "size": 5147.34,
+    "shares": 84,
+    "limit": 60.6,
+    "vs200": 5.26,
+    "chg5d": -13.43
    },
    {
     "rank": 12,
-    "ticker": "MPC",
+    "ticker": "W",
     "strategy": "dip",
-    "tag": "green_or_sweep",
-    "pool": "sp500",
+    "tag": "normal",
+    "pool": "nonsp",
     "opg": false,
-    "size": 5139.37,
-    "shares": 13,
-    "limit": 374.53,
-    "vs200": 19.74,
-    "chg5d": -11.45
-   },
-   {
-    "rank": 13,
-    "ticker": "WDAY",
-    "strategy": "dip",
-    "tag": "green_or_sweep",
-    "pool": "sp500",
-    "opg": false,
-    "size": 5139.37,
-    "shares": 28,
-    "limit": 178.01,
-    "vs200": 11.63,
-    "chg5d": -11.16
+    "size": 5147.34,
+    "shares": 52,
+    "limit": 98.77,
+    "vs200": 8.8,
+    "chg5d": -12.88
    }
   ],
   "skipped": [
    {
-    "ticker": "MRNA",
-    "strategy": "dip",
-    "reason": "Opened at 204.19, past the 2% cap (198.90)"
-   },
-   {
-    "ticker": "EL",
-    "strategy": "dip",
-    "reason": "Opened at 101.68, past the 2% cap (101.45)"
-   },
-   {
-    "ticker": "GDDY",
-    "strategy": "dip",
-    "reason": "Opened at 103.86, past the 2% cap (101.52)"
-   },
-   {
-    "ticker": "SWKS",
-    "strategy": "dip",
-    "reason": "Opened at 78.47, past the 2% cap (75.39)"
-   },
-   {
-    "ticker": "P",
-    "strategy": "dip",
-    "reason": "Opened at 111.04, past the 2% cap (93.89)"
-   },
-   {
-    "ticker": "BEN",
-    "strategy": "dip",
-    "reason": "Opened at 33.07, past the 2% cap (32.68)"
-   },
-   {
-    "ticker": "NTAP",
-    "strategy": "dip",
-    "reason": "Opened at 172.87, past the 2% cap (160.80)"
-   },
-   {
-    "ticker": "58 non-S&P",
+    "ticker": "13 non-S&P",
     "strategy": "dip",
     "reason": "Signals outside the S&P 500 below the $100M/day floor for stocks outside the S&P 500"
    },
    {
-    "ticker": "23 non-S&P",
+    "ticker": "2 non-S&P",
     "strategy": "dip",
-    "reason": "Signals outside the S&P 500 no spare cash left after the S&P signals"
+    "reason": "Signals outside the S&P 500 limit of 2 open positions outside the S&P 500 reached (keeping room for S&P signals)"
    }
   ],
   "queued": false
