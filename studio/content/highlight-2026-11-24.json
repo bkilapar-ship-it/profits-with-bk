@@ -1,19 +1,24 @@
 {
   "asOf": "2026-11-24",
-  "headline": "Reports say the White House is preparing sweeping new tariffs on China, the EU and dozens of other countries, and stocks fell on the news",
+  "headline": "chip stocks gave back much of Monday's huge Nvidia-led rally, while reports said the White House is preparing sweeping new tariffs on China and dozens of other countries",
   "points": [
+    "Chip stocks gave back much of Monday's big Nvidia-led rally, which pulled the Nasdaq down while the Dow rose, so it was a mixed session",
     "The Wall Street Journal reported that the White House is preparing broad new tariffs on China, the EU, Japan, South Korea and dozens of other countries, with details possibly announced this week",
-    "Final rates have not been announced. The EU, Japan and South Korea are expected to be capped at 15 percent or lower, with China facing the steepest rates",
-    "Tech stocks led the fall, as Monday's big Nvidia-driven rally faded",
-    "Wednesday brings the PCE inflation report, a second estimate of economic growth and the Fed's Beige Book, then US markets close on Thursday for Thanksgiving"
+    "Final tariff rates have not been announced",
+    "The S&P 500 finished down about 0.5 percent, the Nasdaq fell about 1.5 percent, and the Dow rose about 0.8 percent",
+    "Wednesday brings the PCE inflation report and a Fed Beige Book, then US markets close on Thursday for Thanksgiving"
   ],
   "sources": [
-    "Investing.com, citing the Wall Street Journal, 24 Nov 2026: https://www.investing.com/news/stock-market-news/white-house-prepares-sweeping-new-tariffs-on-china-eu-and-dozens-of-nations-5048285",
-    "Bloomberg headline, 24 Nov 2026 (paywalled, headline only): https://www.bloomberg.com/news/articles/2026-11-24/us-tech-stocks-poised-to-slide-as-ai-caution-returns-after-rally"
+    "Seeking Alpha, 24 Nov 2026 (close: S&P 500 -0.5%, Dow +0.8%, tariff talk): https://seekingalpha.com/news/4676347-u-s-equities-finish-mixed-as-tech-stumbles-on-tariff-talks",
+    "Business Upturn, 24 Nov 2026 (S&P 500 -0.54% to 7,198.33, Nasdaq -1.47%, Dow +0.81%): https://businessupturn.com/usa/money/us-markets/us-stocks-mixed-at-tuesday-close-as-nasdaq-leads-declines/",
+    "StockTitan, 24 Nov 2026 (chips give back Monday's rally): https://www.stocktitan.net/articles/stock-market-today-live-november-24-2026",
+    "Investing.com citing the Wall Street Journal (tariff plan): https://www.investing.com/news/stock-market-news/white-house-prepares-sweeping-new-tariffs-on-china-eu-and-dozens-of-nations-5048285",
+    "Saxo Options Brief 24 Nov 2026 (VIX 26.62 at Monday's close): https://www.home.saxo/content/articles/options/one-session-flattens-the-fear-curve---options-brief---24-november-2026-24112026",
+    "FinanceFeeds 24 Nov 2026 (VIX 28.87 late morning, +8.4%): https://financefeeds.com/nasdaq-falls-about-2-4-as-amd-nvidia-and-arm-give-back-huangs-rally-a-day-before-pce/"
   ],
-  "note": "Intraday facts: the tariff plan is a media report (WSJ via Investing.com), not an announcement; do not state rates. Re-check the S&P 500 close before the final build. vixCall is Bharat's own call (sign 3 ticked): VERIFY with real ^VIX data before the final build: prior close, intraday high (>10% above prior close?), close (flat?) and level (~26). If the data does not support it, change the wording or remove vixCall.",
+  "note": "Rechecked 21:2x UK: S&P 500 -0.54% (7,198.33), Nasdaq -1.47%, Dow +0.81% (Business Upturn, Seeking Alpha). Chips gave back Monday's rally (StockTitan, FinanceFeeds). Tariff report from WSJ via Investing.com; Seeking Alpha links the session to tariff talk, other sources only to the chip retreat. VIX: 26.62 Monday close, ~32 pre-open, 28.87 late morning, ~27 into the close.",
   "hook": "Tariff Fears Hit Stocks",
-  "thumbHead": "WALL ST BLEEDS. WE SURVIVED",
+  "thumbHead": "AI STOCKS BLEED. WE SURVIVED",
   "tags": [
     "tariffs",
     "stock market today",
@@ -24,12 +29,12 @@
     "4% swing trades"
   ],
   "introNote": "And a quick note: you may have noticed a new name and logo. We're now The 4 Percent Swing Trades, named after the strategy we follow. Same daily briefing, same process, new name.",
-  "badNews": "the new tariff reports",
+  "badNews": "the new tariff reports and a chip sell-off",
   "survive": true,
   "bottomNote": "We might not see Friday's low again, but a bottom is not confirmed yet.",
   "vixCall": {
     "ok": true,
-    "note": "VIX spiked over 10% intraday, then flat; still about 26",
-    "text": "Today V I X jumped more than 10 percent at one point, but it finished flat, so my call is a tick: the fear spike has peaked. But V I X is still around 26, which is on the high side, so we may need to revisit this one tomorrow."
+    "note": "VIX spiked over 10% (about 32 before the open), back near 27",
+    "text": "Today V I X jumped more than 10 percent at one point, but it came back to finish roughly flat, so my call is a tick: the fear spike has peaked. But V I X is still in the high twenties, which is on the high side, so we may need to revisit this one tomorrow."
   }
 }
