@@ -93,8 +93,9 @@ function weekLine(m) {
   return parts.length ? `The S&P 500 ${parts.join(' and ')}.` : '';
 }
 
-function nearTrigger(status, exclude) {
-  return Object.entries(status || {}).map(([t, v]) => ({ ticker: t, close: v[0], r5: v[1], vs200: v[2], rsi: v[3] }))
+function nearTrigger(status, exclude, members) {
+  const mem = Array.isArray(members) ? new Set(members) : null;
+  return Object.entries(status || {}).filter(([t]) => !mem || mem.has(t)).map(([t, v]) => ({ ticker: t, close: v[0], r5: v[1], vs200: v[2], rsi: v[3] }))
     .filter(x => isNum(x.r5) && isNum(x.vs200) && x.vs200 > 0 && x.r5 <= -6.5 && x.r5 > -10 && !exclude.has(x.ticker))
     .sort((a, b) => a.r5 - b.r5).slice(0, 6);
 }
@@ -239,7 +240,7 @@ function buildEpisodeInner({ mode, setups, config }) {
     } else {
       add('outcomes', 'text', 'NO COMPLETED SIGNALS', 'There were no signals that completed their three session window in the recent data, so there is nothing to score this week.', {});
     }
-    const watch = nearTrigger(setups.status, new Set(live.map(x => x.ticker)));
+    const watch = nearTrigger(setups.status, new Set(live.map(x => x.ticker)), setups.__sp500);
     add('watch', 'watch', 'WHAT TO WATCH NEXT WEEK', `Not a forecast, just a watch list. ${marketLine(setups.market)} ${watch.length ? `These stocks are still above their 200-day average and have fallen between six and a half and 10 percent over five sessions, so one more down day could trigger the screen: ${watch.map(x => spell(x.ticker)).join(', ')}.` : 'No stocks are currently close to triggering the screen.'} The screen only fires after the close, so nothing here is a signal until it prints.`, { watch, market: setups.market });
     add('stats', 'stats', 'WHAT HISTORY SAYS', statsText(cfg), { winRate: cfg.backtest.winRate, avgPct: cfg.backtest.avgPct, period: cfg.backtest.period });
     add('outro', 'outro', 'THANKS FOR WATCHING', outroText(cfg), { disclaimer: cfg.disclaimer });
@@ -273,12 +274,12 @@ function buildEpisodeInner({ mode, setups, config }) {
   // 1) the market today
   const mkt = [];
   const aiLed = isNum(m.chg1d) && isNum(setups.__aiDay) && setups.__aiDay >= Math.max(1.5, m.chg1d + 0.5);
-  if (isNum(m.chg1d)) mkt.push(`So, what did the market do today? The S&P 500 ${dayWord} ${say(m.chg1d)}.`);
+  if (isNum(m.chg1d)) mkt.push(`So, what did the market do today? The S&P 500 ${dayWord} ${say(m.chg1d)}.${isNum(m.range1d) && m.range1d >= 1 ? ` And it was a big swing: from the low of the day to the high, the index moved about ${say(m.range1d)}, so a lot of people got shaken out.` : ''}`);
   if (hl && isNum(m.chg1d) && m.chg1d >= 1) mkt.push(`And this wasn't just a relief bounce after last week's sell-off. ${aiLed ? 'It came with real news, and the AI chip stocks led the way' : 'Real news was a big part of it'}: ${hl}.`);
   else if (hl) mkt.push(`And the big story today: ${hl}.`);
   if (isNum(m.chg5d)) mkt.push(`Zoom out to the last five trading days, and it's ${m.chg5d >= 0 ? 'up' : 'down'} ${say(m.chg5d)}.`);
   const heads = news && Array.isArray(news.headlines) ? news.headlines.filter(Boolean).slice(0, 4) : [];
-  mkt.push((isNum(m.chg5d) && m.chg5d <= -3) || (isNum(m.chg1d) && m.chg1d >= 1 && isNum(m.chg5d) && m.chg5d < 0) ? (isNum(m.chg1d) && m.chg1d > 0 ? "Last week's sell-off dragged even good companies down along with the weak ones, and that is exactly where my screen goes hunting." : "When the market drops like this, even good companies get dragged down along with the weak ones. And that is exactly where my screen goes hunting.") : "On a calmer day, the screen just looks for strong companies that had a short, sharp sell-off.");
+  mkt.push((isNum(m.chg5d) && m.chg5d <= -3) || (isNum(m.chg1d) && m.chg1d >= 1 && isNum(m.chg5d) && m.chg5d < 0) ? (isNum(m.chg1d) && m.chg1d > 0 ? "Last week's sell-off dragged even good companies down along with the weak ones, and that is exactly where my screen goes hunting." : "When the market drops like this, even good companies get dragged down along with the weak ones. And that is exactly where my screen goes hunting.") : "My screen looks for strong companies, stocks that are still in long-term uptrends, that have just had a short, sharp sell-off. So on a day like this, the question is whether the sell-off pushed any of them into that zone.");
   add('market', 'market', "TODAY'S MARKET", mkt.join(' '), { market: m });
   if (heads.length) add('news', 'bullets', 'WHAT MOVED THE MARKET', `So what was going on behind the scenes? ${heads.map(h => h.replace(/[.]$/, '') + '.').join(' ')}`, { kick: 'WHAT WAS BEHIND IT', title: 'What moved the market', items: heads });
 
@@ -291,21 +292,24 @@ function buildEpisodeInner({ mode, setups, config }) {
       const labs = BOTTOM_LABS, meas = cur.items.filter(x => x.ok !== null), nOk = meas.filter(x => x.ok).length, sp = ['One', 'Two', 'Three', 'Four', 'Five', 'Six'];
       const line = (l, i) => `${sp[i]}: ${l.charAt(0).toLowerCase() + l.slice(1).replace('(VIX)', 'V I X')}. ${cur.items[i].ok === null ? (i === 2 ? "I can't measure this one from here, so look it up yourself." : "No big move to judge today, so watch the headlines.") : cur.items[i].ok ? 'Tick.' : 'Not yet.'}`;
       add('bottomcheck', 'compare', 'IS THIS THE BOTTOM? THE CHECKLIST, UPDATED',
-        `Now, a question I keep getting: is this the bottom? Nobody can call it exactly, but I have a six-sign checklist from my market-bottom video, so let's hold today's close up against it. The S&P 500 is ${Math.abs(dd * 100).toFixed(0)} percent below its recent high. ${labs.map(line).join(' ')} That's ${nOk} of the ${meas.length} boxes I can measure ticked. ${badDay ? `The last box is the one I'm watching today. Good news did come, but then fresh bad news, ${news.badNews}, pushed stocks right back down. A real bottom is when bad news stops hurting, and we're not there yet. So this still looks like a downtrend, not a bottom. That's why we stick to the process and keep our size small.` : hl && isNum(m.chg1d) && m.chg1d >= 1 && nOk < meas.length ? `${nOk <= 2 ? 'Most boxes are still empty. ' : 'Not every box is ticked. '}But a major catalyst has now arrived, and that is what a bottom usually needs. So my read is that this is starting to look like a possible bottom, but it is early. Nobody calls the exact low, though, so keep your size small.` : 'One day never makes a bottom, so treat this as a snapshot, not a prediction.'}`,
+        `Now, a question I keep getting: is this the bottom? Nobody can call it exactly, but I have a six-sign checklist from my market-bottom video, so let's hold today's close up against it. The S&P 500 is ${Math.abs(dd * 100).toFixed(0)} percent below its recent high. ${labs.map(line).join(' ')} That's ${nOk} of the ${meas.length} boxes I can measure ticked. ${badDay ? `The last box is the one I'm watching today. Good news did come, but then fresh bad news, ${news.badNews}, pushed stocks right back down. A real bottom is when bad news stops hurting. ${news.bottomNote || 'A bottom is not confirmed yet.'} That's why we stick to the process and keep our size small.` : hl && isNum(m.chg1d) && m.chg1d >= 1 && nOk < meas.length ? `${nOk <= 2 ? 'Most boxes are still empty. ' : 'Not every box is ticked. '}But a major catalyst has now arrived, and that is what a bottom usually needs. So my read is that this is starting to look like a possible bottom, but it is early. Nobody calls the exact low, though, so keep your size small.` : 'One day never makes a bottom, so treat this as a snapshot, not a prediction.'}`,
         { kick: `IS THIS THE BOTTOM? ${fdateShort(cur.date).toUpperCase()}`, title: 'The bottom checklist, updated', rows: labs.map((l, i) => ({ label: l, ok: cur.items[i].ok, note: cur.items[i].note })), summary: `${nOk} of ${meas.length} measurable boxes ticked` });
     } }
 
   // 2a) what happened to the calls we gave on earlier sessions (days 1-3), projected with the plan's rules
   const calls = Array.isArray(setups.__calls) ? setups.__calls : [];
-  let survived = null, tailP = '';
+  let survived = null, tailP = '', teaserFn = null;
   if (calls.length) {
     const nm = t => NAMES[t] || t, wdOf = d => new Date(`${d}T12:00:00Z`).toLocaleDateString('en-GB', { weekday: 'long', timeZone: 'UTC' });
     const taken = calls.filter(c => c.entry != null);
     const groups = [...new Set(calls.map(c => c.signalDate))];
-    const lines = calls.map(c => {
+    const callsS = [...calls].sort((a, b) => b.day - a.day); // oldest calls first, then the newer ones
+    let lastG = null;
+    const lines = callsS.map(c => {
+      const gh = groups.length > 1 && c.signalDate !== lastG ? (lastG = c.signalDate, `From ${wdOf(c.signalDate)}'s calls. `) : (lastG = c.signalDate, '');
       if (c.entry == null) return `${nm(c.ticker)} opened at ${money(c.open)}, more than 2 percent above ${wdOf(c.signalDate)}'s close, so the plan says skip it. No chasing.${isNum(c.pct) && c.pct > 0 ? ` It's up ${say(c.pct)} since, so this was the one the rules kept us out of. That's the trade-off of the 2 percent rule.` : ''}`;
-      const st = c.state === 'target' ? `It hit the 4 percent target, a win.` : c.state === 'stop' ? `It hit the safety exit.` : c.state === 'closed' ? `It reached day three and was closed out ${c.pct >= 0 ? 'up' : 'down'} ${say(c.pct)}.` : `It finished at ${money(c.close)}, ${c.pct >= 0 ? 'up' : 'down'} ${say(c.pct)} from there, so we're still holding${c.day < 3 ? ` (day ${c.day} of 3)` : ''}.`;
-      return `${nm(c.ticker)}: you'd have bought at about ${money(c.entry)}. ${st}`;
+      const st = c.state === 'target' ? `It hit the 4 percent target on day ${c.day}, a win.` : c.state === 'stop' ? `It hit the safety exit on day ${c.day}.` : c.state === 'closed' ? `It reached day three and was closed out ${c.pct >= 0 ? 'up' : 'down'} ${say(c.pct)}.` : `It finished at ${money(c.close)}, ${c.pct >= 0 ? 'up' : 'down'} ${say(c.pct)} from there, so we're still holding${c.day < 3 ? ` (day ${c.day} of 3)` : ''}.`;
+      return `${gh}${nm(c.ticker)}: you'd have bought at about ${money(c.entry)}. ${st}`;
     });
     const down = taken.filter(c => c.pct < 0).length;
     const rot = hl && aiLed && taken.length >= 2 && down >= taken.length / 2;
@@ -313,16 +317,38 @@ function buildEpisodeInner({ mode, setups, config }) {
     const upN = taken.filter(c => c.pct > 0).length, avgT = taken.length ? taken.reduce((a, c) => a + c.pct, 0) / taken.length : 0;
     const proud = news && news.survive && isNum(m.chg1d) && m.chg1d < 0 && taken.length && upN >= Math.ceil(taken.length / 2) && avgT > 0;
     if (proud) { survived = { up: upN, n: taken.length, avg: avgT };
-      tailP = `Now look at that. The S&P 500 is down ${say(Math.abs(m.chg1d))} today, a big dip day, and ${upN === taken.length ? 'every one' : upN + ' of the ' + taken.length}${upN === taken.length ? ' of our picks is' : ' are'} up, on average ${say(avgT)} in the green. We follow the same tested, rules-based process every single day, and that is why we survived a day when the market was bleeding, and even made profits. One day doesn't prove anything, and losses will come, but this is exactly what the process is built for.`; }
+      const aiD = isNum(setups.__aiDay) && setups.__aiDay < -0.3 ? `, and the AI stocks are down ${say(Math.abs(setups.__aiDay))} too` : '';
+      tailP = `Guys, you're going to love this! The S&P 500 is down ${say(Math.abs(m.chg1d))} today${aiD}, and yet look at how our screen's calls are doing: ${upN === taken.length ? 'every single one' : upN + ' of the ' + taken.length} up, on average ${say(avgT)} in the green! That's exactly why we follow a tested, rules-based process, and it's why we survived a big dip day, and even made profits. One day doesn't prove anything, and losses will come, but this is what the process is built for. Let's go through them. `; }
     const when = groups.length === 1 ? `On ${wdOf(groups[0])} I gave you ${calls.length} stock${calls.length === 1 ? '' : 's'}.` : `Let's check the calls I gave you earlier.`;
-    add('calls', 'calls', 'WHAT HAPPENED TO OUR CALLS', `Before today's new picks, let's check what happened to the old ones. ${when} Here's what would have happened if you'd followed the plan. ${lines.join(' ')} ${tailP || tail2} I'll keep updating these until each one is closed out.`.replace(/\s+/g, ' '),
-      { kick: 'IF YOU FOLLOWED THE PLAN', title: 'What happened to our calls', rows: calls.map(c => ({ ticker: c.ticker, name: nm(c.ticker) === c.ticker ? '' : nm(c.ticker), entry: c.entry, open: c.open, close: c.close, pct: c.pct, state: c.entry == null ? 'skip' : c.state, day: c.day })) });
+    add('calls', 'calls', 'WHAT HAPPENED TO OUR CALLS', `${tailP}Before today's new picks, let's check what happened to the old ones. ${when} Here's what would have happened if you'd followed the plan. ${lines.join(' ')} ${tailP ? '' : tail2} I'll keep updating these until each one is closed out.`.replace(/\s+/g, ' '),
+      { kick: 'IF YOU FOLLOWED THE PLAN', title: 'What happened to our calls', rows: callsS.map(c => ({ ticker: c.ticker, name: nm(c.ticker) === c.ticker ? '' : nm(c.ticker), entry: c.entry, open: c.open, close: c.close, pct: c.pct, state: c.entry == null ? 'skip' : c.state, day: c.day })) });
+    teaserFn = () => {
     // the Shorts-friendly pointer: names the calls, NOT their levels or results, and sends viewers to the full video
     { const tops = [...new Set(calls.map(c => c.ticker))].slice(0, 5), lab = t => (NAMES[t] ? `${NAMES[t]} (${t})` : t);
       const lead = proud ? `Our calls are holding up on a day the S&P 500 fell ${say(Math.abs(m.chg1d))}. ` : '';
       const nar = `${lead}Which stocks are they? ${tops.map(lab).join(', ')}. The entry, the target and the safety exit for each one are in today's full video. If you're watching this as a Short, tap the related video to see the full plan.`;
       add('callsend', 'bullets', 'OUR CALLS: THE FULL PLAN IS IN THE VIDEO', nar, { kick: 'FULL CALLS IN TODAY\'S VIDEO', title: 'Our calls', items: tops.map(lab).concat(['Entry, target and exit: in the full video']) }); }
+    };
   }
+  // 2b) how we performed, with the small-channel like / subscribe ask, right BEFORE tonight's calls. No counts and no tickers, so it also works as a stand-alone Short
+  if (calls.length) {
+    const taken2 = calls.filter(c => c.entry != null), avg2 = taken2.length ? taken2.reduce((a, c) => a + c.pct, 0) / taken2.length : null;
+    const good = survived && isNum(avg2) && avg2 > 0;
+    const askT = `If these daily calls are helping you, please like and subscribe. It's free, and it helps a small channel grow.`;
+    const nar = good
+      ? `So, how did we perform? While the S&P 500 fell ${say(Math.abs(m.chg1d))} today, our picks are on average up ${say(avg2)}. Same tested process, every single day, and that's how we stay in the game on a big dip day. Losses will come too, and I'll always show them. ${askT} The full breakdown is in today's video.`
+      : `So, how did we perform? The honest answer, wins and losses, is in today's full video. Same tested process every day, and I'll always show the misses as well as the hits. ${askT}`;
+    const aw = nar.split(/\s+/), ai = aw.findIndex(x => /^(like|subscribe)/i.test(x.replace(/[^a-z]/gi, '')));
+    add('perf', 'bullets', 'HOW WE PERFORMED', nar, { kick: 'HOW WE PERFORMED', title: 'How we performed', items: [good ? `Our picks: ${avg2 >= 0 ? '+' : '−'}${Math.abs(avg2).toFixed(1)}% on average` : 'Wins and losses, shown honestly', 'Same tested process every day', 'Like and subscribe: it is free'] });
+    const sc = scenes[scenes.length - 1]; sc.pop = true; sc.popAt = ai < 0 ? 0.6 : Math.max(0, Math.min(0.95, ai / aw.length));
+  }
+  else {
+    const ask = `Before I reveal tonight's calls, a quick word. We're a small channel, and every like and subscribe really helps more people find these videos. So if these calls are genuinely helping you, please tap like and subscribe. It's free, and it keeps the daily briefings coming.`;
+    const aw = ask.split(/\s+/), ai = aw.findIndex(x => /^(like|subscribe)/i.test(x.replace(/[^a-z]/gi, '')));
+    add('ask', 'bullets', "BEFORE TONIGHT'S CALLS", ask, { kick: 'A SMALL ASK', title: "We're a small channel", items: ['Are these calls helping you?', 'Tap LIKE and SUBSCRIBE: it is free', 'It helps more people find the channel'] });
+    const sc = scenes[scenes.length - 1]; sc.pop = true; sc.popAt = ai < 0 ? 0.5 : Math.max(0, Math.min(0.95, ai / aw.length));
+  }
+
 
   // 2) scorecard of earlier picks
   const tracked = (setups.dip || []).filter(x => x.sp500 && x.sessionsAgo >= 1 && x.sessionsAgo <= 8 && x.track && ['target', 'stop', 'closed'].includes(x.track.state));
@@ -335,11 +361,6 @@ function buildEpisodeInner({ mode, setups, config }) {
   }
 
   if (n) {
-    // 2b) a small-channel ask, just before the picks are revealed (the like/subscribe popover fires while it is spoken)
-    { const ask = `Before I reveal tonight's picks, a quick word. We're a small channel, and every like and subscribe really helps more people find these videos. So if these calls are genuinely helping you, please tap like and subscribe now. It's free, and it keeps the daily briefings coming. Right, let's get to tonight's picks.`;
-      const aw = ask.split(/\s+/), ai = aw.findIndex(x => /^(like|subscribe)/i.test(x.replace(/[^a-z]/gi, '')));
-      add('ask', 'bullets', 'BEFORE TONIGHT\'S PICKS', ask, { kick: 'A SMALL ASK', title: 'We\'re a small channel', items: ['Are these calls helping you?', 'Tap LIKE and SUBSCRIBE: it is free', 'It helps more people find the channel'] });
-      const sc = scenes[scenes.length - 1]; sc.pop = true; sc.popAt = ai < 0 ? 0.5 : Math.max(0, Math.min(0.95, ai / aw.length)); }
     // 3) the plan in four steps, once
     add('plan', 'bullets', 'THE PLAN IN FOUR STEPS',
       `Quick reminder of how every pick works, so I don't repeat myself on each stock. One: after the market opens ${nx}, give it three to five minutes. Two: only buy if the price is still within 2 percent of ${wd}'s closing price. Three: aim to sell at 4 percent above that close, and set a safety exit below, just in case the stock keeps falling. Four: whatever happens, be out by the close of day three. Simple as that. And one more rule: if a stock is already on my list from an earlier day, I won't suggest it again, unless it has fallen more than 4 percent since.`,
@@ -347,26 +368,15 @@ function buildEpisodeInner({ mode, setups, config }) {
     // 4) the picks
     featured.forEach((x, i) => add(`setup-${x.ticker}`, 'setup', x.ticker, dailyPick(x, i, wd, nx), { setup: x, plan: plan(x), rank: i + 1, total: dipSp.length }));
     if (n < 3) { // fewer than three qualified: show the stocks closest to qualifying (only then)
-      const near = nearTrigger(setups.status, new Set(featured.map(x => x.ticker))).slice(0, 3);
+      const near = nearTrigger(setups.status, new Set(featured.map(x => x.ticker)), setups.__sp500).slice(0, 3);
       if (near.length) add('closest', 'watch', 'CLOSEST TO QUALIFYING', `Only ${n} stock${n === 1 ? '' : 's'} made it through tonight, so here are the ones that came closest. ${near.map(x => spell(x.ticker)).join(', ')} are still above their 200-day average and have fallen between six and a half and 10 percent over five sessions. One more down day could trigger the screen, but nothing here is a signal until it prints.`, { watch: near, market: setups.market });
     }
   } else {
-    const watch = nearTrigger(setups.status, new Set());
+    const watch = nearTrigger(setups.status, new Set(), setups.__sp500);
     add('watch', 'watch', 'NOTHING TRIGGERED, WHAT TO WATCH', `Nothing passed my screen today. ${watch.length ? `The stocks closest to qualifying are ${watch.map(x => spell(x.ticker)).join(', ')}.` : ''} No signal means no trade, and that is a perfectly normal day.`, { watch, market: setups.market });
   }
 
-  // 4b) how we performed: no counts and no tickers, so it works as a stand-alone Short; ends with the like / subscribe ask
-  if (calls.length) {
-    const taken2 = calls.filter(c => c.entry != null), avg2 = taken2.length ? taken2.reduce((a, c) => a + c.pct, 0) / taken2.length : null;
-    const good = survived && isNum(avg2) && avg2 > 0;
-    const askT = `If these daily calls are helping you, please like and subscribe. It's free, and it helps a small channel grow.`;
-    const nar = good
-      ? `So, how did we perform? While the S&P 500 fell ${say(Math.abs(m.chg1d))} today, our picks are on average up ${say(avg2)}. Same tested process, every single day, and that's how we stay in the game on a big dip day. Losses will come too, and I'll always show them. ${askT} The full breakdown is in today's video.`
-      : `So, how did we perform? The honest answer, wins and losses, is in today's full video. Same tested process every day, and I'll always show the misses as well as the hits. ${askT}`;
-    const aw = nar.split(/\s+/), ai = aw.findIndex(x => /^(like|subscribe)/i.test(x.replace(/[^a-z]/gi, '')));
-    add('perf', 'bullets', 'HOW WE PERFORMED', nar, { kick: 'HOW WE PERFORMED', title: 'How we performed', items: [good ? `Our picks: ${avg2 >= 0 ? '+' : '−'}${Math.abs(avg2).toFixed(1)}% on average` : 'Wins and losses, shown honestly', 'Same tested process every day', 'Like and subscribe: it is free'] });
-    const sc = scenes[scenes.length - 1]; sc.pop = true; sc.popAt = ai < 0 ? 0.6 : Math.max(0, Math.min(0.95, ai / aw.length));
-  }
+  if (teaserFn) teaserFn(); // pointer to the full video (names the earlier calls only)
 
   // 5) tomorrow's calendar (only verified items). Said as "tomorrow", once, with no dates.
   if (ev.items.length) {

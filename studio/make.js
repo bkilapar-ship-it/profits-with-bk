@@ -62,8 +62,10 @@ async function main() {
   if (bars.SPY) bars.SPY = dropUnfinishedToday(bars.SPY);
   if (bars.SPY && bars.SPY.length > 21) {
     const c = bars.SPY.map(b => b.c), n = c.length - 1;
-    setups.market = { ...(setups.market || {}), chg1d: (c[n] / c[n - 1] - 1) * 100, close: c[n], chg5d: (c[n] / c[n - 5] - 1) * 100, chg20d: (setups.market && typeof setups.market.chg20d === 'number') ? setups.market.chg20d : (c[n] / c[n - 20] - 1) * 100 };
+    setups.market = { ...(setups.market || {}), chg1d: (c[n] / c[n - 1] - 1) * 100, close: c[n], chg5d: (c[n] / c[n - 5] - 1) * 100, range1d: (bars.SPY[n].h - bars.SPY[n].l) / c[n - 1] * 100, chg20d: (setups.market && typeof setups.market.chg20d === 'number') ? setups.market.chg20d : (c[n] / c[n - 20] - 1) * 100 };
   }
+  // the S&P 500 members, so the 'closest to qualifying' list only ever shows S&P 500 stocks
+  if (!setups.__sp500) { try { const u = await loadJson(String(src).replace(/setups\.json(\?.*)?$/, 'universe.json')); const L = u && u.indexes && u.indexes.sp500 && u.indexes.sp500.tickers; if (Array.isArray(L) && L.length > 300) setups.__sp500 = L; } catch (e) { console.log('Note: no S&P 500 list for the near-trigger filter:', e.message); } }
   // Episode 1 extras: market news facts file (if present) and the AI/chip health check from real prices
   { const nf = path.join(__dirname, 'content', `news-${setups.asOf}.json`);
     if (fs.existsSync(nf)) setups.__news = JSON.parse(fs.readFileSync(nf, 'utf8'));
@@ -71,7 +73,7 @@ async function main() {
     const hf = path.join(__dirname, 'content', `highlight-${setups.asOf}.json`);
     if (fs.existsSync(hf)) { const h = JSON.parse(fs.readFileSync(hf, 'utf8')), n0 = setups.__news && setups.__news.asOf === setups.asOf ? setups.__news : { asOf: setups.asOf, headlines: [], sources: [] };
       const have = new Set((n0.headlines || []).map(x => String(x).toLowerCase()));
-      setups.__news = { ...n0, asOf: setups.asOf, highlight: h.headline, hook: h.hook, closeNote: h.closeNote, thumbHead: h.thumbHead, tags: h.tags, introNote: h.introNote, badNews: h.badNews, survive: h.survive, headlines: [...(h.points || []), ...(n0.headlines || []).filter(x => !(h.points || []).some(p => String(p).toLowerCase() === String(x).toLowerCase()))], sources: [...(h.sources || []), ...(n0.sources || [])] }; }
+      setups.__news = { ...n0, asOf: setups.asOf, highlight: h.headline, hook: h.hook, closeNote: h.closeNote, thumbHead: h.thumbHead, tags: h.tags, introNote: h.introNote, bottomNote: h.bottomNote, badNews: h.badNews, survive: h.survive, headlines: [...(h.points || []), ...(n0.headlines || []).filter(x => !(h.points || []).some(p => String(p).toLowerCase() === String(x).toLowerCase()))], sources: [...(h.sources || []), ...(n0.sources || [])] }; }
     const ef = path.join(__dirname, 'content', 'events.json');
     if (fs.existsSync(ef)) setups.__events = JSON.parse(fs.readFileSync(ef, 'utf8')); }
   if (mode === 'daily') { // (a) how the AI/chip names did today, (b) what happened to the calls given on earlier sessions
