@@ -19,7 +19,7 @@
    "target": 380.55,
    "stop": 306.87,
    "ocoOrderId": "a4623c45-8dd5-41cb-8127-8a22c3fc3ec6",
-   "now": 354.06
+   "now": 356.61
   },
   "VLO": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 346.53,
    "stop": 283.07,
    "ocoOrderId": "c341d9ed-a5af-491c-8ba2-17249336811d",
-   "now": 327.86
+   "now": 329.49
   },
   "CNC": {
    "strategy": "dip",
@@ -49,7 +49,7 @@
    "target": 65.63,
    "stop": 51.44,
    "ocoOrderId": "59d50dac-d3ed-4d48-b2ec-fc4d2fc4f0c0",
-   "now": 64.51
+   "now": 64.7
   },
   "FISV": {
    "strategy": "dip",
@@ -64,7 +64,7 @@
    "target": 59.2,
    "stop": 48.71,
    "ocoOrderId": "d79d6943-e428-4a61-8561-2eca0a87a1bc",
-   "now": 58.06
+   "now": 58.04
   },
   "ELV": {
    "strategy": "dip",
@@ -79,7 +79,7 @@
    "target": 393.93,
    "stop": 328.35,
    "ocoOrderId": "bf923f7a-da0e-4146-94bc-0cc2c81617af",
-   "now": 388.27
+   "now": 388.73
   },
   "PBF": {
    "strategy": "dip",
@@ -94,7 +94,7 @@
    "target": 60.63,
    "stop": 46,
    "ocoOrderId": "d7b2ba9c-0295-4406-a6b1-ff6939a9d77d",
-   "now": 58.25
+   "now": 58.62
   },
   "VEEV": {
    "strategy": "dip",
@@ -109,7 +109,7 @@
    "target": 281.29,
    "stop": 239.9,
    "ocoOrderId": "3f3408af-1bf8-4f78-8777-f04398ac5d9a",
-   "now": 274.5
+   "now": 274.14
   },
   "W": {
    "strategy": "dip",
@@ -124,7 +124,7 @@
    "target": 98.81,
    "stop": 73.32,
    "ocoOrderId": "9301e4d1-e5a4-48b6-a87c-e55cf99b354f",
-   "now": 94.74
+   "now": 94.06
   }
  },
  "pendingEntries": {},
@@ -1617,9 +1617,9 @@
   },
   {
    "d": "2026-11-24",
-   "value": 96062,
-   "pct": -3.94,
-   "spy": -6.3
+   "value": 96129,
+   "pct": -3.87,
+   "spy": -6.7
   }
  ],
  "lastOrders": {
