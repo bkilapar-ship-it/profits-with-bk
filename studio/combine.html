@@ -30,8 +30,8 @@ summary{cursor:pointer;color:#9DB8FF;font-weight:700;padding:10px 0;list-style:n
 #shList .shr{background:#0C1426;border:1px solid #1E2C4A;border-radius:14px;padding:12px!important;margin:8px 0}
 #ytBar,#shBar,#bar{height:8px;border-radius:6px;background:#1B2742;overflow:hidden;margin-top:12px}#ytBar i,#shBar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#2563EB,#26D0FF)}
 button.go{border-radius:14px;box-shadow:0 6px 20px rgba(37,99,235,.35)}
-.notake #ytcard,.notake #shcard{opacity:.45;pointer-events:none;filter:grayscale(.4)}
-</style></head><body>
+.notake #ytGo,.notake #shGo,.notake #shUp{opacity:.4;pointer-events:none}
+</style></head><body class="notake">
 <nav class="top"><a href="./">‹ Studio</a><a id="navtp" href="daily/teleprompter.html">Teleprompter</a><a class="cur" href="combine.html">Publish</a></nav>
 <h1>Review and publish</h1>
 <p class="mut" id="epline">Check your take, upload it to YouTube, then turn the best scenes into Shorts. Everything happens on this phone.</p>
@@ -158,13 +158,19 @@ function idbOpen(){return new Promise((res,rej)=>{const q=indexedDB.open('bkstud
 async function idbTake(){try{const d=await idbOpen();return await new Promise(r=>{const t=d.transaction(['chunks','meta'],'readonly');const m=t.objectStore('meta').get('cur'),c=t.objectStore('chunks').getAll();t.oncomplete=()=>r({meta:m.result,chunks:(c.result||[]).sort((a,b)=>a.i-b.i).map(x=>x.blob)});t.onerror=()=>r(null);});}catch(e){return null;}}
 async function idbClear(){try{const d=await idbOpen();await new Promise(r=>{const t=d.transaction(['chunks','meta'],'readwrite');t.objectStore('chunks').clear();t.objectStore('meta').clear();t.oncomplete=r;t.onerror=r;t.onabort=r;});}catch(e){}}
 async function loadTake(){
-  const I=$('takeinfo'),r=await idbTake();
-  if(!r||!r.meta||!r.chunks.length){I.innerHTML='No recent take on this phone. Record one in the teleprompter, or open <b>Use a different recording file</b> below.';$('takeSave').style.display='none';$('takeDel').style.display='none';return;}
-  if(Date.now()-r.meta.at>2*864e5){await idbClear();I.textContent='Your last take was more than 2 days old, so it was deleted. Record a new one, or choose a file below.';$('takeSave').style.display='none';$('takeDel').style.display='none';return;}
-  const blob=new Blob(r.chunks,{type:r.meta.mime||r.chunks[0].type||'video/mp4'});takeBlob=blob;lastBlob=blob;useRec(blob);
-  const mins=Math.max(1,Math.round((Date.now()-r.meta.at)/60000)),ago=mins<90?mins+' min ago':Math.round(mins/60)+' h ago';
-  I.innerHTML='Recorded '+ago+' · '+(blob.size/1048576).toFixed(0)+' MB · kept on this phone for 2 days. Preview it, then publish below.';
-  $('prev').addEventListener('loadedmetadata',()=>{I.innerHTML='Recorded '+ago+' · '+fmt($('prev').duration)+' · '+(blob.size/1048576).toFixed(0)+' MB · kept on this phone for 2 days. Preview it, then publish below.';},{once:true});
+  const I=$('takeinfo');I.innerHTML='Opening your latest take… this can take a few seconds for a long video.';
+  try{
+    const r=await Promise.race([idbTake(),new Promise(res=>setTimeout(()=>res('timeout'),25000))]);
+    if(r==='timeout'){I.innerHTML='This browser is slow to open the saved take. <button type="button" id="takeRetry" style="margin-left:6px;padding:8px 12px">Try again</button>';$('takeRetry').onclick=loadTake;return;}
+    if(!r||!r.meta||!r.chunks.length){I.innerHTML='No recent take on this phone. Record one in the teleprompter, or open <b>Use a different recording file</b> below.';$('takeSave').style.display='none';$('takeDel').style.display='none';return;}
+    if(Date.now()-r.meta.at>2*864e5){await idbClear();I.textContent='Your last take was more than 2 days old, so it was deleted. Record a new one, or choose a file below.';$('takeSave').style.display='none';$('takeDel').style.display='none';return;}
+    const blob=new Blob(r.chunks,{type:r.meta.mime||r.chunks[0].type||'video/mp4'});takeBlob=blob;lastBlob=blob;
+    const mins=Math.max(1,Math.round((Date.now()-r.meta.at)/60000)),ago=mins<90?mins+' min ago':Math.round(mins/60)+' h ago',mb=(blob.size/1048576).toFixed(0);
+    $('takeSave').style.display='';$('takeDel').style.display='';
+    I.textContent='Recorded '+ago+' · '+mb+' MB · loading the preview…';
+    $('prev').addEventListener('loadedmetadata',()=>{I.textContent='Recorded '+ago+(isFinite($('prev').duration)?' · '+fmt($('prev').duration):'')+' · '+mb+' MB · kept on this phone for 2 days. Preview it, then publish below.';},{once:true});
+    useRec(blob);
+  }catch(e){I.innerHTML='<span class="err">Could not open the saved take ('+(e&&e.message?e.message:e)+').</span> <button type="button" id="takeRetry" style="margin-left:6px;padding:8px 12px">Try again</button> Or open <b>Use a different recording file</b> below.';const b=$('takeRetry');if(b)b.onclick=loadTake;}
 }
 $('takeSave').onclick=()=>{if(!takeBlob)return;const u=URL.createObjectURL(takeBlob),ext=/mp4/.test(takeBlob.type)?'mp4':'webm';$('takeOut').innerHTML='<a class="btn dl" href="'+u+'" download="trade-with-bk-'+(ep?ep.j.asOf:'take')+'.'+ext+'">Tap to save the file</a>';};
 $('takeDel').onclick=async()=>{if(!confirm('Discard this take? It is deleted from this phone and cannot be recovered.'))return;await idbClear();takeBlob=null;lastBlob=null;recUrl=null;recDur=0;$('prev').removeAttribute('src');$('prev').style.display='none';$('rv').removeAttribute('src');$('takeOut').innerHTML='';$('takeSave').style.display='none';$('takeDel').style.display='none';$('takeinfo').textContent='Take discarded.';ready();};
@@ -187,7 +193,7 @@ $('undo').onclick=()=>{for(let k=marks.length-1;k>0;k--){if(marks[k]!=null){mark
 $('reset').onclick=()=>{markById={};rebuild();};
 $('lay').onclick=e=>{const b=e.target.closest('button');if(!b)return;layout=b.dataset.l;[...$('lay').children].forEach(x=>x.classList.toggle('on',x===b));$('pos').style.display=layout==='pip'?'flex':'none';$('layhelp').textContent=layout==='side'?'Side by side keeps the charts fully visible and puts you in a column next to them.':layout==='pip'?'Your face sits in a small circle over the visuals. Pick a corner that covers the least.':'Only your voice over the visuals, nothing covering the charts.';};
 $('pos').onclick=e=>{const b=e.target.closest('button');if(!b)return;pos=b.dataset.p;[...$('pos').children].forEach(x=>x.classList.toggle('on',x===b));};
-function ready(){$('make').disabled=!(ep&&recUrl&&recDur&&scenes.length>=1);document.body.classList.toggle('notake',!(recUrl&&recDur));}
+function ready(){$('make').disabled=!(ep&&recUrl&&recDur&&scenes.length>=1);document.body.classList.toggle('notake',!recUrl);}
 
 let pre=null;function prefetch(){const m=ep.m,f=ep.j.video||'visuals.mp4';$('status').textContent='Loading the visuals in the background…';pre=fetch(m+'/'+f).then(r=>{if(!r.ok)throw new Error('Could not load the visuals video.');return r.blob();}).then(b=>{visUrl=URL.createObjectURL(b);$('status').innerHTML='<span class="ok">Visuals ready ('+(b.size/1048576).toFixed(0)+' MB)</span>';return visUrl;}).catch(e=>{$('status').innerHTML='<span class="err">'+e.message+'</span>';pre=null;throw e;});pre.catch(()=>{});}
 async function getVisuals(){
