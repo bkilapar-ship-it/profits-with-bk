@@ -249,7 +249,7 @@ function buildEpisodeInner({ mode, setups, config }) {
   const dayWord = isNum(m.chg1d) ? (m.chg1d >= 0 ? 'rose' : 'fell') : '';
   const hookT = news && news.hook ? String(news.hook) : '';
   title = n
-    ? (hookT && isNum(m.chg1d) && m.chg1d >= 0.5 ? `${hookT} + S&P 500 ${dayWord} ${pct(m.chg1d)}: ${n} Stocks to Watch for ${nxd}`.slice(0, 100) : isNum(m.chg1d) && Math.abs(m.chg1d) >= 0.5 ? `S&P 500 ${dayWord} ${pct(m.chg1d)} Today: ${n} Stocks to Watch for ${nxd}` : `${n} Stocks to Watch for ${nxd}: S&P 500 Daily Briefing`)
+    ? (hookT && isNum(m.chg1d) && m.chg1d >= 0.5 ? `${hookT} + S&P 500 ${dayWord} ${pct(m.chg1d)}: ${n} Stock${n === 1 ? '' : 's'} to Watch for ${nxd}`.slice(0, 100) : isNum(m.chg1d) && Math.abs(m.chg1d) >= 0.5 ? `S&P 500 ${dayWord} ${pct(m.chg1d)} Today: ${n} Stock${n === 1 ? '' : 's'} to Watch for ${nxd}` : `${n} Stock${n === 1 ? '' : 's'} to Watch for ${nxd}: S&P 500 Daily Briefing`)
     : `S&P 500 Daily Briefing for ${nxd}: no signals today`;
   const hl = news && news.highlight ? String(news.highlight).replace(/[.]$/, '') : '';
   const big = isNum(m.chg1d) && m.chg1d >= 1.5;
@@ -309,6 +309,11 @@ function buildEpisodeInner({ mode, setups, config }) {
     const when = groups.length === 1 ? `On ${wdOf(groups[0])} I gave you ${calls.length} stock${calls.length === 1 ? '' : 's'}.` : `Let's check the calls I gave you earlier.`;
     add('calls', 'calls', 'WHAT HAPPENED TO OUR CALLS', `Before today's new picks, let's check what happened to the old ones. ${when} Here's what would have happened if you'd followed the plan. ${lines.join(' ')} ${tailP || tail2} I'll keep updating these until each one is closed out.`.replace(/\s+/g, ' '),
       { kick: 'IF YOU FOLLOWED THE PLAN', title: 'What happened to our calls', rows: calls.map(c => ({ ticker: c.ticker, name: nm(c.ticker) === c.ticker ? '' : nm(c.ticker), entry: c.entry, open: c.open, close: c.close, pct: c.pct, state: c.entry == null ? 'skip' : c.state, day: c.day })) });
+    // the Shorts-friendly pointer: names the calls, NOT their levels or results, and sends viewers to the full video
+    { const tops = [...new Set(calls.map(c => c.ticker))].slice(0, 5), lab = t => (NAMES[t] ? `${NAMES[t]} (${t})` : t);
+      const lead = proud ? `Our calls are holding up on a day the S&P 500 fell ${say(Math.abs(m.chg1d))}. ` : '';
+      const nar = `${lead}Which stocks are they? ${tops.map(lab).join(', ')}. The entry, the target and the safety exit for each one are in today's full video. If you're watching this as a Short, tap the related video to see the full plan.`;
+      add('callsend', 'bullets', 'OUR CALLS: THE FULL PLAN IS IN THE VIDEO', nar, { kick: 'FULL CALLS IN TODAY\'S VIDEO', title: 'Our calls', items: tops.map(lab).concat(['Entry, target and exit: in the full video']) }); }
   }
 
   // 2) scorecard of earlier picks
@@ -340,6 +345,19 @@ function buildEpisodeInner({ mode, setups, config }) {
   } else {
     const watch = nearTrigger(setups.status, new Set());
     add('watch', 'watch', 'NOTHING TRIGGERED, WHAT TO WATCH', `Nothing passed my screen today. ${watch.length ? `The stocks closest to qualifying are ${watch.map(x => spell(x.ticker)).join(', ')}.` : ''} No signal means no trade, and that is a perfectly normal day.`, { watch, market: setups.market });
+  }
+
+  // 4b) how we performed: no counts and no tickers, so it works as a stand-alone Short; ends with the like / subscribe ask
+  if (calls.length) {
+    const taken2 = calls.filter(c => c.entry != null), avg2 = taken2.length ? taken2.reduce((a, c) => a + c.pct, 0) / taken2.length : null;
+    const good = survived && isNum(avg2) && avg2 > 0;
+    const askT = `If these daily calls are helping you, please like and subscribe. It's free, and it helps a small channel grow.`;
+    const nar = good
+      ? `So, how did we perform? While the S&P 500 fell ${say(Math.abs(m.chg1d))} today, our picks are on average up ${say(avg2)}. Same tested process, every single day, and that's how we stay in the game on a big dip day. Losses will come too, and I'll always show them. ${askT} The full breakdown is in today's video.`
+      : `So, how did we perform? The honest answer, wins and losses, is in today's full video. Same tested process every day, and I'll always show the misses as well as the hits. ${askT}`;
+    const aw = nar.split(/\s+/), ai = aw.findIndex(x => /^(like|subscribe)/i.test(x.replace(/[^a-z]/gi, '')));
+    add('perf', 'bullets', 'HOW WE PERFORMED', nar, { kick: 'HOW WE PERFORMED', title: 'How we performed', items: [good ? `Our picks: ${avg2 >= 0 ? '+' : '−'}${Math.abs(avg2).toFixed(1)}% on average` : 'Wins and losses, shown honestly', 'Same tested process every day', 'Like and subscribe: it is free'] });
+    const sc = scenes[scenes.length - 1]; sc.pop = true; sc.popAt = ai < 0 ? 0.6 : Math.max(0, Math.min(0.95, ai / aw.length));
   }
 
   // 5) tomorrow's calendar (only verified items). Said as "tomorrow", once, with no dates.

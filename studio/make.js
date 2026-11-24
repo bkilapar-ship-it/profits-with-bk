@@ -127,7 +127,7 @@ async function main() {
   fs.writeFileSync(path.join(out, 'script.txt'), DN + `${ep.title}\n\n` + ep.scenes.map((s, i) => `[${i + 1}. ${s.heading}]\nTALKING POINTS\n${pointsOf(s).map(x => '- ' + x).join('\n')}\n\nFULL SCRIPT (optional)\n${s.narration}`).join('\n\n---\n\n') + '\n');
   fs.writeFileSync(path.join(out, 'metadata.txt'), metadata(ep));
   fs.writeFileSync(path.join(out, 'teleprompter.html'), teleprompterHtml(ep));
-  fs.writeFileSync(path.join(out, 'scenes.json'), JSON.stringify({ title: ep.title, asOf: ep.asOf, mode: ep.mode, video: 'visuals.mp4', scenes: ep.scenes.map(s => ({ id: s.id, type: s.type, heading: s.heading, dur: s.dur, ...(s.pop ? { pop: true, popAt: s.popAt } : {}) })) }, null, 2));
+  fs.writeFileSync(path.join(out, 'scenes.json'), JSON.stringify({ title: ep.title, asOf: ep.asOf, mode: ep.mode, video: 'visuals.mp4', scenes: ep.scenes.map(s => ({ id: s.id, type: s.type, heading: s.heading, dur: s.dur, narration: s.narration, ...(s.pop ? { pop: true, popAt: s.popAt } : {}) })) }, null, 2));
   console.log(`Episode: ${ep.title} (${ep.scenes.length} scenes, ~${Math.round(ep.scenes.reduce((a, s) => a + s.dur, 0))}s)`);
   if (arg('no-video', false) && !arg('stills', false)) return;
 
