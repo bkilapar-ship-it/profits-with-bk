@@ -33,7 +33,13 @@ async function draftSetups(setups, { src, keys }) {
   }
   if (used < 300) throw new Error(`Only ${used} S&P 500 stocks have a bar for ${today}: is the market open today?`);
   const clean = roundAll(items);
-  const out = { ...setups, draft: true, generatedAt: new Date().toISOString(), asOf: today, nextSession: core.addSessions(today, 1), dip: clean.filter(x => x.kind === 'dip'), rip: clean.filter(x => x.kind === 'rip'), status };
+  // Earlier sessions' signals (the calls being reviewed) must be exactly the ones already published, not recomputed from
+  // provisional data: only today's signals come from this scan. Published sessionsAgo is counted from the last real scan,
+  // so each moves one session further back, and anything already signalled today is replaced by the fresh scan.
+  const prior = k => (Array.isArray(setups[k]) ? setups[k] : []).filter(x => x.signalDate && String(x.signalDate) < today).map(x => ({ ...x, sessionsAgo: x.sessionsAgo + (String(setups.asOf) < today ? 1 : 0) }));
+  const fresh = k => clean.filter(x => x.kind === k && (x.sessionsAgo === 0 || !x.signalDate || String(x.signalDate) >= today));
+  console.log(`DRAFT scan: kept ${prior('dip').length} published earlier dip signals (not recomputed).`);
+  const out = { ...setups, draft: true, generatedAt: new Date().toISOString(), asOf: today, nextSession: core.addSessions(today, 1), dip: prior('dip').concat(fresh('dip')), rip: prior('rip').concat(fresh('rip')), status };
   console.log(`DRAFT scan: ${used} S&P 500 stocks with today's partial bar, ${out.dip.filter(x => x.sessionsAgo === 0).length} provisional dip signals today (as of ${today}).`);
   return out;
 }
