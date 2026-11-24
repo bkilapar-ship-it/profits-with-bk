@@ -269,7 +269,7 @@ function buildEpisodeInner({ mode, setups, config }) {
   const note = news && news.introNote ? ' ' + String(news.introNote).trim() : '';
   const introNarr = big
     ? `Hey everyone, welcome back to ${ch}! It's ${date}.${note} Guys, what a day today. What a day! Fantastic. ${hl ? `The big news of the day, and maybe of the last few months, has really pushed the S&P 500: it ${dayWord} ${say(m.chg1d)}.` : `The S&P 500 ${dayWord} ${say(m.chg1d)}.`} ${n ? `And ${found}` : `But ${found}`} Let's get into it.`
-    : `Hey everyone, welcome back to ${ch}! It's ${date}.${note} Here's the quick version: ${hookState}${found} Over the next few minutes we'll look at what the market did today in plain English, check how my earlier picks have done, ${n ? `go through each pick and the plan for it, ` : ''}and see what's coming up tomorrow.`;
+    : `Hey everyone, welcome back to ${ch}! It's ${date}.${note} Here's the quick version: ${hookState}${found} Over the next few minutes we'll look at what the market did today, check how my earlier picks have done, ${n ? `go through each pick and the plan for it, ` : ''}and see what's coming up tomorrow.`;
   add('intro', 'intro', 'DAILY BRIEFING', introNarr,
     { date: dayShort(asOf), kicker: `Briefing for ${nxd}`, chips: [isNum(m.chg1d) ? `S&P 500 ${m.chg1d >= 0 ? '+' : '−'}${Math.abs(m.chg1d).toFixed(1)}% today` : 'Daily briefing', `${n} stock${n === 1 ? '' : 's'} for ${nx}`, 'Scorecard included'], market: m });
 
@@ -515,7 +515,7 @@ function metaParts(ep) {
   } else if (ep.mode === 'weekly') hook = 'Weekly review of how the screen signals played out under the tested rules, plus a watch list for next week.';
   else {
     const d1 = typeof ep.chg1d === 'number' ? `The S&P 500 ${ep.chg1d >= 0 ? 'rose' : 'fell'} ${Math.abs(ep.chg1d).toFixed(1)}% today. ` : '';
-    hook = `${d1}Today's market in plain English, a scorecard of how my earlier picks did, and the ${tick.length} S&P 500 stocks my screen flagged for ${ep.nxd || 'the next session'}, each with a simple plan: when to buy, the +4% target, and a safety exit.${ep.calSource ? '' : ''}`;
+    hook = `${d1}Today's market, a scorecard of how my earlier picks did, and the ${tick.length} S&P 500 stocks my screen flagged for ${ep.nxd || 'the next session'}, each with a simple plan: when to buy, the +4% target, and a safety exit.${ep.calSource ? '' : ''}`;
     rules = `THE PLAN FOR EACH PICK\n• Wait 3-5 minutes after the open on ${ep.nxd}\n• Only buy if the price is within 2% of the signal-day close\n• Target: 4% above that close (a target, not a promise)\n• Safety exit: far below, so keep size small and NEVER use leverage or borrowed money\n• Be out by the close of day 3 at the latest`;
   }
   const head = [hook, tick.length ? `SIGNALS: ${named}` : '', rules].filter(Boolean).join('\n\n');

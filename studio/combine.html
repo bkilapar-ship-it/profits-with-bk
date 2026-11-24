@@ -488,9 +488,11 @@ $('shGo').onclick=async()=>{
     const vframe=(x,y,w,h,el,sg)=>{const d=SD[sg.i];if(!d.ok){g.drawImage(vis,x,y,w,h);return;}const fr=Math.min(1,el/sg.full);let k=0;d.th.forEach(t=>{if(fr>=t)k++;});k=Math.min(d.B,k);const c=d.im[k]||d.still||d.im[0],bs=k>0?d.im[k-1]:null;
       const tb=k===0?el:Math.max(0,el-d.th[k-1]*sg.full),q0=Math.min(1,tb/0.6),q=q0*q0*(3-2*q0);if(!c)return;
       if(bs){g.drawImage(bs,x,y,w,h);g.globalAlpha=q;g.drawImage(c,x,y,w,h);g.globalAlpha=1;}else g.drawImage(c,x,y,w,h);};
+    const DSTAMP=(()=>{try{return new Date(ep.j.asOf+'T12:00:00Z').toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}).replace(/,/g,'').toUpperCase();}catch(e){return '';}})();
+    const stamp=()=>{if(!DSTAMP)return;g.save();g.font='800 46px Poppins,Arial,sans-serif';g.textAlign='center';const w=g.measureText(DSTAMP).width+60,x=(W-w)/2,y=164,h=70;g.fillStyle='rgba(255,194,26,.16)';g.strokeStyle='#FFC21A';g.lineWidth=3;g.beginPath();if(g.roundRect)g.roundRect(x,y,w,h,18);else g.rect(x,y,w,h);g.fill();g.stroke();g.fillStyle='#FFC21A';g.shadowColor='rgba(255,194,26,.5)';g.shadowBlur=14;g.fillText(DSTAMP,W/2,y+50);g.restore();};
     const drawAdd=()=>{const a=addCur,el=(performance.now()-addT0)/1000,tot=base+Math.min(a.dur,el);
       g.fillStyle=bg;g.fillRect(0,0,W,H);const gl=g.createRadialGradient(W*.5,H*.35,10,W*.5,H*.35,W);gl.addColorStop(0,'rgba(38,208,255,.14)');gl.addColorStop(1,'rgba(38,208,255,0)');g.fillStyle=gl;g.fillRect(0,0,W,H);
-      g.textAlign='center';g.fillStyle='#fff';g.shadowColor='#26D0FF';g.shadowBlur=18;g.font='800 40px Poppins,Arial,sans-serif';g.fillText('THE 4% SWING TRADES',W/2,90);g.shadowBlur=0;
+      g.textAlign='center';g.fillStyle='#fff';g.shadowColor='#26D0FF';g.shadowBlur=18;g.font='800 40px Poppins,Arial,sans-serif';g.fillText('THE 4% SWING TRADES',W/2,90);g.shadowBlur=0;stamp();
       g.fillStyle='#FFC21A';g.font='800 62px Poppins,Arial,sans-serif';a.def.big.forEach((l,j)=>{g.fillText(l,W/2,330+j*84);});
       if(window.bkPop&&a.k==='sub')bkPop(g,0,620,W,405,el-0.4);
       const fr=Math.min(1,el/a.dur);let k=0,acc=0;const tw=a.chunks.reduce((x,y)=>x+y.split(' ').length,0)||1;a.chunks.forEach((c,j)=>{if(fr>=acc/tw)k=j;acc+=c.split(' ').length;});
@@ -505,7 +507,7 @@ $('shGo').onclick=async()=>{
       g.save();try{g.filter='blur(22px)';}catch(e){}const bw=Math.round(H*16/9);g.beginPath();g.rect(0,0,W,H);g.clip();vframe((W-bw)/2,0,bw,H,se,sg);g.restore();
       g.fillStyle='rgba(2,5,10,.80)';g.fillRect(0,0,W,H);
       g.textAlign='center';g.fillStyle='#fff';g.shadowColor='#26D0FF';g.shadowBlur=18;g.font='800 40px Poppins,Arial,sans-serif';g.fillText('THE 4% SWING TRADES',W/2,90);g.shadowBlur=0;
-      g.fillStyle='#FFC21A';g.font='700 24px Poppins,Arial,sans-serif';g.fillText(sc.heading.slice(0,34),W/2,134);
+      g.fillStyle='#FFC21A';g.font='700 24px Poppins,Arial,sans-serif';g.fillText(sc.heading.slice(0,34),W/2,134);stamp();
       g.save();g.shadowColor='rgba(38,208,255,.45)';g.shadowBlur=26;g.fillStyle='#000';g.fillRect(vx,vy,vw,vh);g.restore();
       g.save();g.beginPath();g.rect(vx,vy,vw,vh);g.clip();vframe(vx,vy,vw,vh,se,sg);if(window.bkPop){if(sc.type==='outro'||sc.pop)bkPop(g,vx,vy,vw,vh,se-(sc.pop&&sc.popAt!=null?sc.popAt:bkPopAt(sc.narration))*sg.full);else if(!AD.length&&cur===segs.length-1&&tot>D-5)bkPop(g,vx,vy,vw,vh,tot-(D-5));}g.restore();
       const fy=vy+vh,fh=60;

@@ -357,7 +357,7 @@ const SCENES = {
   },
   market: (s, ep) => {
     const d = s.data, m = d.market || {};
-    return frame(`<div class="abs" data-a="0,0.3" style="left:80px;top:140px"><div class="kick">${isNum(m.chg1d) ? 'PLAIN ENGLISH' : 'THE BACKDROP'}</div><div class="h2" style="margin-top:12px">${isNum(m.chg1d) ? 'The S&amp;P 500 today' : 'S&amp;P 500, this week'}</div></div>
+    return frame(`<div class="abs" data-a="0,0.3" style="left:80px;top:140px"><div class="kick">${isNum(m.chg1d) ? "TODAY'S MARKET" : 'THE BACKDROP'}</div><div class="h2" style="margin-top:12px">${isNum(m.chg1d) ? 'The S&amp;P 500 today' : 'S&amp;P 500, this week'}</div></div>
       ${isNum(m.chg1d) ? `<div class="card abs" data-a="0.1,0.4" style="left:80px;top:320px;width:560px;height:300px;padding:40px"><div class="lab">TODAY</div><div class="num ${cls(m.chg1d)}" style="font-size:120px;line-height:1.15;margin-top:10px">${cnt(m.chg1d, 1, m.chg1d > 0 ? '+' : '', '%', 0.15, 0.6, cls(m.chg1d))}</div></div>` : ''}
       ${isNum(m.chg5d) ? `<div class="card abs" data-a="0.1,0.4" style="left:80px;top:${isNum(m.chg1d) ? 650 : 320}px;width:560px;height:300px;padding:40px"><div class="lab">LAST 5 DAYS</div><div class="num ${cls(m.chg5d)}" style="font-size:120px;line-height:1.15;margin-top:10px">${cnt(m.chg5d, 1, m.chg5d > 0 ? '+' : '', '%', 0.15, 0.6, cls(m.chg5d))}</div></div>` : ''}
       ${(isNum(m.chg20d) && !isNum(m.chg1d)) ? `<div class="card abs" data-a="0.2,0.5" style="left:80px;top:650px;width:560px;height:300px;padding:40px"><div class="lab">LAST 20 SESSIONS</div><div class="num" style="font-size:120px;line-height:1.15;margin-top:10px">${cnt(m.chg20d, 1, m.chg20d > 0 ? '+' : '', '%', 0.2, 0.65, cls(m.chg20d))}</div></div>` : ''}
