@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Combine your video | Trade With BK Studio</title>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Review and publish | Trade With BK Studio</title>
 <style>
 :root{color-scheme:dark}*{box-sizing:border-box}
 body{margin:0;background:#0A0F1C;color:#EAF0FB;font-family:-apple-system,BlinkMacSystemFont,'Inter',system-ui,sans-serif;padding:18px 16px 80px;max-width:640px;margin:auto}
@@ -16,24 +16,67 @@ video{width:100%;border-radius:12px;background:#000;margin-top:10px}
 canvas{width:100%;border-radius:12px;background:#000;margin-top:10px;display:none}
 nav.top{position:sticky;top:0;z-index:9;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:-18px -16px 14px;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;background:rgba(10,15,28,.94);backdrop-filter:blur(8px);border-bottom:1px solid #22304D}nav.top a{padding:11px 6px;border-radius:12px;border:1px solid #2A3B61;background:#121C33;color:#fff;text-decoration:none;text-align:center;font-weight:700;font-size:14px}nav.top a.cur{background:#2563EB;border-color:#2563EB}
 a.btn.dl{display:block;background:#2563EB;border-color:#2563EB;margin-top:10px}
-</style></head><body>
-<nav class="top"><a href="./">‹ Studio</a><a id="navtp" href="daily/teleprompter.html">Teleprompter</a><a class="cur" href="combine.html">Combine</a></nav>
-<h1>Combine your video</h1>
-<p class="mut">Put your face and voice together with the visuals. It all happens in this page, on your phone. Nothing is uploaded.</p>
 
+.card{background:linear-gradient(180deg,#111C36,#0D1630);border-radius:20px;padding:18px;box-shadow:0 10px 30px rgba(0,0,0,.25)}
+.step{display:flex;gap:14px;align-items:flex-start;margin-bottom:14px}.step .n{flex:0 0 34px;height:34px;border-radius:50%;background:linear-gradient(135deg,#2563EB,#26D0FF);display:grid;place-items:center;font-weight:800;font-size:16px;box-shadow:0 0 18px rgba(38,208,255,.35)}
+.step h2{margin:0;font-size:19px;letter-spacing:0;text-transform:none;color:#fff}.step p{margin:3px 0 0}
+.in{width:100%;font:inherit;padding:13px;border-radius:12px;border:1px solid #2A3B61;background:#0B1328;color:#fff;margin:6px 0 10px}
+.lbl{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:#8FA3C7;font-weight:700;display:block;margin-top:6px}
+.row2{display:grid;grid-template-columns:1fr 1.4fr;gap:10px;margin:12px 0 4px}.row2 .go{width:100%}
+button.danger{color:#FF8FA3;border-color:#5a2733;background:#1a1220}
+.throw{display:flex;gap:14px;align-items:center;margin:2px 0 12px}.throw img{width:132px;aspect-ratio:16/9;object-fit:cover;border-radius:10px;border:1px solid #2A3B61;background:#0B1328}
+details.more,details.adv{margin-top:12px;border-top:1px solid #22304D;padding-top:4px}details.adv{border:1px solid #22304D;border-radius:16px;padding:6px 14px 14px;margin:22px 0}
+summary{cursor:pointer;color:#9DB8FF;font-weight:700;padding:10px 0;list-style:none}summary::-webkit-details-marker{display:none}summary::after{content:' ▾';opacity:.7}
+#shList .shr{background:#0C1426;border:1px solid #1E2C4A;border-radius:14px;padding:12px!important;margin:8px 0}
+#ytBar,#shBar,#bar{height:8px;border-radius:6px;background:#1B2742;overflow:hidden;margin-top:12px}#ytBar i,#shBar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#2563EB,#26D0FF)}
+button.go{border-radius:14px;box-shadow:0 6px 20px rgba(37,99,235,.35)}
+.notake #ytcard,.notake #shcard{opacity:.45;pointer-events:none;filter:grayscale(.4)}
+</style></head><body>
+<nav class="top"><a href="./">‹ Studio</a><a id="navtp" href="daily/teleprompter.html">Teleprompter</a><a class="cur" href="combine.html">Publish</a></nav>
+<h1>Review and publish</h1>
+<p class="mut" id="epline">Check your take, upload it to YouTube, then turn the best scenes into Shorts. Everything happens on this phone.</p>
+
+<div class="card" id="takecard"><div class="step"><span class="n">1</span><div><h2>Your take</h2><p class="mut" id="takeinfo">Looking for your latest recording…</p></div></div>
+  <video id="prev" playsinline controls style="display:none"></video>
+  <div class="row2"><button id="takeSave" type="button">Save a copy to this phone</button><button id="takeDel" type="button" class="danger">Discard take</button></div>
+  <div id="takeOut"></div>
+  <details class="more"><summary>Use a different recording file</summary><input id="rec" type="file" accept="video/*,audio/*,.mp4,.mov,.m4v,.webm,.m4a,.mp3,.wav"><div id="recinfo" class="mut" style="margin-top:8px"></div></details></div>
+<div class="card" id="ytcard"><div class="step"><span class="n">2</span><div><h2>Publish to YouTube</h2><p class="mut">Uploads straight from here as <b>private</b> or <b>unlisted</b>. Watch it once in YouTube Studio, then make it public.</p></div></div>
+  <div class="throw"><img id="ytThumb" alt="Thumbnail" src=""><div><div class="lbl">Thumbnail</div><div class="mut">Added automatically after the upload.</div></div></div>
+  <label class="lbl" for="ytT">Title</label><input id="ytT" class="in" placeholder="Title">
+  <details class="more"><summary>Description and tags</summary><textarea id="ytD" rows="9" class="in" style="font-size:13px"></textarea></details>
+  <div class="row2"><select id="ytPriv"><option value="private">Private</option><option value="unlisted">Unlisted</option></select><button id="ytGo" class="go">Upload to YouTube</button></div>
+  <div id="ytBar" style="display:none"><i></i></div><div id="ytSt" class="mut" style="margin-top:8px"></div>
+  <details class="more"><summary>YouTube connection and options</summary>
+    <label class="lbl" for="ytId">Google OAuth client ID</label><input id="ytId" class="in" placeholder="Paste once; it is remembered on this phone">
+    <label class="lbl" for="ytF">Upload a different file instead</label><input id="ytF" type="file">
+    <details><summary>One-time setup (about 5 minutes)</summary><ol class="mut"><li>Open console.cloud.google.com, create a project, and enable <b>YouTube Data API v3</b>.</li><li>APIs &amp; Services, OAuth consent screen: set it to External and add your own Google account as a test user.</li><li>Credentials, Create credentials, OAuth client ID, type <b>Web application</b>. Under Authorized JavaScript origins add the address of this site (the part before /studio/).</li><li>Paste the client ID above.</li></ol><p class="mut">Until Google audits the project, YouTube keeps API uploads private. That is fine here: you switch it to public by hand.</p></details>
+  </details></div>
+<div class="card" id="shcard"><div class="step"><span class="n">3</span><div><h2>Make Shorts</h2><p class="mut">Pick scenes (or just part of one). Each Short is vertical, uses your voice only and shows the visual with big captions. Up to 3 minutes; under 60 seconds works best.</p></div></div>
+  <div class="row"><button id="shAll" type="button">Tick all</button><button id="shNone" type="button">Clear</button></div>
+  <div id="shList"></div><div id="shTot" class="mut" style="margin:8px 0"></div>
+  <div class="row"><button id="shGo" class="go">Create the Short</button></div>
+  <p class="warn">Like the full video, it plays that part of your recording in real time. Keep the page open.</p>
+  <div id="shBar" style="display:none"><i></i></div><div id="shSt" class="mut" style="margin-top:8px"></div>
+  <canvas id="shCv" style="display:none;max-width:100%;max-height:60vh;margin:10px auto"></canvas><div id="shOut"></div>
+  <div id="shUpBox" style="display:none"><div id="shTh"></div><div class="row"><input id="shT" class="in"></div>
+  <div class="row"><select id="shPriv"><option value="private">Private</option><option value="unlisted">Unlisted</option></select><button id="shUp" class="go">Upload the Short to YouTube</button></div></div>
+</div>
+
+
+<details class="adv"><summary>Older recordings and manual tools</summary><p class="mut" style="margin:10px 0 0">The old way: combine a separate recording with the visuals, pick the episode, and build thumbnails by hand.</p>
 <div class="card"><h2>1. Episode</h2>
   <select id="ep" style="width:100%"></select><div id="epinfo" class="mut" style="margin-top:8px"></div></div>
 
-<div class="card"><h2>2. Your recording</h2>
+<div class="card"><h2>Choose a recording file</h2>
   <input id="rec" type="file" accept="video/*,audio/*,.mp4,.mov,.m4v,.webm,.m4a,.mp3,.wav">
-  <div class="row" style="margin-top:10px"><button id="ghLoad" type="button">Or load a recording saved on GitHub</button></div><div id="ghList" class="mut"></div>
   <div id="recinfo" class="mut" style="margin-top:8px"></div></div>
 
 <div class="card"><h2>3. Scenes in this video</h2><div class="mut">Untick a scene to leave it out, or move it up or down. These are the same choices as in the teleprompter review.</div><div id="plan" style="margin-top:8px"></div></div>
 
 <div class="card"><h2>4. Match your recording to the scenes</h2>
   <div class="mut" id="markhelp">Pick your recording first.</div>
-  <video id="prev" playsinline controls style="display:none"></video>
+  
   <div class="row" id="markbtns" style="display:none"><button id="tap" class="go">Scene 2 starts now</button></div>
   <div class="row" id="markbtns2" style="display:none"><button id="undo">Undo last</button><button id="reset">Start over</button><button id="auto">Use automatic marks</button></div>
   <div id="marks"></div></div>
@@ -59,35 +102,11 @@ a.btn.dl{display:block;background:#2563EB;border-color:#2563EB;margin-top:10px}
   <div class="row"><button id="thSave" class="go">Save thumbnail</button></div><div id="thOut"></div>
   <h3 style="margin:18px 0 6px;font-size:16px">Scene thumbnails (no photo)</h3><p class="mut">One per scene, built from that scene's own visual. Tap to open, then save or share.</p><div id="scTh" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px"></div></div>
 
-<div class="card" id="ytcard"><h2>8. Publish to YouTube</h2>
-  <p class="mut">Uploads the video you just created (or a file you choose) straight from this page, with the title, description, tags and thumbnail filled in. It goes up as <b>private</b> or <b>unlisted</b>; you make it public yourself in YouTube Studio after watching it.</p>
-  <div class="row"><input id="ytId" placeholder="Google OAuth client ID (one-time setup, see below)" style="width:100%;font:inherit;padding:12px;border-radius:12px;border:1px solid #2A3B61;background:#0B1328;color:#fff"></div>
-  <div class="row"><select id="ytPriv"><option value="private">Private</option><option value="unlisted">Unlisted</option></select><input id="ytF" type="file"></div>
-  <div class="row"><input id="ytT" placeholder="Title" style="width:100%;font:inherit;padding:12px;border-radius:12px;border:1px solid #2A3B61;background:#0B1328;color:#fff"></div>
-  <div class="row"><textarea id="ytD" rows="8" style="width:100%;font:inherit;font-size:13px;padding:12px;border-radius:12px;border:1px solid #2A3B61;background:#0B1328;color:#fff"></textarea></div>
-  <div class="row"><button id="ytGo" class="go">Sign in with Google and upload</button></div>
-  <div id="ytBar" style="display:none"><i></i></div><div id="ytSt" class="mut" style="margin-top:8px"></div>
-  <details><summary>One-time setup (about 5 minutes)</summary><ol class="mut"><li>Open console.cloud.google.com, create a project, and enable <b>YouTube Data API v3</b>.</li><li>APIs &amp; Services, OAuth consent screen: set it to External and add your own Google account as a test user.</li><li>Credentials, Create credentials, OAuth client ID, type <b>Web application</b>. Under Authorized JavaScript origins add the address of this site (the part before /studio/).</li><li>Paste the client ID above. It is not a secret and is stored only in this browser.</li></ol><p class="mut">Until Google audits the project, YouTube keeps API uploads private. That is fine here: you switch it to public by hand.</p></details>
-</div>
-
-<div class="card" id="shcard"><h2>9. Make a Short</h2>
-  <p class="mut">Turns one or more scenes of your recording into a vertical 9:16 video (scenes play in order; under each one you can set a start and end time to use only part of it) (the visual in the middle on a soft background, big captions, your voice only: no face, disclaimer). Works with an older recording too: choose the file in section 2 and set the scene marks. A Short can be up to 3 minutes; under 60 seconds works best.</p>
-  <div class="row"><button id="shAll" type="button">Tick all</button><button id="shNone" type="button">Clear</button></div>
-  <div id="shList"></div><div id="shTot" class="mut" style="margin:8px 0"></div>
-  <div class="row"><button id="shGo" class="go">Create the Short</button></div>
-  <p class="warn">Like the full video, it plays that part of your recording in real time. Keep the page open.</p>
-  <div id="shBar" style="display:none"><i></i></div><div id="shSt" class="mut" style="margin-top:8px"></div>
-  <canvas id="shCv" style="display:none;max-width:100%;max-height:60vh;margin:10px auto"></canvas><div id="shOut"></div>
-  <div id="shUpBox" style="display:none"><div id="shTh"></div><div class="row"><input id="shT" style="width:100%;font:inherit;padding:12px;border-radius:12px;border:1px solid #2A3B61;background:#0B1328;color:#fff"></div>
-  <div class="row"><select id="shPriv"><option value="private">Private</option><option value="unlisted">Unlisted</option></select><button id="shUp" class="go">Upload the Short to YouTube</button></div></div>
-</div>
-
-
+</details>
 <video id="vis" playsinline muted preload="auto" style="position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none"></video>
 <video id="rv" playsinline preload="auto" style="position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none"></video>
 
 <script src="popover.js"></script>
-<script src="gh.js"></script>
 <script>
 let CUES={};const $=id=>document.getElementById(id);
 const EPS=(new URLSearchParams(location.search).get('eps')||'daily,weekly').split(',');
@@ -109,7 +128,7 @@ function pick(){
   const o=$('ep').selectedOptions[0];if(!o)return;const j=JSON.parse(o.dataset.j);ep={m:o.value,j};let t=0;all=j.scenes.map(s=>{const a={...s,start:t};t+=s.dur;return a;});
   const p=store.get(planKey())||{};planOrder=(p.order&&p.order.length?p.order.filter(id=>all.some(s=>s.id===id)):[]);all.forEach(s=>{if(!planOrder.includes(s.id))planOrder.push(s.id);});skipSet=new Set(p.skip||[]);markById={};
   studioImg=new Image();studioImg.src=ep.m+'/studio-bg.png?'+Date.now();thImg=new Image();thImg.onload=()=>thDraw();thImg.src=ep.m+'/thumbnail-bg.png?'+Date.now();thPh=new Image();thPh.onload=()=>thDraw();thPh.src=ep.m+'/thumbnail.png?'+Date.now();
-  visUrl=null;prefetch();$('navtp').href=ep.m+'/teleprompter.html';$('epinfo').textContent=all.length+' scenes · '+fmt(t)+' of visuals';
+  visUrl=null;if($('ytThumb'))$('ytThumb').src=ep.m+'/thumbnail.png?'+Date.now();if($('epline'))$('epline').textContent=(ep.j.title||'')+' · '+ep.j.asOf;prefetch();$('navtp').href=ep.m+'/teleprompter.html';$('epinfo').textContent=all.length+' scenes · '+fmt(t)+' of visuals';
   const a=store.get('bkstudio-marks2-'+mkey());$('auto').style.display=(a&&a.t)?'':'none';
   rebuild();if(a&&a.t)$('auto').onclick();
 }
@@ -132,14 +151,24 @@ function useRec(f){
   v.onerror=()=>{$('recinfo').innerHTML='<span class="err">This browser cannot play that file. Try an .mp4 or .mov recording.</span>';};
 }
 $('rec').onchange=e=>{const f=e.target.files[0];if(f)useRec(f);};
-$('ghLoad').onclick=async()=>{const L=$('ghList');
-  if(!window.bkgh||!bkgh.ok()){L.innerHTML='Set up GitHub saving first: <a href="./#github">Studio page, GitHub saving</a>.';return;}
-  L.textContent='Looking…';
-  try{const rs=await bkgh.list();if(!rs.length){L.textContent='Nothing saved on GitHub right now (recordings are deleted after 2 days).';return;}
-    L.innerHTML=rs.map(r=>'<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #1B2A47"><span style="flex:1;word-break:break-all">'+r.name.replace(/</g,'&lt;')+' <span class="mut">('+(r.size/1048576).toFixed(0)+' MB)</span></span><button type="button" data-use="'+r.name+'">Use</button></div>').join('');
-    L.querySelectorAll('[data-use]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{const blob=await bkgh.load(b.dataset.use,p=>{b.textContent=Math.round(p*100)+'%';});L.innerHTML='<span class="ok">Loaded from GitHub.</span>';useRec(blob);}catch(e){L.innerHTML='<span class="err">'+(e&&e.message?e.message:e)+'</span>';}});
-  }catch(e){L.innerHTML='<span class="err">'+(e&&e.message?e.message:e)+'</span>';}};
 function loadAuto(){}
+/* ---- the take recorded in the teleprompter lives in this browser for 2 days ---- */
+let takeBlob=null;
+function idbOpen(){return new Promise((res,rej)=>{const q=indexedDB.open('bkstudio-rec',1);q.onupgradeneeded=()=>{const d=q.result;d.createObjectStore('chunks',{autoIncrement:true});d.createObjectStore('meta');};q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);});}
+async function idbTake(){try{const d=await idbOpen();return await new Promise(r=>{const t=d.transaction(['chunks','meta'],'readonly');const m=t.objectStore('meta').get('cur'),c=t.objectStore('chunks').getAll();t.oncomplete=()=>r({meta:m.result,chunks:(c.result||[]).sort((a,b)=>a.i-b.i).map(x=>x.blob)});t.onerror=()=>r(null);});}catch(e){return null;}}
+async function idbClear(){try{const d=await idbOpen();await new Promise(r=>{const t=d.transaction(['chunks','meta'],'readwrite');t.objectStore('chunks').clear();t.objectStore('meta').clear();t.oncomplete=r;t.onerror=r;t.onabort=r;});}catch(e){}}
+async function loadTake(){
+  const I=$('takeinfo'),r=await idbTake();
+  if(!r||!r.meta||!r.chunks.length){I.innerHTML='No recent take on this phone. Record one in the teleprompter, or open <b>Use a different recording file</b> below.';$('takeSave').style.display='none';$('takeDel').style.display='none';return;}
+  if(Date.now()-r.meta.at>2*864e5){await idbClear();I.textContent='Your last take was more than 2 days old, so it was deleted. Record a new one, or choose a file below.';$('takeSave').style.display='none';$('takeDel').style.display='none';return;}
+  const blob=new Blob(r.chunks,{type:r.meta.mime||r.chunks[0].type||'video/mp4'});takeBlob=blob;lastBlob=blob;useRec(blob);
+  const mins=Math.max(1,Math.round((Date.now()-r.meta.at)/60000)),ago=mins<90?mins+' min ago':Math.round(mins/60)+' h ago';
+  I.innerHTML='Recorded '+ago+' · '+(blob.size/1048576).toFixed(0)+' MB · kept on this phone for 2 days. Preview it, then publish below.';
+  $('prev').addEventListener('loadedmetadata',()=>{I.innerHTML='Recorded '+ago+' · '+fmt($('prev').duration)+' · '+(blob.size/1048576).toFixed(0)+' MB · kept on this phone for 2 days. Preview it, then publish below.';},{once:true});
+}
+$('takeSave').onclick=()=>{if(!takeBlob)return;const u=URL.createObjectURL(takeBlob),ext=/mp4/.test(takeBlob.type)?'mp4':'webm';$('takeOut').innerHTML='<a class="btn dl" href="'+u+'" download="trade-with-bk-'+(ep?ep.j.asOf:'take')+'.'+ext+'">Tap to save the file</a>';};
+$('takeDel').onclick=async()=>{if(!confirm('Discard this take? It is deleted from this phone and cannot be recovered.'))return;await idbClear();takeBlob=null;lastBlob=null;recUrl=null;recDur=0;$('prev').removeAttribute('src');$('prev').style.display='none';$('rv').removeAttribute('src');$('takeOut').innerHTML='';$('takeSave').style.display='none';$('takeDel').style.display='none';$('takeinfo').textContent='Take discarded.';ready();};
+
 $('auto').onclick=()=>{const a=store.get('bkstudio-marks2-'+mkey());if(!a||!a.t)return;if(a.order){const rest=planOrder.filter(id=>!a.order.includes(id));planOrder=a.order.filter(id=>all.some(s=>s.id===id)).concat(rest);skipSet=new Set(rest.filter(id=>skipSet.has(id)||true));savePlan();}markById={};Object.entries(a.t).forEach(([id,t])=>{markById[id]=t;});rebuild();};
 function renderMarks(){
   const n=scenes.length,nxt=marks.findIndex((m,k)=>k>0&&m==null);
@@ -158,7 +187,7 @@ $('undo').onclick=()=>{for(let k=marks.length-1;k>0;k--){if(marks[k]!=null){mark
 $('reset').onclick=()=>{markById={};rebuild();};
 $('lay').onclick=e=>{const b=e.target.closest('button');if(!b)return;layout=b.dataset.l;[...$('lay').children].forEach(x=>x.classList.toggle('on',x===b));$('pos').style.display=layout==='pip'?'flex':'none';$('layhelp').textContent=layout==='side'?'Side by side keeps the charts fully visible and puts you in a column next to them.':layout==='pip'?'Your face sits in a small circle over the visuals. Pick a corner that covers the least.':'Only your voice over the visuals, nothing covering the charts.';};
 $('pos').onclick=e=>{const b=e.target.closest('button');if(!b)return;pos=b.dataset.p;[...$('pos').children].forEach(x=>x.classList.toggle('on',x===b));};
-function ready(){$('make').disabled=!(ep&&recUrl&&recDur&&scenes.length>=1);}
+function ready(){$('make').disabled=!(ep&&recUrl&&recDur&&scenes.length>=1);document.body.classList.toggle('notake',!(recUrl&&recDur));}
 
 let pre=null;function prefetch(){const m=ep.m,f=ep.j.video||'visuals.mp4';$('status').textContent='Loading the visuals in the background…';pre=fetch(m+'/'+f).then(r=>{if(!r.ok)throw new Error('Could not load the visuals video.');return r.blob();}).then(b=>{visUrl=URL.createObjectURL(b);$('status').innerHTML='<span class="ok">Visuals ready ('+(b.size/1048576).toFixed(0)+' MB)</span>';return visUrl;}).catch(e=>{$('status').innerHTML='<span class="err">'+e.message+'</span>';pre=null;throw e;});pre.catch(()=>{});}
 async function getVisuals(){
@@ -275,7 +304,7 @@ const thSet=m=>{thMode=m;['thM1','thM2','thM3'].forEach(i=>$(i).classList.remove
 $('thM1').onclick=()=>thSet('photo');$('thM2').onclick=()=>thSet('video');$('thM3').onclick=()=>$('thF').click();
 $('thF').onchange=()=>{const f=$('thF').files[0];if(!f)return;const im=new Image();im.onload=()=>{thSelf=im;thSet('pick');};im.src=URL.createObjectURL(f);};
 $('thSave').onclick=()=>{thDraw();$('thC').toBlob(b=>{const u=URL.createObjectURL(b);$('thOut').innerHTML='<a class="btn dl" href="'+u+'" download="trade-with-bk-thumbnail-'+(ep?ep.j.asOf:'')+'.jpg">Download thumbnail</a><p class="mut">If it does not download, press and hold the picture above and choose Save image.</p>';},'image/jpeg',.92);};
-loadEpisodes();thDraw();
+loadEpisodes().then(loadTake,loadTake);thDraw();
 /* ---- YouTube upload (browser, Google Identity Services + resumable upload) ---- */
 let lastBlob=null,ytTok=null,ytTokExp=0,_ac=null,_rvs=null;
 function getAC(){if(!_ac){const A=window.AudioContext||window.webkitAudioContext;_ac=new A();}return _ac;}
@@ -431,8 +460,7 @@ $('shGo').onclick=async()=>{
     try{src.disconnect(dst);}catch(e){}
     const type=mr.mimeType||mime||'video/mp4',blob=new Blob(chunks,{type}),ext=/mp4/.test(type)?'mp4':'webm',url=URL.createObjectURL(blob);shortBlob=blob;
     cv.style.display='none';$('shBar').style.display='none';S('<span class="ok">Short ready. '+(blob.size/1048576).toFixed(1)+' MB, '+Math.round(D)+' s'+(D>60?' (over 60 s: it will be a normal video, not a Short, in the Shorts shelf)':'')+'</span>');
-    $('shOut').innerHTML='<video controls playsinline src="'+url+'" style="max-height:60vh"></video><a class="btn dl" href="'+url+'" download="trade-with-bk-short-'+ep.j.asOf+'.'+ext+'">Save the Short to this phone</a><a class="btn dl" href="#" id="shGh">Save the Short to GitHub (not on your phone)</a><div id="shGhSt" class="mut"></div>';
-    $('shGh').onclick=async e=>{e.preventDefault();const o=$('shGhSt');if(!window.bkgh||!bkgh.ok()){o.innerHTML='Set up GitHub saving first: <a href="./#github">Studio page</a>.';return;}try{o.textContent='Uploading…';const n=await bkgh.save(blob,'short.'+ext,p=>{o.textContent='Uploading… '+Math.round(p*100)+'%';});o.innerHTML='<span class="ok">Saved to GitHub ('+n+'). It is deleted after 2 days.</span>';}catch(x){o.innerHTML='<span class="err">'+(x&&x.message?x.message:x)+'</span>';}};
+    $('shOut').innerHTML='<video controls playsinline src="'+url+'" style="max-height:60vh"></video><a class="btn dl" href="'+url+'" download="trade-with-bk-short-'+ep.j.asOf+'.'+ext+'">Save the Short to this phone</a>';
     shortThumbIdx=all.indexOf(scenes[segs[0].i]);const stU=ep.m+'/thumbs/short-'+shortThumbIdx+'.jpg';$('shTh').innerHTML='<div class="mut" style="margin:8px 0 4px">Cover image for this Short (9:16, set automatically when you upload it here):</div><img src="'+stU+'" style="height:220px;border-radius:10px;border:1px solid #2A3B61" onerror="this.parentNode.innerHTML=\'\'"> <a class="btn dl" href="'+stU+'" download="short-cover.jpg">Save the cover image</a>';
     const f0=scenes[segs[0].i].heading;$('shT').value=((segs.length===1?f0.charAt(0)+f0.slice(1).toLowerCase():'Market recap')+' | Trade With BK #Shorts').slice(0,100);$('shUpBox').style.display='block';
   }catch(e){S('<span class="err">'+(e&&e.message?e.message:e)+'</span>');$('shCv').style.display='none';}
