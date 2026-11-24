@@ -521,7 +521,7 @@ function thumbHtml(ep, dir, art) {
     const words = String(ep.thumbHead).toUpperCase().split(/\s+/), lines = []; let cur = '';
     words.forEach(w => { if ((cur + ' ' + w).trim().length > 12 && cur) { lines.push(cur); cur = w; } else cur = (cur + ' ' + w).trim(); }); if (cur) lines.push(cur);
     const nl = lines.length, fz = nl <= 2 ? 120 : nl === 3 ? 100 : 82, wdn = String(ep.nxd || '').split(' ')[0].toUpperCase();
-    const up = typeof ep.chg1d === 'number' && ep.chg1d >= 1, top0 = 118, ty = top0 + nl * fz * 1.02 + 24;
+    const up = typeof ep.chg1d === 'number' && ep.chg1d >= 1, down = typeof ep.chg1d === 'number' && ep.chg1d <= -0.5, top0 = 118, ty = top0 + nl * fz * 1.02 + 24;
     return `<!doctype html><html><head><meta charset="utf-8"><style>${fontCss(dir)}${CSS.replace(/html,body\{width:1920px;height:1080px/, 'html,body{width:1280px;height:720px')}</style></head><body>
     ${bgCandles(1280, 720, 9)}
     <div class="abs" style="inset:0;background:radial-gradient(ellipse at 85% 80%,rgba(31,229,90,.38),transparent 55%),linear-gradient(90deg,rgba(0,0,0,.55) 0%,rgba(0,0,0,.2) 55%,transparent 75%)"></div>
@@ -529,8 +529,9 @@ function thumbHtml(ep, dir, art) {
     ${art ? (() => { const src = path.join(__dirname, '..', 'assets', 'bk.png'); if (!fs.existsSync(src)) return ''; fs.copyFileSync(src, path.join(dir, 'bk.png')); return `<div class="abs" style="left:790px;top:70px;width:440px;height:440px;border-radius:50%;box-shadow:0 0 0 8px #1FE55A,0 0 70px 12px rgba(31,229,90,.55),0 0 140px rgba(38,208,255,.3);overflow:hidden"><img src="bk.png" style="width:440px;height:440px;object-fit:cover"></div>`; })() : ''}
     <div class="abs" style="left:56px;top:34px;display:flex;align-items:center;gap:14px">${logoSvg(56, { id: 'th' })}<span style="font-weight:800;letter-spacing:.14em;font-size:22px">THE 4% SWING TRADES</span></div>
     <div class="abs" style="left:56px;top:${top0}px;width:760px">${lines.map((l, i) => `<div class="h1" style="font-size:${fz}px;line-height:1.02;${i === nl - 1 ? 'color:var(--acc);text-shadow:0 0 36px rgba(38,208,255,.7)' : 'text-shadow:0 5px 0 #000,0 0 24px rgba(0,0,0,.8)'}">${esc(l)}</div>`).join('')}</div>
-    ${up ? `<div class="abs" style="left:56px;top:${ty}px"><span class="chip g" style="font-size:34px;padding:10px 24px;border-width:3px;box-shadow:0 0 28px rgba(31,229,165,.55)">S&amp;P 500 +${ep.chg1d.toFixed(1)}% TODAY</span></div>` : ''}
-    ${n ? `<div class="abs" style="left:56px;top:${ty + (up ? 74 : 0)}px"><div class="kick" style="font-size:30px;letter-spacing:.06em;color:var(--amb);text-shadow:0 0 18px rgba(255,194,26,.6)">TOP ${n} STOCKS FOR ${esc(wdn)}</div></div>` : ''}
+    ${up ? `<div class="abs" style="left:56px;top:${ty}px"><span class="chip g" style="font-size:34px;padding:10px 24px;border-width:3px;box-shadow:0 0 28px rgba(31,229,165,.55)">S&amp;P 500 +${ep.chg1d.toFixed(1)}% TODAY</span></div>` : (down ? `<div class="abs" style="left:56px;top:${ty}px"><span class="chip r" style="font-size:34px;padding:10px 24px;border-width:3px">S&amp;P 500 −${Math.abs(ep.chg1d).toFixed(1)}% TODAY</span></div>` : '')}
+    ${ep.proud ? `<div class="abs" style="left:56px;top:${ty + 74}px"><span class="chip g" style="font-size:34px;padding:10px 24px;border-width:3px;box-shadow:0 0 28px rgba(31,229,165,.55)">${esc(ep.proud)}</span></div>` : ''}
+    ${n ? `<div class="abs" style="left:56px;top:${ty + (up || down ? 74 : 0) + (ep.proud ? 74 : 0)}px"><div class="kick" style="font-size:30px;letter-spacing:.06em;color:var(--amb);text-shadow:0 0 18px rgba(255,194,26,.6)">TOP ${n} STOCKS FOR ${esc(wdn)}</div></div>` : ''}
     ${t.length ? `<div class="abs" style="left:56px;top:650px;display:flex;gap:10px">${t.map(x => `<span class="chip" style="font-size:22px;padding:5px 14px;opacity:.9">${esc(x)}</span>`).join('')}</div>` : ''}
     </body></html>`;
   }

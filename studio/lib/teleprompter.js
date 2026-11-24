@@ -8,7 +8,7 @@ const { FRAME_N } = require('./render');
 function teleprompterHtml(ep) {
   const total = ep.scenes.reduce((s, x) => s + x.dur, 0);
   const blocks = ep.scenes.map((s, i) => `<section class="blk" data-id="${esc(s.id)}" data-i="${i}"><img class="thumb" src="stills/scene-${i}.jpg" alt="" loading="lazy" onerror="this.style.display='none'"><div class="rvc"><button data-a="up">▲ Up</button><button data-a="down">▼ Down</button><button data-a="skip" class="skipbtn">Skip this scene</button></div><div class="cue"></div><ul class="pts">${pointsOf(s).map(x => `<li>${esc(x)}</li>`).join('')}</ul><p class="full">${esc(s.narration)}</p></section>`).join('');
-  let acc = 0; const heads = JSON.stringify(ep.scenes.map(s => { const o = { id: s.id, ty: s.type, h: s.heading, d: Math.round(s.dur), st: acc, du: s.dur }; acc += s.dur; return o; }));
+  let acc = 0; const heads = JSON.stringify(ep.scenes.map(s => { const o = { id: s.id, ty: s.type, h: s.heading, d: Math.round(s.dur), st: acc, du: s.dur, pop: s.pop ? 1 : 0, pa: s.popAt }; acc += s.dur; return o; }));
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Teleprompter: ${esc(ep.title)}</title>
 <style>
 :root{color-scheme:dark;--bar:128px}*{box-sizing:border-box}html,body{margin:0;height:100%;background:#05080F;color:#F2F6FF;font-family:-apple-system,BlinkMacSystemFont,'Inter',system-ui,sans-serif;-webkit-text-size-adjust:100%}
@@ -172,7 +172,7 @@ function beatThr(text,B){const t=String(text||'').replace(/\s+/g,' ').trim();if(
   const ss=t.split(/(?<=[.!?])\s+(?=[A-Z0-9'"“$])/).filter(Boolean),w=ss.map(x=>x.split(' ').length),tot=w.reduce((a,b)=>a+b,0),st=[];let c=0;w.forEach(x=>{st.push(c/tot);c+=x;});
   const cu=[];ss.forEach((x,j)=>{if(/^(One|Two|Three|Four|Five|Six|Seven|Eight):/.test(x))cu.push(st[j]);});if(cu.length&&cu.length===B)return cu.map(x=>Math.min(0.97,x));const S=ss.length;return Array.from({length:B},(_,k)=>{const u=(k+1)*S/(B+1),j=Math.min(S-1,Math.floor(u));return Math.min(0.97,st[j]+(u-j)*(w[j]/tot));});}
 function setTarget(cur,v,mid){if(!live||lvIdx<0)return;const b=v[cur];if(!b||b.dataset.id!==liveId)return;const r=b.getBoundingClientRect(),f=Math.max(0,Math.min(1,(mid-r.top)/Math.max(1,r.height))),B=lvB[lvIdx]||0;const fe=b.querySelector('p.full'),txt=fe?fe.textContent:b.textContent;const cc=lvCue&&lvCue[lvIdx],th=(cc&&cc.length===B)?cc:beatThr(txt,B);let t=0;th.forEach(x=>{if(f>=x)t++;});t=Math.min(B,t);if(t>lvTgt)lvTgt=t;
-  if(HEADS[lvIdx]&&HEADS[lvIdx].ty==='outro'&&window.bkPopAt&&!popT0&&f>=bkPopAt(txt))popT0=performance.now();}
+  if(HEADS[lvIdx]&&(HEADS[lvIdx].ty==='outro'||HEADS[lvIdx].pop)&&window.bkPopAt&&!popT0&&f>=(HEADS[lvIdx].pop&&HEADS[lvIdx].pa!=null?HEADS[lvIdx].pa:bkPopAt(txt)))popT0=performance.now();}
 function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
 function cover(c,v,x,y,w,h){const vw=v.videoWidth,vh=v.videoHeight;if(!vw)return;const k=Math.max(w/vw,h/vh),sw=w/k,sh=h/k;c.drawImage(v,(vw-sw)/2,(vh-sh)/2,sw,sh,x,y,w,h);}
 function liveDraw(W,H2,ctx,mode){

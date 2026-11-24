@@ -1,0 +1,29 @@
+{
+  "asOf": "2026-11-24",
+  "headline": "Reports say the White House is preparing sweeping new tariffs on China, the EU and dozens of other countries, and stocks fell on the news",
+  "points": [
+    "The Wall Street Journal reported that the White House is preparing broad new tariffs on China, the EU, Japan, South Korea and dozens of other countries, with details possibly announced this week",
+    "Final rates have not been announced. The EU, Japan and South Korea are expected to be capped at 15 percent or lower, with China facing the steepest rates",
+    "Tech stocks led the fall, as Monday's big Nvidia-driven rally faded",
+    "Wednesday brings the PCE inflation report, a second estimate of economic growth and the Fed's Beige Book, then US markets close on Thursday for Thanksgiving"
+  ],
+  "sources": [
+    "Investing.com, citing the Wall Street Journal, 24 Nov 2026: https://www.investing.com/news/stock-market-news/white-house-prepares-sweeping-new-tariffs-on-china-eu-and-dozens-of-nations-5048285",
+    "Bloomberg headline, 24 Nov 2026 (paywalled, headline only): https://www.bloomberg.com/news/articles/2026-11-24/us-tech-stocks-poised-to-slide-as-ai-caution-returns-after-rally"
+  ],
+  "note": "Intraday facts: the tariff plan is a media report (WSJ via Investing.com), not an announcement; do not state rates. Re-check the S&P 500 close before the final build.",
+  "hook": "Tariff Fears Hit Stocks",
+  "thumbHead": "WALL ST BLEEDS. WE SURVIVED",
+  "tags": [
+    "tariffs",
+    "stock market today",
+    "S&P 500",
+    "stock market sell-off",
+    "tariff news",
+    "swing trading",
+    "4% swing trades"
+  ],
+  "introNote": "And a quick note: you may have noticed a new name and logo. We're now The 4 Percent Swing Trades, named after the strategy we follow. Same daily briefing, same process, new name.",
+  "badNews": "the new tariff reports",
+  "survive": true
+}

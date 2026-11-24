@@ -4,9 +4,9 @@
 const fs = require('fs');
 const path = require('path');
 const dir = process.argv[2];
-const LABEL = { welcome: 'Welcome video', daily: 'Daily video', weekly: 'Weekly review', bottom: 'Market bottoms (special)' };
+const LABEL = { welcome: 'Welcome video', daily: 'Daily video', 'daily-draft': 'DRAFT: early review of tonight\'s script (intraday numbers, will change)', weekly: 'Weekly review', bottom: 'Market bottoms (special)' };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-const sections = ['daily', 'weekly'].map(m => {
+const sections = ['daily', 'daily-draft', 'weekly'].map(m => {
   const f = path.join(dir, m, 'meta.json');
   if (!fs.existsSync(f)) return `<section><h2>${LABEL[m]}</h2><p class="mut">None generated yet.</p></section>`;
   const meta = JSON.parse(fs.readFileSync(f, 'utf8'));

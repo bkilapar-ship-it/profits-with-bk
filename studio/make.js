@@ -11,10 +11,12 @@ const { loadJson, fetchBars, fetchVix } = require('./lib/data');
 const { buildEpisode, metadata, pointsOf, callRows } = require('./lib/script');
 const { prepareCharts, renderEpisode, renderStills, renderBrandAssets } = require('./lib/render');
 const { analyze } = require('./lib/bottom');
+const { draftSetups } = require('./lib/draft');
 
 /** Today's daily bar is unfinished until the US close, so it must never be read as a closing price. Drops it unless the market closed (after 16:30 Eastern). */
+let DRAFT = false; // draft mode: keep today's unfinished bar (intraday numbers) instead of waiting for the close
 function dropUnfinishedToday(arr) {
-  if (!Array.isArray(arr) || !arr.length) return arr;
+  if (DRAFT || !Array.isArray(arr) || !arr.length) return arr;
   const p = Object.fromEntries(new Intl.DateTimeFormat('en-US', { timeZone: 'America/New_York', hourCycle: 'h23', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }).formatToParts(new Date()).map(x => [x.type, x.value]));
   const today = `${p.year}-${p.month}-${p.day}`, mins = Number(p.hour) * 60 + Number(p.minute);
   const last = String(arr[arr.length - 1].t).slice(0, 10);
@@ -26,10 +28,13 @@ const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > -1 
 
 async function main() {
   const mode = arg('mode', 'daily');
+  DRAFT = !!arg('draft', false);
+  if (DRAFT) console.log('DRAFT MODE: today\'s unfinished bar is included, every figure is intraday and will change by the close.');
   const config = JSON.parse(fs.readFileSync(path.join(__dirname, 'config.json'), 'utf8'));
   const repo = process.env.GITHUB_REPOSITORY || 'bkilapar-ship-it/profits-with-bk';
   const src = arg('setups', process.env.STUDIO_SETUPS_URL || `https://${repo.split('/')[0]}.github.io/${repo.split('/')[1]}/data/setups.json`);
-  const setups = await loadJson(src);
+  let setups = await loadJson(src);
+  if (DRAFT && mode === 'daily') setups = { ...(await draftSetups(setups, { src, keys: { keyId: process.env.ALPACA_KEY_ID, secret: process.env.ALPACA_SECRET_KEY } })) };
   try { // the paper account's public history (simulated money), published by the scanner next to setups.json
     const pu = process.env.STUDIO_PAPER_URL || arg('paper', null) || (String(src).replace(/setups\.json(\?.*)?$/, 'paper.json'));
     if (pu && pu !== src) { const pj = await loadJson(pu); if (pj && Array.isArray(pj.trades)) setups.__paper = pj; }
@@ -66,7 +71,7 @@ async function main() {
     const hf = path.join(__dirname, 'content', `highlight-${setups.asOf}.json`);
     if (fs.existsSync(hf)) { const h = JSON.parse(fs.readFileSync(hf, 'utf8')), n0 = setups.__news && setups.__news.asOf === setups.asOf ? setups.__news : { asOf: setups.asOf, headlines: [], sources: [] };
       const have = new Set((n0.headlines || []).map(x => String(x).toLowerCase()));
-      setups.__news = { ...n0, asOf: setups.asOf, highlight: h.headline, hook: h.hook, closeNote: h.closeNote, thumbHead: h.thumbHead, tags: h.tags, headlines: [...(h.points || []), ...(n0.headlines || []).filter(x => !(h.points || []).some(p => String(p).toLowerCase() === String(x).toLowerCase()))], sources: [...(h.sources || []), ...(n0.sources || [])] }; }
+      setups.__news = { ...n0, asOf: setups.asOf, highlight: h.headline, hook: h.hook, closeNote: h.closeNote, thumbHead: h.thumbHead, tags: h.tags, introNote: h.introNote, badNews: h.badNews, survive: h.survive, headlines: [...(h.points || []), ...(n0.headlines || []).filter(x => !(h.points || []).some(p => String(p).toLowerCase() === String(x).toLowerCase()))], sources: [...(h.sources || []), ...(n0.sources || [])] }; }
     const ef = path.join(__dirname, 'content', 'events.json');
     if (fs.existsSync(ef)) setups.__events = JSON.parse(fs.readFileSync(ef, 'utf8')); }
   if (mode === 'daily') { // (a) how the AI/chip names did today, (b) what happened to the calls given on earlier sessions
@@ -112,14 +117,17 @@ async function main() {
       console.log(`AI health: ${setups.aiHealth.length} names, ${setups.aiHealth.filter(a => a.vs200 < 0).length} below the 200-day`);
     } catch (e) { console.log('Note: AI health check skipped:', e.message); }
   }
+  if (DRAFT) setups.__draft = true;
   const ep = buildEpisode({ mode, setups, config });
+  if (DRAFT) ep.title = 'DRAFT: ' + ep.title;
   const out = path.resolve(arg('out', path.join(__dirname, 'out', `${mode}-${setups.asOf}`)));
   fs.mkdirSync(out, { recursive: true });
 
-  fs.writeFileSync(path.join(out, 'script.txt'), `${ep.title}\n\n` + ep.scenes.map((s, i) => `[${i + 1}. ${s.heading}]\nTALKING POINTS\n${pointsOf(s).map(x => '- ' + x).join('\n')}\n\nFULL SCRIPT (optional)\n${s.narration}`).join('\n\n---\n\n') + '\n');
+  const DN = DRAFT ? 'DRAFT: built before the US close, so every price and percentage below is intraday and WILL change by the close. Wording and structure are what to review.\n\n' : '';
+  fs.writeFileSync(path.join(out, 'script.txt'), DN + `${ep.title}\n\n` + ep.scenes.map((s, i) => `[${i + 1}. ${s.heading}]\nTALKING POINTS\n${pointsOf(s).map(x => '- ' + x).join('\n')}\n\nFULL SCRIPT (optional)\n${s.narration}`).join('\n\n---\n\n') + '\n');
   fs.writeFileSync(path.join(out, 'metadata.txt'), metadata(ep));
   fs.writeFileSync(path.join(out, 'teleprompter.html'), teleprompterHtml(ep));
-  fs.writeFileSync(path.join(out, 'scenes.json'), JSON.stringify({ title: ep.title, asOf: ep.asOf, mode: ep.mode, video: 'visuals.mp4', scenes: ep.scenes.map(s => ({ id: s.id, type: s.type, heading: s.heading, dur: s.dur })) }, null, 2));
+  fs.writeFileSync(path.join(out, 'scenes.json'), JSON.stringify({ title: ep.title, asOf: ep.asOf, mode: ep.mode, video: 'visuals.mp4', scenes: ep.scenes.map(s => ({ id: s.id, type: s.type, heading: s.heading, dur: s.dur, ...(s.pop ? { pop: true, popAt: s.popAt } : {}) })) }, null, 2));
   console.log(`Episode: ${ep.title} (${ep.scenes.length} scenes, ~${Math.round(ep.scenes.reduce((a, s) => a + s.dur, 0))}s)`);
   if (arg('no-video', false) && !arg('stills', false)) return;
 
@@ -133,7 +141,7 @@ async function main() {
   if (arg('no-video', false)) return;
   const video = await renderEpisode(ep, out, { chromium });
   fs.rmSync(path.join(out, '_work'), { recursive: true, force: true });
-  fs.writeFileSync(path.join(out, 'meta.json'), JSON.stringify({ title: ep.title, asOf: ep.asOf, mode: ep.mode, scenes: ep.scenes.length, seconds: ep.scenes.reduce((a, s) => a + s.dur, 0), tickers: ep.tickers }, null, 2));
+  fs.writeFileSync(path.join(out, 'meta.json'), JSON.stringify({ draft: DRAFT || undefined, title: ep.title, asOf: ep.asOf, mode: ep.mode, scenes: ep.scenes.length, seconds: ep.scenes.reduce((a, s) => a + s.dur, 0), tickers: ep.tickers }, null, 2));
   console.log(`Done: ${video}`);
 }
 main().catch(e => { console.error('FAILED:', e.message); process.exit(1); });

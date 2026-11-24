@@ -12,7 +12,7 @@ async function loadJson(src) {
 }
 
 /** Daily bars for symbols from Alpaca: { SYM: [{t,o,h,l,c,v}] }, oldest first. */
-async function fetchBars(symbols, { keyId, secret, base = 'https://data.alpaca.markets', feed = 'sip', days = 420 } = {}) {
+async function fetchBars(symbols, { keyId, secret, base = 'https://data.alpaca.markets', feed = 'sip', days = 420, end = null } = {}) {
   if (!keyId || !secret) throw new Error('ALPACA_KEY_ID and ALPACA_SECRET_KEY are required to draw charts.');
   const start = new Date(Date.now() - days * 864e5).toISOString().slice(0, 10);
   const out = {};
@@ -21,6 +21,7 @@ async function fetchBars(symbols, { keyId, secret, base = 'https://data.alpaca.m
     let token = null;
     do {
       const q = new URLSearchParams({ symbols: chunk.join(','), timeframe: '1Day', start, adjustment: 'split', feed, limit: '10000', sort: 'asc' });
+      q.set('end', end || new Date(Date.now() - 16 * 60 * 1000).toISOString()); // the free plan cannot read the latest 15 minutes of SIP data
       if (token) q.set('page_token', token);
       let res;
       for (let a = 0; a < 4; a++) {

@@ -2,7 +2,7 @@ name: Studio (daily and weekly video)
 
 # Builds the day's video visuals, teleprompter, thumbnail and YouTube title/description from the latest
 # screener signals. Free: no paid services. Output is published on your site at /studio/ (phone-friendly page).
-# Also starts when Claude pushes research-trigger/studio.txt (line 1 = daily or weekly).
+# Also starts when Claude pushes research-trigger/studio.txt (line 1 = daily or weekly; line 3 = draft for the early, pre-close review draft, published separately as daily-draft).
 
 on:
   schedule:
@@ -47,7 +47,11 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then m="${{ inputs.mode }}"; fi
           if [ "${{ github.event_name }}" = "push" ] && [ -f research-trigger/studio.txt ]; then m=$(sed -n 1p research-trigger/studio.txt | tr -cd 'a-z'); fi
           case "$m" in daily|weekly) ;; *) m=daily;; esac
+          d=""
+          if [ "${{ github.event_name }}" = "push" ] && [ -f research-trigger/studio.txt ] && [ "$(sed -n 3p research-trigger/studio.txt | tr -cd 'a-z')" = "draft" ] && [ "$m" = "daily" ]; then d="--draft"; fi
           echo "m=$m" >> "$GITHUB_OUTPUT"
+          echo "d=$d" >> "$GITHUB_OUTPUT"
+          if [ -n "$d" ]; then echo "dir=daily-draft" >> "$GITHUB_OUTPUT"; else echo "dir=$m" >> "$GITHUB_OUTPUT"; fi
 
       - name: Install the video tools
         working-directory: studio
@@ -62,13 +66,13 @@ jobs:
           ALPACA_KEY_ID: ${{ secrets.ALPACA_KEY_ID }}
           ALPACA_SECRET_KEY: ${{ secrets.ALPACA_SECRET_KEY }}
           STUDIO_SETUPS_URL: ${{ vars.PAGES_BASE_URL && format('{0}/data/setups.json', vars.PAGES_BASE_URL) || format('https://{0}.github.io/{1}/data/setups.json', github.repository_owner, github.event.repository.name) }}
-        run: node studio/make.js --mode "${{ steps.mode.outputs.m }}" --out studio-out/${{ steps.mode.outputs.m }}
+        run: node studio/make.js --mode "${{ steps.mode.outputs.m }}" ${{ steps.mode.outputs.d }} --out studio-out/${{ steps.mode.outputs.dir }}
 
       - name: Keep a copy for 14 days (backup)
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: studio-${{ steps.mode.outputs.m }}
+          name: studio-${{ steps.mode.outputs.dir }}
           path: studio-out/
           retention-days: 14
           if-no-files-found: warn
@@ -78,7 +82,7 @@ jobs:
           set -e
           mkdir -p /tmp/pub
           if git fetch -q --depth=1 origin studio-latest 2>/dev/null; then git archive FETCH_HEAD | tar -x -C /tmp/pub; fi
-          m="${{ steps.mode.outputs.m }}"
+          m="${{ steps.mode.outputs.dir }}"
           rm -rf /tmp/pub/welcome /tmp/pub/bottom   # old one-off templates are no longer offered
           rm -rf "/tmp/pub/$m"; mkdir -p "/tmp/pub/$m"
           cp studio-out/$m/{visuals.mp4,thumbnail.png,thumbnail-bg.png,studio-bg.png,script.txt,metadata.txt,teleprompter.html,meta.json,scenes.json} "/tmp/pub/$m/"
