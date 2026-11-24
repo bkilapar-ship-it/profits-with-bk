@@ -573,19 +573,42 @@ function studioBgHtml(ep, dir) {
 function sceneThumbHtml(ep, i, dir, stillFile) {
   const sc = ep.scenes[i], raw = String(sc.heading || '').trim().toUpperCase(), words = raw.split(/\s+/);
   const last = words.length > 1 ? words.pop() : '', first = words.join(' ');
-  const len = raw.length, fs0 = len <= 12 ? 128 : len <= 20 ? 100 : len <= 30 ? 80 : 64;
+  const len = raw.length, fs0 = len <= 10 ? 150 : len <= 16 ? 118 : len <= 24 ? 92 : len <= 32 ? 74 : 60;
   const kick = ep.mode === 'weekly' ? 'WEEKLY REVIEW' : ep.mode === 'bottom' ? 'MARKET BOTTOMS' : ep.mode === 'welcome' ? 'START HERE' : 'S&P 500 DIP SIGNALS';
+  const num = v => typeof v === 'number' && isFinite(v);
   const st = sc.type === 'setup' && sc.data && sc.data.setup, nm = st ? (NAMES_R[st.ticker] || '') : '';
-  const chips = st ? `<div class="abs" style="left:56px;top:${fs0 >= 100 ? 330 : 300}px;display:flex;flex-direction:column;gap:12px;align-items:flex-start">${nm ? `<div style="font-weight:700;font-size:38px;color:#C9D6EE">${esc(nm)}</div>` : ''}${typeof st.chg5d === 'number' ? `<span class="chip r" style="font-size:30px;padding:8px 20px">${st.chg5d < 0 ? '−' : '+'}${Math.abs(st.chg5d).toFixed(1)}% IN 5 DAYS</span>` : ''}${typeof st.vs200 === 'number' ? `<span class="chip g" style="font-size:26px;padding:6px 18px">${st.vs200 >= 0 ? '+' : '−'}${Math.abs(st.vs200).toFixed(1)}% vs 200-DAY AVERAGE</span>` : ''}</div>` : '';
-  const img = stillFile ? `<div class="abs" style="left:610px;top:150px;width:630px;height:354px;transform:rotate(-2.5deg);border-radius:18px;overflow:hidden;border:4px solid #26D0FF;box-shadow:0 0 50px rgba(38,208,255,.45),0 18px 40px rgba(0,0,0,.6)"><img src="${stillFile}" style="width:100%;height:100%;object-fit:cover"></div>` : '';
+  const mk = sc.data && sc.data.market, mv = mk ? (num(mk.chg1d) ? mk.chg1d : num(mk.chg5d) ? mk.chg5d : null) : null;
+  // accent colour tells the story: green up, red down, amber for stocks, cyan otherwise
+  let acc = '#26D0FF', accRgb = '38,208,255', hero = '', sub = '', icon = '';
+  const arrow = up => `<svg width="64" height="64" viewBox="0 0 64 64"><path d="${up ? 'M10 46 L26 28 L36 38 L54 14' : 'M10 18 L26 36 L36 26 L54 50'}" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/><path d="${up ? 'M40 14 H54 V28' : 'M40 50 H54 V36'}" fill="none" stroke="currentColor" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+  if (st) {
+    acc = '#FFC21A'; accRgb = '255,194,26';
+    hero = num(st.chg5d) ? `${st.chg5d < 0 ? '−' : '+'}${Math.abs(st.chg5d).toFixed(1)}%` : ''; sub = 'IN 5 DAYS';
+    if (num(st.chg5d)) { if (st.chg5d < 0) { acc = '#FF3B6B'; accRgb = '255,59,107'; } icon = arrow(st.chg5d >= 0); }
+  } else if (mv !== null) {
+    const up = mv >= 0; acc = up ? '#1FE5A5' : '#FF3B6B'; accRgb = up ? '31,229,165' : '255,59,107';
+    hero = `${up ? '+' : '−'}${Math.abs(mv).toFixed(1)}%`; sub = num(mk.chg1d) ? 'S&P 500 TODAY' : 'S&P 500 THIS WEEK'; icon = arrow(up);
+  } else if (sc.type === 'calls' || sc.type === 'outcomes') { acc = '#1FE5A5'; accRgb = '31,229,165'; hero = 'RESULTS'; sub = 'HOW THE CALLS DID'; }
+  else if (sc.type === 'warn') { acc = '#FF3B6B'; accRgb = '255,59,107'; }
+  else if (sc.type === 'intro') { acc = '#FFC21A'; accRgb = '255,194,26'; }
+  const cpl = Math.max(4, Math.floor(620 / (fs0 * 0.64))); let nl = 1, cl = 0; raw.split(/\s+/).forEach(w => { if (cl && cl + 1 + w.length > cpl) { nl++; cl = w.length; } else cl += (cl ? 1 : 0) + w.length; });
+  const tTop = 178 + Math.round(nl * fs0 * 1.0) + 16;
+  const tick = st ? `<div class="abs" style="left:56px;top:${tTop}px;display:flex;flex-direction:column;gap:12px;align-items:flex-start"><div style="font-weight:800;font-size:44px;color:#fff;text-shadow:0 0 20px rgba(${accRgb},.6)">${esc(st.ticker)}${nm && !raw.includes(nm.toUpperCase().split(' ')[0]) ? ` <span style="font-weight:600;color:#C9D6EE;font-size:34px">${esc(nm)}</span>` : ''}</div>${num(st.vs200) ? `<span class="chip g" style="font-size:24px;padding:6px 18px">${st.vs200 >= 0 ? '+' : '−'}${Math.abs(st.vs200).toFixed(1)}% vs 200-DAY AVERAGE</span>` : ''}</div>` : '';
+  const img = stillFile ? `
+    <div class="abs" style="left:560px;top:110px;width:700px;height:480px;background:radial-gradient(closest-side,rgba(${accRgb},.55),transparent 72%);filter:blur(10px)"></div>
+    <div class="abs" style="left:580px;top:150px;width:660px;height:371px;transform:rotate(-3deg);border-radius:20px;overflow:hidden;border:5px solid ${acc};box-shadow:0 0 0 3px rgba(0,0,0,.6),0 0 60px rgba(${accRgb},.7),0 24px 50px rgba(0,0,0,.7)"><img src="${stillFile}" style="width:100%;height:100%;object-fit:cover"></div>` : '';
+  const badge = hero ? `<div class="abs" style="left:${stillFile ? 770 : 640}px;top:${stillFile ? 470 : 250}px;transform:rotate(-4deg);display:flex;align-items:center;gap:16px;padding:14px 34px 16px 26px;border-radius:22px;background:linear-gradient(135deg,rgba(0,0,0,.92),rgba(10,16,28,.92));border:4px solid ${acc};box-shadow:0 0 44px rgba(${accRgb},.75),0 14px 30px rgba(0,0,0,.6);color:${acc}">${icon}<div><div style="font-weight:900;font-size:${hero.length > 6 ? 70 : 96}px;line-height:1;letter-spacing:-.01em;text-shadow:0 0 26px rgba(${accRgb},.7)">${esc(hero)}</div>${sub ? `<div style="font-weight:800;font-size:23px;letter-spacing:.18em;color:#fff;margin-top:4px">${esc(sub)}</div>` : ''}</div></div>` : '';
+  const h1c = `background:linear-gradient(180deg,#fff 30%,${acc});-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 4px 0 rgba(0,0,0,.55)) drop-shadow(0 0 22px rgba(${accRgb},.5))`;
   return `<!doctype html><html><head><meta charset="utf-8"><style>${fontCss(dir)}${CSS.replace(/html,body\{width:1920px;height:1080px/, 'html,body{width:1280px;height:720px')}</style></head><body>
     ${bgCandles(1280, 720, 11 + i)}
-    <div class="abs" style="inset:0;background:linear-gradient(90deg,rgba(0,0,0,.55) 0%,rgba(0,0,0,.2) 55%,transparent 75%)"></div>
-    <div class="abs" style="left:56px;top:40px;display:flex;align-items:center;gap:14px">${logoSvg(60, { id: 'sth' })}<span style="font-weight:800;letter-spacing:.14em;font-size:24px">TRADE WITH BK</span></div>
-    <div class="abs" style="left:56px;top:136px"><div class="kick" style="font-size:26px;color:var(--amb);text-shadow:0 0 18px rgba(255,194,26,.6)">${esc(kick)}</div></div>
-    <div class="abs" style="left:56px;top:188px;width:560px"><div class="h1" style="font-size:${fs0}px;line-height:1.02">${esc(first)}${last ? ` <span style="color:var(--acc)">${esc(last)}</span>` : ''}</div></div>
-    ${chips}${img}
-    <div class="abs" style="left:56px;bottom:34px"><span class="chip" style="font-size:20px;padding:6px 16px;opacity:.85">EDUCATIONAL ONLY · NOT FINANCIAL ADVICE</span></div>
+    <div class="abs" style="inset:0;background:radial-gradient(ellipse at 78% 38%,rgba(${accRgb},.30),transparent 55%),linear-gradient(90deg,rgba(0,0,0,.72) 0%,rgba(0,0,0,.25) 58%,transparent 80%)"></div>
+    <div class="abs" style="left:-120px;top:560px;width:1600px;height:26px;transform:rotate(-8deg);background:linear-gradient(90deg,transparent,${acc} 30%,${acc} 70%,transparent);opacity:.85;box-shadow:0 0 30px ${acc}"></div>
+    <div class="abs" style="left:-120px;top:600px;width:1600px;height:8px;transform:rotate(-8deg);background:linear-gradient(90deg,transparent,#fff 40%,#fff 60%,transparent);opacity:.5"></div>
+    <div class="abs" style="left:56px;top:38px;display:flex;align-items:center;gap:14px">${logoSvg(60, { id: 'sth' })}<span style="font-weight:800;letter-spacing:.14em;font-size:24px">TRADE WITH BK</span></div>
+    <div class="abs" style="left:56px;top:122px"><span style="display:inline-block;font-weight:800;font-size:23px;letter-spacing:.2em;color:#000;background:${acc};padding:6px 18px;border-radius:8px;box-shadow:0 0 24px rgba(${accRgb},.7)">${esc(kick)}</span></div>
+    <div class="abs" style="left:56px;top:178px;width:620px"><div class="h1" style="font-size:${fs0}px;line-height:1;${h1c}">${esc(first)}${last ? ` ${esc(last)}` : ''}</div></div>
+    ${tick}${img}${badge}
+    <div class="abs" style="left:56px;bottom:30px"><span class="chip" style="font-size:19px;padding:6px 16px;opacity:.85">EDUCATIONAL ONLY · NOT FINANCIAL ADVICE</span></div>
     </body></html>`;
 }
 
@@ -610,4 +633,4 @@ async function renderBrandAssets(ep, outDir, { chromium }) {
   } finally { await browser.close(); fs.rmSync(work, { recursive: true, force: true }); }
 }
 
-module.exports = { FRAME_N, FRAME_FPS, renderBrandAssets, chartSvg2, renderStills, prepareCharts, renderEpisode, sceneHtml, chartSvg, FPS, ANIM };
+module.exports = { sceneThumbHtml, FRAME_N, FRAME_FPS, renderBrandAssets, chartSvg2, renderStills, prepareCharts, renderEpisode, sceneHtml, chartSvg, FPS, ANIM };

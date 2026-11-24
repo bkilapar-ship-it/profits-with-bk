@@ -70,7 +70,7 @@ a.btn.dl{display:block;background:#2563EB;border-color:#2563EB;margin-top:10px}
 </div>
 
 <div class="card" id="shcard"><h2>9. Make a Short</h2>
-  <p class="mut">Turns one or more scenes of your recording into a vertical 9:16 video (scenes play in order) (the visual in the middle on a soft background, big captions, your voice only: no face, disclaimer). Works with an older recording too: choose the file in section 2 and set the scene marks. A Short can be up to 3 minutes; under 60 seconds works best.</p>
+  <p class="mut">Turns one or more scenes of your recording into a vertical 9:16 video (scenes play in order; under each one you can set a start and end time to use only part of it) (the visual in the middle on a soft background, big captions, your voice only: no face, disclaimer). Works with an older recording too: choose the file in section 2 and set the scene marks. A Short can be up to 3 minutes; under 60 seconds works best.</p>
   <div class="row"><button id="shAll" type="button">Tick all</button><button id="shNone" type="button">Clear</button></div>
   <div id="shList"></div><div id="shTot" class="mut" style="margin:8px 0"></div>
   <div class="row"><button id="shGo" class="go">Create the Short</button></div>
@@ -340,13 +340,21 @@ $('ytGo').onclick=async()=>{
 /* ---- Shorts: one scene, 9:16, face + visual + captions ---- */
 let shortBlob=null;
 function shSel(){return [...document.querySelectorAll('#shList input:checked')].map(x=>+x.value);}
-function shSegs(){return shSel().map(i=>{const st=i===0?0:marks[i],en=(i+1<scenes.length&&marks[i+1]!=null)?marks[i+1]:recDur;return {i,st,en,d:Math.max(0,(en||0)-st)};});}
+function shTrim(i){const r=document.querySelector('#shList .shr[data-i="'+i+'"]');return r?{a:parseFloat(r.querySelector('.shA').value),b:parseFloat(r.querySelector('.shB').value)}:{};}
+function shSegs(){return shSel().map(i=>{const s0=i===0?0:marks[i],e0=(i+1<scenes.length&&marks[i+1]!=null)?marks[i+1]:recDur,full=Math.max(0,(e0||0)-s0),t=shTrim(i);
+  let a=isFinite(t.a)?Math.max(0,Math.min(full,t.a)):0,b=isFinite(t.b)?Math.max(0,Math.min(full,t.b)):full;if(b<=a){a=0;b=full;}
+  return {i,o:a,full,st:s0+a,en:s0+b,d:b-a};});}
 function shTotal(){const sg=shSegs(),t=sg.reduce((a,x)=>a+x.d,0);$('shTot').innerHTML=sg.length?('Total '+Math.round(t)+' s'+(t>180?' <span class="err">(over 3 minutes: untick something)</span>':t>60?' (over 60 s: YouTube will not file it under Shorts)':' (fits a Short)')):'Tick at least one scene.';}
-function shFill(){const el=$('shList');if(!el)return;const keep=new Set(shSel());
+function shFill(){const el=$('shList');if(!el)return;const keep=new Set(shSel()),keepT={};document.querySelectorAll('#shList .shr').forEach(r=>{keepT[r.dataset.i]={a:r.querySelector('.shA').value,b:r.querySelector('.shB').value};});
   const opts=scenes.map((sc,i)=>({i,sc,t:i===0?0:marks[i]})).filter(o=>o.t!=null);
-  el.innerHTML=opts.length?opts.map(o=>{const en=(o.i+1<scenes.length&&marks[o.i+1]!=null)?marks[o.i+1]:recDur;const d=Math.max(0,(en||0)-o.t);return '<label class="mrow" style="display:flex;gap:10px;align-items:center;padding:8px 0"><input type="checkbox" value="'+o.i+'"'+(keep.has(o.i)?' checked':'')+'><span>'+(o.i+1)+'. '+o.sc.heading.charAt(0)+o.sc.heading.slice(1).toLowerCase()+(d?' <span class="mut">('+Math.round(d)+' s)</span>':'')+'</span></label>';}).join(''):'<div class="mut">Choose your recording and set the scene marks first.</div>';
+  el.innerHTML=opts.length?opts.map(o=>{const en=(o.i+1<scenes.length&&marks[o.i+1]!=null)?marks[o.i+1]:recDur;const d=Math.max(0,(en||0)-o.t);const pv=keepT[o.i]||{},fmt=x=>Math.floor(x/60)+':'+String(Math.floor(x%60)).padStart(2,'0');
+      const sn=String(o.sc.narration||'').replace(/\s+/g,' ').trim().split(/(?<=[.!?])\s+/).filter(Boolean),tw=sn.reduce((a,x)=>a+x.split(' ').length,0)||1;let acc=0;
+      const tl=sn.map(x=>{const t=acc/tw*d;acc+=x.split(' ').length;return '<div style="margin:4px 0"><b style="color:#FFC21A">'+fmt(t)+'</b> '+x.replace(/</g,'&lt;')+'</div>';}).join('');
+      return '<div class="shr" data-i="'+o.i+'" style="padding:8px 0;border-bottom:1px solid #1B2A47"><label class="mrow" style="display:flex;gap:10px;align-items:center"><input type="checkbox" value="'+o.i+'"'+(keep.has(o.i)?' checked':'')+'><span>'+(o.i+1)+'. '+o.sc.heading.charAt(0)+o.sc.heading.slice(1).toLowerCase()+(d?' <span class="mut">('+Math.round(d)+' s)</span>':'')+'</span></label>'
+      +'<div class="mut" style="display:flex;gap:8px;align-items:center;margin:6px 0 0 30px;font-size:13px">From <input class="shA" type="number" min="0" max="'+Math.floor(d)+'" step="0.5" value="'+(pv.a!=null?pv.a:0)+'" style="width:70px;font:inherit;padding:6px;border-radius:8px;border:1px solid #2A3B61;background:#0B1328;color:#fff"> s to <input class="shB" type="number" min="0" max="'+Math.ceil(d)+'" step="0.5" value="'+(pv.b!=null?pv.b:Math.round(d*10)/10)+'" style="width:70px;font:inherit;padding:6px;border-radius:8px;border:1px solid #2A3B61;background:#0B1328;color:#fff"> s <span>(of '+Math.round(d)+' s)</span></div>'
+      +'<details style="margin:4px 0 0 30px"><summary class="mut" style="font-size:13px">Show what is said, and when</summary><div class="mut" style="font-size:13px;line-height:1.4">'+tl+'</div></details></div>';}).join(''):'<div class="mut">Choose your recording and set the scene marks first.</div>';
   shTotal();}
-$('shList').onchange=shTotal;$('shAll').onclick=()=>{document.querySelectorAll('#shList input').forEach(x=>x.checked=true);shTotal();};$('shNone').onclick=()=>{document.querySelectorAll('#shList input').forEach(x=>x.checked=false);shTotal();};
+$('shList').onchange=shTotal;$('shList').oninput=shTotal;$('shAll').onclick=()=>{document.querySelectorAll('#shList input').forEach(x=>x.checked=true);shTotal();};$('shNone').onclick=()=>{document.querySelectorAll('#shList input').forEach(x=>x.checked=false);shTotal();};
 const _ready=ready;ready=function(){_ready();try{shFill();}catch(e){}};
 function shChunks(text){const w=String(text||'').replace(/\s+/g,' ').trim().split(' ').filter(Boolean);const out=[];let cur=[];w.forEach(x=>{cur.push(x);if(cur.length>=5||/[.!?]$/.test(x)||(cur.length>=3&&/[,;:]$/.test(x))){out.push(cur.join(' '));cur=[];}});if(cur.length)out.push(cur.join(' '));return out;}
 function shWrap(g,t,maxW){const w=t.split(' '),L=[];let c='';w.forEach(x=>{const n=c?c+' '+x:x;if(g.measureText(n).width>maxW&&c){L.push(c);c=x;}else c=n;});if(c)L.push(c);return L;}
@@ -379,20 +387,20 @@ $('shGo').onclick=async()=>{
     const handle='@TradeWithBK';let raf=0,running=true,cur=0,base=0;
     const CH=segs.map(sg=>{const c=shChunks(scenes[sg.i].narration),tot=c.reduce((a,b)=>a+b.split(' ').length,0)||1,cs=[];let acc=0;c.forEach(x=>{cs.push(acc/tot);acc+=x.split(' ').length;});return {c,cs};});
     const bg=g.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#08101F');bg.addColorStop(1,'#02050A');
-    const vframe=(x,y,w,h,el,sg)=>{const d=SD[sg.i];if(!d.ok){g.drawImage(vis,x,y,w,h);return;}const fr=Math.min(1,el/sg.d);let k=0;d.th.forEach(t=>{if(fr>=t)k++;});k=Math.min(d.B,k);const c=d.im[k]||d.still||d.im[0],bs=k>0?d.im[k-1]:null;
-      const tb=k===0?el:Math.max(0,el-d.th[k-1]*sg.d),q0=Math.min(1,tb/0.6),q=q0*q0*(3-2*q0);if(!c)return;
+    const vframe=(x,y,w,h,el,sg)=>{const d=SD[sg.i];if(!d.ok){g.drawImage(vis,x,y,w,h);return;}const fr=Math.min(1,el/sg.full);let k=0;d.th.forEach(t=>{if(fr>=t)k++;});k=Math.min(d.B,k);const c=d.im[k]||d.still||d.im[0],bs=k>0?d.im[k-1]:null;
+      const tb=k===0?el:Math.max(0,el-d.th[k-1]*sg.full),q0=Math.min(1,tb/0.6),q=q0*q0*(3-2*q0);if(!c)return;
       if(bs){g.drawImage(bs,x,y,w,h);g.globalAlpha=q;g.drawImage(c,x,y,w,h);g.globalAlpha=1;}else g.drawImage(c,x,y,w,h);};
-    const draw=()=>{if(!running)return;const sg=segs[cur],sc=scenes[sg.i],t=rv.currentTime,el=Math.max(0,Math.min(sg.d,t-sg.st)),tot=base+el,fr=Math.min(1,el/sg.d);
+    const draw=()=>{if(!running)return;const sg=segs[cur],sc=scenes[sg.i],t=rv.currentTime,el=Math.max(0,Math.min(sg.d,t-sg.st)),tot=base+el,se=el+sg.o,fr=Math.min(1,se/sg.full);
       g.fillStyle=bg;g.fillRect(0,0,W,H);
       const gl=g.createRadialGradient(W*.5,H*.35,10,W*.5,H*.35,W);gl.addColorStop(0,'rgba(38,208,255,.14)');gl.addColorStop(1,'rgba(38,208,255,0)');g.fillStyle=gl;g.fillRect(0,0,W,H);
       const vx=0,vw=W,vh=Math.round(vw*9/16),vy=300;
       /* soft zoomed copy of the visual fills the tall frame behind it */
-      g.save();try{g.filter='blur(22px)';}catch(e){}const bw=Math.round(H*16/9);g.beginPath();g.rect(0,0,W,H);g.clip();vframe((W-bw)/2,0,bw,H,el,sg);g.restore();
+      g.save();try{g.filter='blur(22px)';}catch(e){}const bw=Math.round(H*16/9);g.beginPath();g.rect(0,0,W,H);g.clip();vframe((W-bw)/2,0,bw,H,se,sg);g.restore();
       g.fillStyle='rgba(2,5,10,.80)';g.fillRect(0,0,W,H);
       g.textAlign='center';g.fillStyle='#fff';g.shadowColor='#26D0FF';g.shadowBlur=18;g.font='800 40px Poppins,Arial,sans-serif';g.fillText('TRADE WITH BK',W/2,90);g.shadowBlur=0;
       g.fillStyle='#FFC21A';g.font='700 24px Poppins,Arial,sans-serif';g.fillText(sc.heading.slice(0,34),W/2,134);
       g.save();g.shadowColor='rgba(38,208,255,.45)';g.shadowBlur=26;g.fillStyle='#000';g.fillRect(vx,vy,vw,vh);g.restore();
-      g.save();g.beginPath();g.rect(vx,vy,vw,vh);g.clip();vframe(vx,vy,vw,vh,el,sg);if(window.bkPop){if(sc.type==='outro')bkPop(g,vx,vy,vw,vh,el-bkPopAt(sc.narration)*sg.d);else if(cur===segs.length-1&&tot>D-5)bkPop(g,vx,vy,vw,vh,tot-(D-5));}g.restore();
+      g.save();g.beginPath();g.rect(vx,vy,vw,vh);g.clip();vframe(vx,vy,vw,vh,se,sg);if(window.bkPop){if(sc.type==='outro')bkPop(g,vx,vy,vw,vh,se-bkPopAt(sc.narration)*sg.full);else if(cur===segs.length-1&&tot>D-5)bkPop(g,vx,vy,vw,vh,tot-(D-5));}g.restore();
       const fy=vy+vh,fh=60;
       let k=0;CH[cur].cs.forEach((c,j)=>{if(fr>=c)k=j;});const cap=CH[cur].c[k]||'';
       g.font='800 50px Poppins,Arial,sans-serif';const L=shWrap(g,cap,W-70),cy=fy+fh+70;
@@ -405,7 +413,7 @@ $('shGo').onclick=async()=>{
     rv.muted=false;rv.volume=1;mr.start(500);draw();
     for(cur=0;cur<segs.length;cur++){const sg=segs[cur];
       if(cur>0){rv.pause();await seek(sg.st);}
-      if(!SD[sg.i].ok){vis.currentTime=starts[sg.i];vis.play().catch(()=>{});}
+      if(!SD[sg.i].ok){vis.currentTime=starts[sg.i]+sg.o;vis.play().catch(()=>{});}
       await rv.play();
       await new Promise(r=>{const iv=setInterval(()=>{if(rv.ended||rv.currentTime>=sg.en-0.05||rv.currentTime>=(rv.duration||1e9)-0.25){clearInterval(iv);r();}},100);});
       rv.pause();base+=sg.d;}
