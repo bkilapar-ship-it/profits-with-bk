@@ -19,7 +19,7 @@
    "target": 380.55,
    "stop": 306.87,
    "ocoOrderId": "a4623c45-8dd5-41cb-8127-8a22c3fc3ec6",
-   "now": 352.43
+   "now": 354.06
   },
   "VLO": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 346.53,
    "stop": 283.07,
    "ocoOrderId": "c341d9ed-a5af-491c-8ba2-17249336811d",
-   "now": 324.83
+   "now": 327.86
   },
   "CNC": {
    "strategy": "dip",
@@ -49,22 +49,7 @@
    "target": 65.63,
    "stop": 51.44,
    "ocoOrderId": "59d50dac-d3ed-4d48-b2ec-fc4d2fc4f0c0",
-   "now": 62.76
-  },
-  "PYPL": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-11-20",
-   "signalClose": 53.29,
-   "entryDate": "2026-11-23",
-   "entry": 54.16,
-   "shares": 94,
-   "target": 56.33,
-   "stop": 49.03,
-   "ocoOrderId": "f190c982-c28e-4ee0-a2ed-b3ade37fa8d6",
-   "now": 55.39
+   "now": 64.51
   },
   "FISV": {
    "strategy": "dip",
@@ -79,22 +64,7 @@
    "target": 59.2,
    "stop": 48.71,
    "ocoOrderId": "d79d6943-e428-4a61-8561-2eca0a87a1bc",
-   "now": 57
-  },
-  "WDAY": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "green_or_sweep",
-   "pool": "sp500",
-   "signalDate": "2026-11-20",
-   "signalClose": 174.52,
-   "entryDate": "2026-11-23",
-   "entry": 175.92,
-   "shares": 28,
-   "target": 182.96,
-   "stop": 152.97,
-   "ocoOrderId": "56174246-98ad-4d10-9c54-ae2691943068",
-   "now": 176.65
+   "now": 58.06
   },
   "ELV": {
    "strategy": "dip",
@@ -108,7 +78,8 @@
    "shares": 13,
    "target": 393.93,
    "stop": 328.35,
-   "ocoOrderId": "bf923f7a-da0e-4146-94bc-0cc2c81617af"
+   "ocoOrderId": "bf923f7a-da0e-4146-94bc-0cc2c81617af",
+   "now": 388.27
   },
   "PBF": {
    "strategy": "dip",
@@ -122,43 +93,41 @@
    "shares": 84,
    "target": 60.63,
    "stop": 46,
-   "ocoOrderId": "d7b2ba9c-0295-4406-a6b1-ff6939a9d77d"
-  }
- },
- "pendingEntries": {
+   "ocoOrderId": "d7b2ba9c-0295-4406-a6b1-ff6939a9d77d",
+   "now": 58.25
+  },
   "VEEV": {
-   "orderId": "67f57515-ac44-41b3-9291-8226fa0ce74a",
    "strategy": "dip",
    "side": "long",
    "tag": "normal",
    "pool": "sp500",
-   "size": 5147.34156,
-   "shares": 18,
-   "limit": 274.02,
-   "opg": false,
-   "forDate": "2026-11-24",
    "signalDate": "2026-11-23",
    "signalClose": 268.65,
-   "atr": 10.19,
-   "placedAt": "2026-11-24T14:32:15.621Z"
+   "entryDate": "2026-11-24",
+   "entry": 270.47,
+   "shares": 18,
+   "target": 281.29,
+   "stop": 239.9,
+   "ocoOrderId": "3f3408af-1bf8-4f78-8777-f04398ac5d9a",
+   "now": 274.5
   },
   "W": {
-   "orderId": "77c987e9-499c-4a1c-91b2-ea8d9182ffa7",
    "strategy": "dip",
    "side": "long",
    "tag": "normal",
    "pool": "nonsp",
-   "size": 5147.34156,
-   "shares": 52,
-   "limit": 98.77,
-   "opg": false,
-   "forDate": "2026-11-24",
    "signalDate": "2026-11-23",
    "signalClose": 96.83,
-   "atr": 7.23,
-   "placedAt": "2026-11-24T14:32:16.010Z"
+   "entryDate": "2026-11-24",
+   "entry": 95.01,
+   "shares": 52,
+   "target": 98.81,
+   "stop": 73.32,
+   "ocoOrderId": "9301e4d1-e5a4-48b6-a87c-e55cf99b354f",
+   "now": 94.74
   }
  },
+ "pendingEntries": {},
  "pendingCloses": {},
  "trades": [
   {
@@ -1315,6 +1284,40 @@
    "how": "time",
    "usd": 184,
    "pct": 1.45
+  },
+  {
+   "ticker": "PYPL",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-11-20",
+   "signalClose": 53.29,
+   "entryDate": "2026-11-23",
+   "exitDate": "2026-11-24",
+   "entry": 54.16,
+   "exit": 56.33,
+   "shares": 94,
+   "how": "target",
+   "usd": 203.98,
+   "pct": 4.01
+  },
+  {
+   "ticker": "WDAY",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "green_or_sweep",
+   "pool": "sp500",
+   "signalDate": "2026-11-20",
+   "signalClose": 174.52,
+   "entryDate": "2026-11-23",
+   "exitDate": "2026-11-24",
+   "entry": 175.92,
+   "exit": 183.01,
+   "shares": 28,
+   "how": "target",
+   "usd": 198.62,
+   "pct": 4.03
   }
  ],
  "equity": [
@@ -1614,9 +1617,9 @@
   },
   {
    "d": "2026-11-24",
-   "value": 95320,
-   "pct": -4.68,
-   "spy": -6.81
+   "value": 96062,
+   "pct": -3.94,
+   "spy": -6.3
   }
  ],
  "lastOrders": {
