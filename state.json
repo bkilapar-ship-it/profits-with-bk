@@ -19,7 +19,7 @@
    "target": 380.55,
    "stop": 306.87,
    "ocoOrderId": "a4623c45-8dd5-41cb-8127-8a22c3fc3ec6",
-   "now": 358.68
+   "now": 359
   },
   "VLO": {
    "strategy": "dip",
@@ -64,7 +64,7 @@
    "target": 56.33,
    "stop": 49.03,
    "ocoOrderId": "f190c982-c28e-4ee0-a2ed-b3ade37fa8d6",
-   "now": 55.2
+   "now": 55.19
   },
   "FISV": {
    "strategy": "dip",
@@ -79,7 +79,7 @@
    "target": 59.2,
    "stop": 48.71,
    "ocoOrderId": "d79d6943-e428-4a61-8561-2eca0a87a1bc",
-   "now": 56.96
+   "now": 57.42
   },
   "WDAY": {
    "strategy": "dip",
@@ -1553,8 +1553,8 @@
   },
   {
    "d": "2026-11-24",
-   "value": 95487,
-   "pct": -4.51,
+   "value": 95530,
+   "pct": -4.47,
    "spy": null
   }
  ],
