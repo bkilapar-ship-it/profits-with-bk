@@ -326,7 +326,7 @@ function buildEpisodeInner({ mode, setups, config }) {
 
   // 2) scorecard of earlier picks
   const tracked = (setups.dip || []).filter(x => x.sp500 && x.sessionsAgo >= 1 && x.sessionsAgo <= 8 && x.track && ['target', 'stop', 'closed'].includes(x.track.state));
-  if (tracked.length && !calls.length) {
+  if (cfg.scorecard && tracked.length && !calls.length) { // off by default: the daily video only reviews calls still holding at yesterday's close
     const tn = tracked.length, hit = tracked.filter(x => x.track.state === 'target').length, stp = tracked.filter(x => x.track.state === 'stop').length, up = tracked.filter(x => x.track.pct > 0).length, lossEnd = tracked.filter(x => x.track.state === 'closed' && x.track.pct < 0).length;
     const avg = tracked.reduce((a, x) => a + x.track.pct, 0) / tn;
     add('scorecard', 'outcomes', 'SCORECARD: HOW EARLIER PICKS DID',

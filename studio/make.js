@@ -104,6 +104,9 @@ async function main() {
           if (state === 'open') { pct = (last.c / entry - 1) * 100; if (b.length - 1 - si >= 3) state = 'closed'; }
         }
         const last = b[b.length - 1];
+        // only calls that were still holding at the previous close are reviewed: skipped calls (no entry) and calls that already hit
+        // their target, safety exit or day-3 close before today were covered in an earlier video and are not mentioned again
+        if (entry == null || (exitIdx != null && exitIdx < b.length - 1)) continue;
         calls.push({ ticker: r.ticker, signalDate: r.signalDate, day: Math.min(3, b.length - 1 - si), entry, open: openPx, close: last.c, pct: entry == null ? (last.c / openPx - 1) * 100 : pct, state });
       }
       if (calls.length) { setups.__calls = calls; console.log('Calls: ' + calls.map(c => `${c.ticker} ${c.entry == null ? 'skipped' : c.state + ' ' + c.pct.toFixed(1) + '%'}`).join(', ')); }
