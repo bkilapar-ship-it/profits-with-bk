@@ -56,6 +56,8 @@ button.go{border-radius:14px;box-shadow:0 6px 20px rgba(37,99,235,.35)}
   </details></div>
 <div class="card" id="shcard"><div class="step"><span class="n">3</span><div><h2>Make Shorts</h2><p class="mut">Pick scenes (or just part of one). Each Short is vertical, uses your voice only and shows the visual with big captions. Up to 3 minutes; under 60 seconds works best.</p></div></div>
   <div class="row"><button id="shAll" type="button">Tick all</button><button id="shNone" type="button">Clear</button></div>
+  <div class="lbl">Link to the full video</div><input id="shLink" class="in" placeholder="https://youtu.be/… (filled in automatically after you upload the full video)" inputmode="url">
+  <p class="mut" style="margin:-4px 0 10px;font-size:13px">It goes at the top of every Short's description. YouTube's own <b>Related video</b> button can only be set by hand: in YouTube Studio open the Short, tap Related video and pick the full video.</p>
   <div id="shList"></div><div id="shTot" class="mut" style="margin:8px 0"></div>
   <div class="row"><button id="shGo" class="go">Create the Short</button></div>
   <p class="warn">Like the full video, it plays that part of your recording in real time. Keep the page open.</p>
@@ -130,7 +132,7 @@ function pick(){
   const o=$('ep').selectedOptions[0];if(!o)return;const j=JSON.parse(o.dataset.j);ep={m:o.value,j};let t=0;all=j.scenes.map(s=>{const a={...s,start:t};t+=s.dur;return a;});
   const p=store.get(planKey())||{};planOrder=(p.order&&p.order.length?p.order.filter(id=>all.some(s=>s.id===id)):[]);all.forEach(s=>{if(!planOrder.includes(s.id))planOrder.push(s.id);});skipSet=new Set(p.skip||[]);markById={};
   studioImg=new Image();studioImg.src=ep.m+'/studio-bg.png?'+Date.now();thImg=new Image();thImg.onload=()=>thDraw();thImg.src=ep.m+'/thumbnail-bg.png?'+Date.now();thPh=new Image();thPh.onload=()=>thDraw();thPh.src=ep.m+'/thumbnail.png?'+Date.now();
-  visUrl=null;if($('ytThumb'))$('ytThumb').src=ep.m+'/thumbnail.png?'+Date.now();if($('epline'))$('epline').textContent=(ep.j.title||'')+' · '+ep.j.asOf;prefetch();$('navtp').href=ep.m+'/teleprompter.html';$('epinfo').textContent=all.length+' scenes · '+fmt(t)+' of visuals';
+  visUrl=null;shLinkFill();if($('ytThumb'))$('ytThumb').src=ep.m+'/thumbnail.png?'+Date.now();if($('epline'))$('epline').textContent=(ep.j.title||'')+' · '+ep.j.asOf;prefetch();$('navtp').href=ep.m+'/teleprompter.html';$('epinfo').textContent=all.length+' scenes · '+fmt(t)+' of visuals';
   const a=store.get('bkstudio-marks2-'+mkey());$('auto').style.display=(a&&a.t)?'':'none';
   rebuild();if(a&&a.t)$('auto').onclick();
 }
@@ -169,7 +171,7 @@ function showTake(blob,at,note){const I=$('takeinfo');takeBlob=blob;lastBlob=blo
   useRec(blob);}
 /* the teleprompter hands the finished video straight over (no storage needed) */
 window.bkTake=function(blob,at){_pending={blob,at:at||Date.now()};if(_epsReady){showTake(_pending.blob,_pending.at);_pending=null;}};
-if($('embBack'))$('embBack').onclick=()=>{try{parent.document.getElementById('revf').remove();}catch(e){history.back();}};
+if($('embBack'))$('embBack').onclick=()=>{try{parent.document.getElementById('revf').style.display='none';const fb=parent.document.getElementById('pubfab');if(fb)fb.style.display='block';}catch(e){history.back();}};
 async function loadTake(){
   _epsReady=true;
   if(_pending){showTake(_pending.blob,_pending.at);_pending=null;return;}
@@ -351,6 +353,8 @@ async function ytFill(){
 }
 function scThumbs(){const el=$('scTh');if(!el||!ep)return;el.innerHTML=ep.j.scenes.map((sc,i)=>'<a href="'+ep.m+'/thumbs/scene-'+i+'.png" download="trade-with-bk-scene-'+(i+1)+'.png" target="_blank" rel="noopener" style="display:block;text-decoration:none;color:#8FA3C7;font-size:12px"><img loading="lazy" src="'+ep.m+'/thumbs/scene-'+i+'.png" style="width:100%;border-radius:8px;display:block" onerror="this.parentNode.style.display=\'none\'">'+(i+1)+'. '+sc.heading.charAt(0)+sc.heading.slice(1).toLowerCase()+'</a>').join('');}
 try{$('ytId').value=localStorage.getItem('bkstudio-ytid')||'';}catch(e){}
+function fullKey(){return 'bkstudio-fullvid-'+(ep?ep.j.mode+'-'+ep.j.asOf:'x');}
+function shLinkFill(){const el=$('shLink');if(!el||el.value.trim())return;let id=null;try{id=localStorage.getItem(fullKey());}catch(e){}if(id)el.value='https://youtu.be/'+id;}
 function ytSt(h){$('ytSt').innerHTML=h;}
 function ytAuth(cid){return new Promise((res,rej)=>{
   if(ytTok&&Date.now()<ytTokExp)return res(ytTok);
@@ -387,7 +391,8 @@ $('ytGo').onclick=async()=>{
     let tags=[];try{tags=JSON.parse($('ytD').dataset.tags||'[]');}catch(e){}
     const r=await ytUpload({blob:f||lastBlob,title:$('ytT').value,desc:$('ytD').value,tags,priv:$('ytPriv').value,thumbUrl:ep.m+'/thumbnail.png',st:ytSt,bar:$('ytBar')});
     $('ytBar').style.display='none';
-    ytSt('<span class="ok">Uploaded as '+$('ytPriv').value+'.</span>'+r.note+' <a href="https://studio.youtube.com/video/'+r.id+'/edit" target="_blank" rel="noopener">Open it in YouTube Studio</a> to watch it, then make it public.');
+    try{localStorage.setItem(fullKey(),r.id);}catch(e){}shLinkFill();
+    ytSt('<span class="ok">Uploaded as '+$('ytPriv').value+'.</span>'+r.note+' <a href="https://studio.youtube.com/video/'+r.id+'/edit" target="_blank" rel="noopener">Open it in YouTube Studio</a> to watch it, then make it public. Its link is now added to your Shorts.');
   }catch(e){ytSt('<span class="err">'+(e&&e.message?e.message:e)+'</span>');}
   btn.disabled=false;
 };
@@ -485,9 +490,9 @@ $('shGo').onclick=async()=>{
 };
 $('shUp').onclick=async()=>{
   const btn=$('shUp');btn.disabled=true;const S=h=>$('shSt').innerHTML=h;
-  try{const md=await ytMeta();const desc=['Full video on the channel: @TradeWithBK',md&&md.tail,'#Shorts'].filter(Boolean).join('\n\n');
+  try{const md=await ytMeta();const fl=($('shLink').value||'').trim();try{localStorage.setItem(fullKey(),(fl.match(/(?:youtu\.be\/|v=)([\w-]{6,})/)||[])[1]||'');}catch(e){}const desc=[fl?'Watch the full video: '+fl:'Full video on the channel: @TradeWithBK','Channel: @TradeWithBK',md&&md.tail,'#Shorts'].filter(Boolean).join('\n\n');
     const r=await ytUpload({blob:shortBlob,title:$('shT').value,desc,tags:(md?md.tags:[]).concat(['shorts']),priv:$('shPriv').value,thumbUrl:shortThumbIdx>=0?ep.m+'/thumbs/short-'+shortThumbIdx+'.jpg':undefined,st:S,bar:$('shBar')});
-    $('shBar').style.display='none';S('<span class="ok">Short uploaded as '+$('shPriv').value+'.</span> <a href="https://studio.youtube.com/video/'+r.id+'/edit" target="_blank" rel="noopener">Open it in YouTube Studio</a> to check it, then make it public.');
+    $('shBar').style.display='none';S('<span class="ok">Short uploaded as '+$('shPriv').value+'.</span> <a href="https://studio.youtube.com/video/'+r.id+'/edit" target="_blank" rel="noopener">Open it in YouTube Studio</a> to check it, then make it public. To link the full video as the Short\'s <b>Related video</b>, open the Short in Studio, Details, Related video.');
   }catch(e){S('<span class="err">'+(e&&e.message?e.message:e)+'</span>');}
   btn.disabled=false;};
 
