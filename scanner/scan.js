@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * Trade With BK — MACD Curl-Up Screener — scheduled market scan
+ * The 4% Swing Trades — MACD Curl-Up Screener — scheduled market scan
  *
  * Runs in GitHub Actions (Node 22+, built-in fetch, no npm dependencies).
  * 1. Lists all active, tradable US stocks & ETFs from Alpaca.
@@ -256,7 +256,7 @@ function cleanName(raw) {
 }
 
 /* ---------------------------------------------- index member lists */
-const UA = 'TradeWithBK-screener/1.0 (scheduled GitHub Action; contact via repository)';
+const UA = '4PercentSwingTrades-screener/1.0 (scheduled GitHub Action; contact via repository)';
 const TICKER_RE = /^[A-Z]{1,5}(\.[A-Z])?$/;
 
 async function fetchText(url) {

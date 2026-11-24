@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * Trade With BK — one-off DAY-TRADING research. Runs in GitHub Actions with your Alpaca keys;
+ * The 4% Swing Trades — one-off DAY-TRADING research. Runs in GitHub Actions with your Alpaca keys;
  * read-only (it only downloads market data, never touches orders).
  *
  * Downloads 15-minute bars (2019 onward, plus a warm-up year) for stocks that were S&P 500 members on each date, plus

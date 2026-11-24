@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * Trade With BK — optional WhatsApp alerts, sent through CallMeBot (https://www.callmebot.com).
+ * The 4% Swing Trades — optional WhatsApp alerts, sent through CallMeBot (https://www.callmebot.com).
  *
  * CallMeBot is a free, unofficial gateway that messages YOUR OWN WhatsApp number. It is for
  * personal use only, so treat alerts as a convenience, never as something to rely on. It sends
@@ -105,7 +105,7 @@ function setupSections(setups) {
 /** The alert as one or more messages, each at most `limit` characters. A section that runs over starts the
  *  next message with its own heading, marked "(cont.)", so every message makes sense on its own. */
 function setupsMessages(setups, limit = Infinity) {
-  const header = `📊 *Trade With BK*: setups for the ${dayLabel(setups.nextSession || setups.asOf)} open`;
+  const header = `📊 *The 4% Swing Trades*: setups for the ${dayLabel(setups.nextSession || setups.asOf)} open`;
   const { sections, notes } = setupSections(setups);
   const msgs = []; let cur = header;
   const place = (text, alt) => {
@@ -182,7 +182,7 @@ if (require.main === module) {
   (async () => {
     const [cmd, ...rest] = process.argv.slice(2);
     if (cmd === 'test') {
-      const ok = await send('✅ Trade With BK alerts are working. You will get: new setups after the close, paper entries, exits and closed trades, and failures.');
+      const ok = await send('✅ The 4% Swing Trades alerts are working. You will get: new setups after the close, paper entries, exits and closed trades, and failures.');
       process.exitCode = ok ? 0 : 1;   // red on purpose, so a bad setup is visible in the test run
     } else if (cmd === 'failure') {
       await send(failureMessage(rest.join(' ')));

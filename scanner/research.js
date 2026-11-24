@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * Trade With BK — one-off research: do Uptrend Dip / Downtrend Rip work on liquid
+ * The 4% Swing Trades — one-off research: do Uptrend Dip / Downtrend Rip work on liquid
  * stocks OUTSIDE the S&P 500 (the SOFI / MSTR kind)?
  *
  * Runs in GitHub Actions with the same Alpaca keys as the scanner. Read-only: it

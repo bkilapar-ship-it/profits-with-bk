@@ -84,7 +84,7 @@ jobs:
           git init -q -b paper-state
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git config user.name "github-actions[bot]"
-          echo "Paper trading state for Trade With BK. Bot-managed — do not hand-edit; use the workflow_dispatch pause/resume action instead." > README.md
+          echo "Paper trading state for The 4% Swing Trades. Bot-managed — do not hand-edit; use the workflow_dispatch pause/resume action instead." > README.md
           git add README.md
           git commit -q -m "Initialize paper-state branch"
           git remote add origin "https://x-access-token:${GITHUB_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"

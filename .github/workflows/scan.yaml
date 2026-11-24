@@ -109,7 +109,7 @@ jobs:
       - name: Assemble site
         run: |
           mkdir -p _site
-          cp index.html style.css app.js _site/
+          cp index.html style.css app.js logo.png favicon.png apple-touch-icon.png _site/
           if [ -d studio-latest ]; then mkdir -p _site/studio && cp -r studio-latest/. _site/studio/ && rm -rf _site/studio/.git; fi
           touch _site/.nojekyll
 

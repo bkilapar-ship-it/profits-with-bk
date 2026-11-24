@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /*
- * Trade With BK — automated paper trading
+ * The 4% Swing Trades — automated paper trading
  *
  * Runs in GitHub Actions (Node 22+, built-in fetch, no npm dependencies).
  * Trades the Uptrend Dip (long) and Downtrend Rip (short) setups on a real

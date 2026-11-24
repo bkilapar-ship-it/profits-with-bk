@@ -1,4 +1,4 @@
-# Trade With BK — Swing Setup Scanner
+# The 4% Swing Trades — Swing Setup Scanner
 
 A static stock screener for GitHub Pages. It finds stocks where the **MACD line is still below its Signal line but curling upward**, with the gap between them narrowing. This is often visible a few candles before a conventional bullish MACD crossover.
 

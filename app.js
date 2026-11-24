@@ -1,5 +1,5 @@
 /*
- * Trade With BK — MACD Curl-Up Screener — app.js
+ * The 4% Swing Trades — MACD Curl-Up Screener — app.js
  *
  * A technical-analysis screening tool. It is NOT a trading system and does not
  * give financial advice. It only reports whether current indicator values match

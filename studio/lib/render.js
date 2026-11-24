@@ -187,7 +187,7 @@ function miniCandles(view, cw, ch) {
 function niceStep(x) { const p = Math.pow(10, Math.floor(Math.log10(x))), f = x / p; return (f < 1.5 ? 1 : f < 3.5 ? 2 : f < 7.5 ? 5 : 10) * p; }
 
 /* ----------------------------------------------------------------- scenes */
-const frame = (inner, date) => `${bgCandles(W, H)}<div class="top"><div class="brand">${logoSvg(46, { glow: false, id: 'tp' })}<span>TRADE WITH BK</span></div><div>${esc(date || '')}</div></div>${inner}<div class="foot"><span>Educational only. Not financial advice or a personal recommendation.</span><span>Backtested results are not a guide to future performance.</span></div><div class="tape"><span>${esc(TAPE)}</span></div>`;
+const frame = (inner, date) => `${bgCandles(W, H)}<div class="top"><div class="brand">${logoSvg(46, { glow: false, id: 'tp' })}<span>THE 4% SWING TRADES</span></div><div>${esc(date || '')}</div></div>${inner}<div class="foot"><span>Educational only. Not financial advice or a personal recommendation.</span><span>Backtested results are not a guide to future performance.</span></div><div class="tape"><span>${esc(TAPE)}</span></div>`;
 const stat = (label, valueHtml, sub, x, y, w, a) => `<div class="card abs" data-a="${a}" style="left:${x}px;top:${y}px;width:${w}px;height:148px;padding:22px 26px"><div class="lab" style="white-space:nowrap">${label}</div><div class="num" style="font-size:56px;margin-top:6px;white-space:nowrap">${valueHtml}</div>${sub ? `<div class="mut" style="font-size:20px;margin-top:-2px">${sub}</div>` : ''}</div>`;
 const cnt = (to, d, pre, suf, s, e, c = '') => `<span class="${c}" data-count="0|${to}|${d}|${pre}|${suf}|${s}|${e}">${pre}${to.toFixed(d)}${suf}</span>`;
 
@@ -508,7 +508,7 @@ function thumbHtml(ep, dir, art) {
       <path d="M690 626 C 740 600 800 560 860 500" fill="none" stroke="#1FE55A" stroke-width="12" stroke-linecap="round" style="filter:drop-shadow(0 0 12px #1FE55A)"/><path d="M812 506 L866 494 L856 548" fill="none" stroke="#1FE55A" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 12px #1FE55A)"/></svg>
     <div class="abs" style="inset:0;background:linear-gradient(90deg,rgba(0,0,0,.5) 0%,rgba(0,0,0,.22) 52%,transparent 70%)"></div>
     ${face}
-    <div class="abs" style="left:40px;top:34px;display:flex;align-items:center;gap:14px">${logoSvg(52, { id: 'th' })}<span style="font-weight:800;letter-spacing:.14em;font-size:21px">TRADE WITH BK</span></div>
+    <div class="abs" style="left:40px;top:34px;display:flex;align-items:center;gap:14px">${logoSvg(52, { id: 'th' })}<span style="font-weight:800;letter-spacing:.14em;font-size:21px">THE 4% SWING TRADES</span></div>
     <div class="abs" style="left:44px;top:112px">${fat('HOW TO SPOT A', 76, '#fff', 'text-shadow:0 5px 0 #000,0 0 24px rgba(0,0,0,.8)')}</div>
     ${brush(34, 198, 700, 150, '#FFD21A', 'bk1')}
     <div class="abs" style="left:58px;top:206px">${fat('MARKET', 148, '#050505')}</div>
@@ -527,7 +527,7 @@ function thumbHtml(ep, dir, art) {
     <div class="abs" style="inset:0;background:radial-gradient(ellipse at 85% 80%,rgba(31,229,90,.38),transparent 55%),linear-gradient(90deg,rgba(0,0,0,.55) 0%,rgba(0,0,0,.2) 55%,transparent 75%)"></div>
     <svg class="abs" style="left:620px;top:210px" width="660" height="500" viewBox="0 0 660 500"><path d="M20 460 L170 330 L250 380 L420 190 L520 240 L620 90" fill="none" stroke="#1FE55A" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 18px #1FE55A)" opacity=".9"/><path d="M540 80 L632 78 L624 172" fill="none" stroke="#1FE55A" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 18px #1FE55A)" opacity=".9"/></svg>
     ${art ? (() => { const src = path.join(__dirname, '..', 'assets', 'bk.png'); if (!fs.existsSync(src)) return ''; fs.copyFileSync(src, path.join(dir, 'bk.png')); return `<div class="abs" style="left:790px;top:70px;width:440px;height:440px;border-radius:50%;box-shadow:0 0 0 8px #1FE55A,0 0 70px 12px rgba(31,229,90,.55),0 0 140px rgba(38,208,255,.3);overflow:hidden"><img src="bk.png" style="width:440px;height:440px;object-fit:cover"></div>`; })() : ''}
-    <div class="abs" style="left:56px;top:34px;display:flex;align-items:center;gap:14px">${logoSvg(56, { id: 'th' })}<span style="font-weight:800;letter-spacing:.14em;font-size:22px">TRADE WITH BK</span></div>
+    <div class="abs" style="left:56px;top:34px;display:flex;align-items:center;gap:14px">${logoSvg(56, { id: 'th' })}<span style="font-weight:800;letter-spacing:.14em;font-size:22px">THE 4% SWING TRADES</span></div>
     <div class="abs" style="left:56px;top:${top0}px;width:760px">${lines.map((l, i) => `<div class="h1" style="font-size:${fz}px;line-height:1.02;${i === nl - 1 ? 'color:var(--acc);text-shadow:0 0 36px rgba(38,208,255,.7)' : 'text-shadow:0 5px 0 #000,0 0 24px rgba(0,0,0,.8)'}">${esc(l)}</div>`).join('')}</div>
     ${up ? `<div class="abs" style="left:56px;top:${ty}px"><span class="chip g" style="font-size:34px;padding:10px 24px;border-width:3px;box-shadow:0 0 28px rgba(31,229,165,.55)">S&amp;P 500 +${ep.chg1d.toFixed(1)}% TODAY</span></div>` : ''}
     ${n ? `<div class="abs" style="left:56px;top:${ty + (up ? 74 : 0)}px"><div class="kick" style="font-size:30px;letter-spacing:.06em;color:var(--amb);text-shadow:0 0 18px rgba(255,194,26,.6)">TOP ${n} STOCKS FOR ${esc(wdn)}</div></div>` : ''}
@@ -541,7 +541,7 @@ function thumbHtml(ep, dir, art) {
   const mk = surv ? `<div class="abs" style="left:56px;top:150px"><span class="chip r" style="font-size:26px;padding:8px 20px">S&amp;P 500 −${Math.abs(ep.chg5d).toFixed(1)}% THIS WEEK</span></div>` : '';
   return `<!doctype html><html><head><meta charset="utf-8"><style>${fontCss(dir)}${CSS.replace(/html,body\{width:1920px;height:1080px/, 'html,body{width:1280px;height:720px')}</style></head><body>
     ${bgCandles(1280, 720, 9)}
-    <div class="abs" style="left:56px;top:40px;display:flex;align-items:center;gap:14px">${logoSvg(60, { id: 'th' })}<span style="font-weight:800;letter-spacing:.14em;font-size:24px">TRADE WITH BK</span></div>
+    <div class="abs" style="left:56px;top:40px;display:flex;align-items:center;gap:14px">${logoSvg(60, { id: 'th' })}<span style="font-weight:800;letter-spacing:.14em;font-size:24px">THE 4% SWING TRADES</span></div>
     ${mk}
     <div class="abs" style="left:56px;top:${surv ? 214 : 160}px"><div class="kick" style="font-size:26px;color:var(--amb);text-shadow:0 0 18px rgba(255,194,26,.6)">${esc(kick)}</div></div>
     <div class="abs" style="left:56px;top:${surv ? 258 : 205}px;width:740px"><div class="h1" style="font-size:112px;line-height:1.04">${head}</div></div>
@@ -608,7 +608,7 @@ function sceneThumbHtml(ep, i, dir, stillFile, vertical) {
     ${bgCandles(1080, 1920, 31 + i)}
     <div class="abs" style="inset:0;background:radial-gradient(ellipse at 50% 42%,rgba(${accRgb},.30),transparent 60%),linear-gradient(180deg,rgba(0,0,0,.55),rgba(0,0,0,.1) 40%,rgba(0,0,0,.6))"></div>
     <div class="abs" style="left:-200px;top:1500px;width:1700px;height:30px;transform:rotate(-8deg);background:linear-gradient(90deg,transparent,${acc} 30%,${acc} 70%,transparent);opacity:.85;box-shadow:0 0 34px ${acc}"></div>
-    <div class="abs" style="left:60px;top:46px;display:flex;align-items:center;gap:16px">${logoSvg(70, { id: 'sthv' })}<span style="font-weight:800;letter-spacing:.14em;font-size:30px">TRADE WITH BK</span></div>
+    <div class="abs" style="left:60px;top:46px;display:flex;align-items:center;gap:16px">${logoSvg(70, { id: 'sthv' })}<span style="font-weight:800;letter-spacing:.14em;font-size:30px">THE 4% SWING TRADES</span></div>
     ${vimg}
     <div class="abs" style="left:0;right:0;top:684px;text-align:center"><span style="display:inline-block;font-weight:800;font-size:28px;letter-spacing:.2em;color:#000;background:${acc};padding:8px 22px;border-radius:10px;box-shadow:0 0 28px rgba(${accRgb},.7)">${esc(kick)}</span></div>
     <div class="abs" style="left:70px;right:70px;top:750px;text-align:center"><div class="h1" style="font-size:${hf}px;line-height:1;text-align:center;background:linear-gradient(180deg,#fff 30%,${acc});-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 5px 0 rgba(0,0,0,.55)) drop-shadow(0 0 26px rgba(${accRgb},.5))">${esc(first)}${last ? ` ${esc(last)}` : ''}</div></div>
@@ -622,7 +622,7 @@ function sceneThumbHtml(ep, i, dir, stillFile, vertical) {
     <div class="abs" style="inset:0;background:radial-gradient(ellipse at 78% 38%,rgba(${accRgb},.30),transparent 55%),linear-gradient(90deg,rgba(0,0,0,.72) 0%,rgba(0,0,0,.25) 58%,transparent 80%)"></div>
     <div class="abs" style="left:-120px;top:560px;width:1600px;height:26px;transform:rotate(-8deg);background:linear-gradient(90deg,transparent,${acc} 30%,${acc} 70%,transparent);opacity:.85;box-shadow:0 0 30px ${acc}"></div>
     <div class="abs" style="left:-120px;top:600px;width:1600px;height:8px;transform:rotate(-8deg);background:linear-gradient(90deg,transparent,#fff 40%,#fff 60%,transparent);opacity:.5"></div>
-    <div class="abs" style="left:56px;top:38px;display:flex;align-items:center;gap:14px">${logoSvg(60, { id: 'sth' })}<span style="font-weight:800;letter-spacing:.14em;font-size:24px">TRADE WITH BK</span></div>
+    <div class="abs" style="left:56px;top:38px;display:flex;align-items:center;gap:14px">${logoSvg(60, { id: 'sth' })}<span style="font-weight:800;letter-spacing:.14em;font-size:24px">THE 4% SWING TRADES</span></div>
     <div class="abs" style="left:56px;top:122px"><span style="display:inline-block;font-weight:800;font-size:23px;letter-spacing:.2em;color:#000;background:${acc};padding:6px 18px;border-radius:8px;box-shadow:0 0 24px rgba(${accRgb},.7)">${esc(kick)}</span></div>
     <div class="abs" style="left:56px;top:178px;width:620px"><div class="h1" style="font-size:${fs0}px;line-height:1;${h1c}">${esc(first)}${last ? ` ${esc(last)}` : ''}</div></div>
     ${tick}${img}${badge}

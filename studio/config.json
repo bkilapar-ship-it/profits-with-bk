@@ -1,6 +1,6 @@
 {
-  "channelName": "Trade With BK",
-  "handle": "@TradeWithBK",
+  "channelName": "The 4% Swing Trades",
+  "handle": "",
   "backtest": {
     "winRate": 65,
     "avgPct": 0.8,

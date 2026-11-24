@@ -126,7 +126,7 @@ function buildWelcome({ setups, config, news }) {
   const minStop = rows.length ? Math.floor(Math.min(...rows.map(r => Math.abs(r.stopDist)))) : null;
   const maxStop = rows.length ? Math.round(Math.max(...rows.map(r => Math.abs(r.stopDist)))) : null;
 
-  add('intro', 'intro', 'Welcome to Trade With BK',
+  add('intro', 'intro', 'Welcome to The 4% Swing Trades',
     `Hi everyone, I'm Bharat, and welcome to ${ch}. This is our very first video, so let me tell you what we're doing here, how the strategy works, and how to use it safely. Then we'll look at what the market did this week, and the five best signals the screener found for ${nx}.`,
     ["Hi, I'm Bharat", `Welcome to ${ch}: signals for ${nxd}`, 'What the channel is, how it works, how to use it safely', `This week's market, and ${nx}'s top five`],
     { date: `Based on the ${dayShort(asOf)} close`, kicker: `Signals for ${nxd}`, chips: ['S&P 500 signals every weekday', 'Weekly review on Fridays'], market: m });
@@ -490,7 +490,7 @@ function metaParts(ep) {
     rules = `THE PLAN FOR EACH PICK\n• Wait 3-5 minutes after the open on ${ep.nxd}\n• Only buy if the price is within 2% of the signal-day close\n• Target: 4% above that close (a target, not a promise)\n• Safety exit: far below, so keep size small and NEVER use leverage or borrowed money\n• Be out by the close of day 3 at the latest`;
   }
   const head = [hook, tick.length ? `SIGNALS: ${named}` : '', rules].filter(Boolean).join('\n\n');
-  const tail = [sources ? `MARKET SOURCES (checked by me, double-check before relying on them)\n${sources}` : '', ep.cfg.disclaimer, 'AI note: the charts and graphics in this video are generated automatically from market data. The voice and presenter are real.', `#TradeWithBK #SwingTrading #SP500 #StockMarket`].filter(Boolean).join('\n\n');
+  const tail = [sources ? `MARKET SOURCES (checked by me, double-check before relying on them)\n${sources}` : '', ep.cfg.disclaimer, 'AI note: the charts and graphics in this video are generated automatically from market data. The voice and presenter are real.', `#4PercentSwingTrades #SwingTrading #SP500 #StockMarket`].filter(Boolean).join('\n\n');
   const tags0 = ep.mode === 'bottom' ? ['market bottom', 'how to find a market bottom', 'stock market bottom', 'stock market correction', 'stock market crash', 'technical analysis for beginners', 'VIX', 'buy the dip', 'investing for beginners', 'S&P 500', 'trade with bk'] : null;
   const tags1 = tags0 || ['S&P 500', 'S&P 500 stocks', 'swing trading', 'swing trading strategy', '4% swing trade', 'stock screener', 'dip buying', 'uptrend pullback', 'stock market correction', 'stock market today', 'trading signals', 'technical analysis', 'stocks to watch', 'trade with bk', ...tick, ...tick.map(x => NAMES[x]).filter(Boolean)];
   const tags = [...new Set([...(ep.extraTags || []), ...tags1])].slice(0, 30);

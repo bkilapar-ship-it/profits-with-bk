@@ -3,13 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Trade With BK — Swing Setup Scanner</title>
-  <meta name="description" content="Trade With BK: rules-based swing setups (Uptrend Dip, Downtrend Rip, MACD Curl) scanned daily across US stocks, indexes, sectors and themes.">
+  <title>The 4% Swing Trades — Swing Setup Scanner</title>
+  <meta name="description" content="The 4% Swing Trades: rules-based swing setups (Uptrend Dip, Downtrend Rip, MACD Curl) scanned daily across US stocks, indexes, sectors and themes.">
   <meta name="theme-color" content="#13233F">
-  <meta name="apple-mobile-web-app-title" content="Trade With BK">
+  <meta name="apple-mobile-web-app-title" content="The 4% Swing Trades">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"%3E  %3Crect width="64" height="64" rx="16" fill="#13233F"/%3E  %3Cpath d="M11 41 C 23 42, 36 43, 53 36.5" fill="none" stroke="#FF7A1A" stroke-width="4" stroke-linecap="round"/%3E  %3Cpath d="M11 45 C 20 56, 33 57, 46.5 35.2" fill="none" stroke="#6B8CFF" stroke-width="4.6" stroke-linecap="round"/%3E  %3Cpath d="M50.4 28.6 L51 38.2 L42.2 33.2 Z" fill="#6B8CFF" stroke="#6B8CFF" stroke-width="1.2" stroke-linejoin="round"/%3E  %3Ctext x="32" y="28" text-anchor="middle" font-family="Manrope, 'Segoe UI', Arial, sans-serif" font-weight="800" font-size="21" letter-spacing="-0.5" fill="#FFFFFF"%3EBK%3C/text%3E%3C/svg%3E">
+  <link rel="icon" type="image/png" href="favicon.png">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -17,22 +18,11 @@
 </head>
 <body>
 
-<!-- Brand mark, defined once and reused -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="bk-logo" viewBox="0 0 64 64">
-    <rect width="64" height="64" rx="16" fill="#13233F"/>
-    <path d="M11 41 C 23 42, 36 43, 53 36.5" fill="none" stroke="#FF7A1A" stroke-width="4" stroke-linecap="round"/>
-    <path d="M11 45 C 20 56, 33 57, 46.5 35.2" fill="none" stroke="#6B8CFF" stroke-width="4.6" stroke-linecap="round"/>
-    <path d="M50.4 28.6 L51 38.2 L42.2 33.2 Z" fill="#6B8CFF" stroke="#6B8CFF" stroke-width="1.2" stroke-linejoin="round"/>
-    <text x="32" y="28" text-anchor="middle" font-family="Manrope, 'Segoe UI', Arial, sans-serif" font-weight="800" font-size="21" letter-spacing="-0.5" fill="#FFFFFF">BK</text>
-  </symbol>
-</svg>
-
 <header class="appbar">
   <div class="wrap appbar-inner">
-    <a class="brand" href="./" aria-label="Trade With BK, home">
-      <svg class="brand-mark" aria-hidden="true"><use href="#bk-logo"/></svg>
-      <span class="brand-name">Trade With <b>BK</b></span>
+    <a class="brand" href="./" aria-label="The 4% Swing Trades, home">
+      <img class="brand-mark" src="logo.png" alt="" width="36" height="36">
+      <span class="brand-name">The 4% <b>Swing Trades</b></span>
     </a>
     <div class="appbar-actions">
     <button id="openPaper" type="button" class="icon-btn paper-btn" aria-pressed="false">
@@ -183,8 +173,8 @@
 
 <footer class="wrap site-footer">
   <div class="footer-brand">
-    <svg class="brand-mark small" aria-hidden="true"><use href="#bk-logo"/></svg>
-    <span>Trade With <b>BK</b></span>
+    <img class="brand-mark small" src="logo.png" alt="" width="26" height="26">
+    <span>The 4% <b>Swing Trades</b></span>
   </div>
   <p>This is a technical screening tool, not financial advice and not a trading system. It reports which stocks match rules-based setups and how those setups behaved in past data. Past results do not guarantee future results.</p>
 </footer>

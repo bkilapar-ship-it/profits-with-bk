@@ -1,4 +1,4 @@
-# Research protocol and ledger (Trade With BK)
+# Research protocol and ledger (The 4% Swing Trades)
 
 Goal: improve the live Uptrend Dip plan's return per unit of drawdown, without fooling ourselves.
 

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Review and publish | Trade With BK Studio</title>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>Review and publish | The 4% Swing Trades Studio</title>
 <style>
 :root{color-scheme:dark}*{box-sizing:border-box}
 body{margin:0;background:#0A0F1C;color:#EAF0FB;font-family:-apple-system,BlinkMacSystemFont,'Inter',system-ui,sans-serif;padding:18px 16px 80px;max-width:640px;margin:auto}
@@ -185,7 +185,7 @@ async function loadTake(){
     showTake(new Blob(r.chunks,{type:r.meta.mime||r.chunks[0].type||'video/mp4'}),r.meta.at,' · kept on this phone for 2 days');
   }catch(e){I.innerHTML='<span class="err">Could not open the saved take ('+(e&&e.message?e.message:e)+').</span> Use <b>Use a different recording file</b> below.';}
 }
-$('takeSave').onclick=()=>{if(!takeBlob)return;const u=URL.createObjectURL(takeBlob),ext=/mp4/.test(takeBlob.type)?'mp4':'webm';$('takeOut').innerHTML='<a class="btn dl" href="'+u+'" download="trade-with-bk-'+(ep?ep.j.asOf:'take')+'.'+ext+'">Tap to save the file</a>';};
+$('takeSave').onclick=()=>{if(!takeBlob)return;const u=URL.createObjectURL(takeBlob),ext=/mp4/.test(takeBlob.type)?'mp4':'webm';$('takeOut').innerHTML='<a class="btn dl" href="'+u+'" download="4pct-swing-trades-'+(ep?ep.j.asOf:'take')+'.'+ext+'">Tap to save the file</a>';};
 $('takeDel').onclick=async()=>{if(!confirm('Discard this take? It is deleted from this phone and cannot be recovered.'))return;await idbClear();takeBlob=null;lastBlob=null;recUrl=null;recDur=0;$('prev').removeAttribute('src');$('prev').style.display='none';$('rv').removeAttribute('src');$('takeOut').innerHTML='';$('takeSave').style.display='none';$('takeDel').style.display='none';$('takeinfo').textContent='Take discarded.';ready();};
 
 $('auto').onclick=()=>{const a=store.get('bkstudio-marks2-'+mkey());if(!a||!a.t)return;if(a.order){const rest=planOrder.filter(id=>!a.order.includes(id));planOrder=a.order.filter(id=>all.some(s=>s.id===id)).concat(rest);skipSet=new Set(rest.filter(id=>skipSet.has(id)||true));savePlan();}markById={};Object.entries(a.t).forEach(([id,t])=>{markById[id]=t;});rebuild();};
@@ -280,7 +280,7 @@ $('make').onclick=async()=>{
         ctx.save();ctx.shadowColor='rgba(38,208,255,.55)';ctx.shadowBlur=H*.025;rr(ctx,fx,fy,fw,fh,H*.02);ctx.fillStyle='#000';ctx.fill();ctx.restore();
         ctx.save();rr(ctx,fx,fy,fw,fh,H*.02);ctx.clip();cover(ctx,rv,fx,fy,fw,fh);ctx.restore();
         ctx.strokeStyle='#26D0FF';ctx.lineWidth=Math.max(2,H*.003);rr(ctx,fx,fy,fw,fh,H*.02);ctx.stroke();
-        if(!useImg){const cx=fx+fw/2;ctx.textAlign='center';ctx.fillStyle='#fff';ctx.shadowColor='#26D0FF';ctx.shadowBlur=H*.02;ctx.font='800 '+Math.round(H*.036)+'px Poppins,Arial,sans-serif';ctx.fillText('TRADE WITH BK',cx,fy-H*.04);ctx.shadowBlur=0;
+        if(!useImg){const cx=fx+fw/2;ctx.textAlign='center';ctx.fillStyle='#fff';ctx.shadowColor='#26D0FF';ctx.shadowBlur=H*.02;ctx.font='800 '+Math.round(H*.036)+'px Poppins,Arial,sans-serif';ctx.fillText('THE 4% SWING TRADES',cx,fy-H*.04);ctx.shadowBlur=0;
         ctx.fillStyle='#FFC21A';ctx.font='700 '+Math.round(H*.02)+'px Poppins,Arial,sans-serif';ctx.fillText('S&P 500 DIP SIGNALS',cx,fy+fh+H*.05);ctx.textAlign='left';}
       }else{
         drawV(ctx,0,0,W,H,t,i);popFor(0,0,W,H,t,i);
@@ -300,7 +300,7 @@ $('make').onclick=async()=>{
     const type=mr.mimeType||mime||'video/mp4',blob=new Blob(chunks,{type}),ext=/mp4/.test(type)?'mp4':'webm',url=URL.createObjectURL(blob);
     try{src.disconnect(dst);}catch(e){}lastBlob=blob;ytFill();cv.style.display='none';$('bar').style.display='none';
     $('status').innerHTML='<span class="ok">Done. '+(blob.size/1048576).toFixed(0)+' MB</span>';
-    $('out').innerHTML='<video controls playsinline src="'+url+'"></video><a class="btn dl" href="'+url+'" download="trade-with-bk-'+ep.j.asOf+'.'+ext+'">Save the video</a><p class="mut">If Save does not start a download, press and hold the video above, or tap Share and choose Save Video. Check it plays well before uploading.</p>';
+    $('out').innerHTML='<video controls playsinline src="'+url+'"></video><a class="btn dl" href="'+url+'" download="4pct-swing-trades-'+ep.j.asOf+'.'+ext+'">Save the video</a><p class="mut">If Save does not start a download, press and hold the video above, or tap Share and choose Save Video. Check it plays well before uploading.</p>';
   }catch(e){$('status').innerHTML='<span class="err">'+(e&&e.message?e.message:e)+'</span>';}
   btn.disabled=false;
 };
@@ -322,7 +322,7 @@ $('rv').addEventListener('seeked',thDraw);$('rv').addEventListener('loadeddata',
 const thSet=m=>{thMode=m;['thM1','thM2','thM3'].forEach(i=>$(i).classList.remove('on'));$({photo:'thM1',video:'thM2',pick:'thM3'}[m]).classList.add('on');$('thS').style.display=m==='video'?'block':'none';thDraw();};
 $('thM1').onclick=()=>thSet('photo');$('thM2').onclick=()=>thSet('video');$('thM3').onclick=()=>$('thF').click();
 $('thF').onchange=()=>{const f=$('thF').files[0];if(!f)return;const im=new Image();im.onload=()=>{thSelf=im;thSet('pick');};im.src=URL.createObjectURL(f);};
-$('thSave').onclick=()=>{thDraw();$('thC').toBlob(b=>{const u=URL.createObjectURL(b);$('thOut').innerHTML='<a class="btn dl" href="'+u+'" download="trade-with-bk-thumbnail-'+(ep?ep.j.asOf:'')+'.jpg">Download thumbnail</a><p class="mut">If it does not download, press and hold the picture above and choose Save image.</p>';},'image/jpeg',.92);};
+$('thSave').onclick=()=>{thDraw();$('thC').toBlob(b=>{const u=URL.createObjectURL(b);$('thOut').innerHTML='<a class="btn dl" href="'+u+'" download="4pct-swing-trades-thumbnail-'+(ep?ep.j.asOf:'')+'.jpg">Download thumbnail</a><p class="mut">If it does not download, press and hold the picture above and choose Save image.</p>';},'image/jpeg',.92);};
 loadEpisodes().then(loadTake,loadTake);thDraw();
 /* ---- YouTube upload (browser, Google Identity Services + resumable upload) ---- */
 let lastBlob=null,ytTok=null,ytTokExp=0,_ac=null,_rvs=null;
@@ -351,7 +351,7 @@ async function ytFill(){
   $('ytD').value=[md.head,ch,md.tail].filter(Boolean).join('\n\n');
   $('ytD').dataset.tags=JSON.stringify(md.tags);
 }
-function scThumbs(){const el=$('scTh');if(!el||!ep)return;el.innerHTML=ep.j.scenes.map((sc,i)=>'<a href="'+ep.m+'/thumbs/scene-'+i+'.png" download="trade-with-bk-scene-'+(i+1)+'.png" target="_blank" rel="noopener" style="display:block;text-decoration:none;color:#8FA3C7;font-size:12px"><img loading="lazy" src="'+ep.m+'/thumbs/scene-'+i+'.png" style="width:100%;border-radius:8px;display:block" onerror="this.parentNode.style.display=\'none\'">'+(i+1)+'. '+sc.heading.charAt(0)+sc.heading.slice(1).toLowerCase()+'</a>').join('');}
+function scThumbs(){const el=$('scTh');if(!el||!ep)return;el.innerHTML=ep.j.scenes.map((sc,i)=>'<a href="'+ep.m+'/thumbs/scene-'+i+'.png" download="4pct-swing-trades-scene-'+(i+1)+'.png" target="_blank" rel="noopener" style="display:block;text-decoration:none;color:#8FA3C7;font-size:12px"><img loading="lazy" src="'+ep.m+'/thumbs/scene-'+i+'.png" style="width:100%;border-radius:8px;display:block" onerror="this.parentNode.style.display=\'none\'">'+(i+1)+'. '+sc.heading.charAt(0)+sc.heading.slice(1).toLowerCase()+'</a>').join('');}
 try{$('ytId').value=localStorage.getItem('bkstudio-ytid')||'';}catch(e){}
 function fullKey(){return 'bkstudio-fullvid-'+(ep?ep.j.mode+'-'+ep.j.asOf:'x');}
 function shLinkFill(){const el=$('shLink');if(!el||el.value.trim())return;let id=null;try{id=localStorage.getItem(fullKey());}catch(e){}if(id)el.value='https://youtu.be/'+id;}
@@ -445,7 +445,7 @@ $('shGo').onclick=async()=>{
     const opts=['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm'];const mime=opts.find(t=>MediaRecorder.isTypeSupported(t))||'';
     const mr=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:3e6,audioBitsPerSecond:128e3}:undefined);const chunks=[];mr.ondataavailable=e=>{if(e.data&&e.data.size)chunks.push(e.data);};const done=new Promise(res=>{mr.onstop=res;});
     let wake=null;try{if(navigator.wakeLock)wake=await navigator.wakeLock.request('screen');}catch(e){}
-    const handle='@TradeWithBK';let raf=0,running=true,cur=0,base=0;
+    const handle='The 4% Swing Trades';let raf=0,running=true,cur=0,base=0;
     const CH=segs.map(sg=>{const c=shChunks(scenes[sg.i].narration),tot=c.reduce((a,b)=>a+b.split(' ').length,0)||1,cs=[];let acc=0;c.forEach(x=>{cs.push(acc/tot);acc+=x.split(' ').length;});return {c,cs};});
     const bg=g.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#08101F');bg.addColorStop(1,'#02050A');
     const vframe=(x,y,w,h,el,sg)=>{const d=SD[sg.i];if(!d.ok){g.drawImage(vis,x,y,w,h);return;}const fr=Math.min(1,el/sg.full);let k=0;d.th.forEach(t=>{if(fr>=t)k++;});k=Math.min(d.B,k);const c=d.im[k]||d.still||d.im[0],bs=k>0?d.im[k-1]:null;
@@ -458,7 +458,7 @@ $('shGo').onclick=async()=>{
       /* soft zoomed copy of the visual fills the tall frame behind it */
       g.save();try{g.filter='blur(22px)';}catch(e){}const bw=Math.round(H*16/9);g.beginPath();g.rect(0,0,W,H);g.clip();vframe((W-bw)/2,0,bw,H,se,sg);g.restore();
       g.fillStyle='rgba(2,5,10,.80)';g.fillRect(0,0,W,H);
-      g.textAlign='center';g.fillStyle='#fff';g.shadowColor='#26D0FF';g.shadowBlur=18;g.font='800 40px Poppins,Arial,sans-serif';g.fillText('TRADE WITH BK',W/2,90);g.shadowBlur=0;
+      g.textAlign='center';g.fillStyle='#fff';g.shadowColor='#26D0FF';g.shadowBlur=18;g.font='800 40px Poppins,Arial,sans-serif';g.fillText('THE 4% SWING TRADES',W/2,90);g.shadowBlur=0;
       g.fillStyle='#FFC21A';g.font='700 24px Poppins,Arial,sans-serif';g.fillText(sc.heading.slice(0,34),W/2,134);
       g.save();g.shadowColor='rgba(38,208,255,.45)';g.shadowBlur=26;g.fillStyle='#000';g.fillRect(vx,vy,vw,vh);g.restore();
       g.save();g.beginPath();g.rect(vx,vy,vw,vh);g.clip();vframe(vx,vy,vw,vh,se,sg);if(window.bkPop){if(sc.type==='outro')bkPop(g,vx,vy,vw,vh,se-bkPopAt(sc.narration)*sg.full);else if(cur===segs.length-1&&tot>D-5)bkPop(g,vx,vy,vw,vh,tot-(D-5));}g.restore();
@@ -467,7 +467,7 @@ $('shGo').onclick=async()=>{
       g.font='800 50px Poppins,Arial,sans-serif';const L=shWrap(g,cap,W-70),cy=fy+fh+70;
       L.slice(0,3).forEach((l,j)=>{const y=cy+j*62;g.lineWidth=9;g.strokeStyle='rgba(0,0,0,.85)';g.strokeText(l,W/2,y);g.fillStyle='#fff';g.fillText(l,W/2,y);});
       g.fillStyle='#8FA3C7';g.font='600 20px Poppins,Arial,sans-serif';g.fillText('Educational only. Not financial advice.',W/2,H-62);
-      if(tot>D-4){g.fillStyle='#FFC21A';g.font='800 26px Poppins,Arial,sans-serif';g.fillText('Full video on the channel '+handle,W/2,H-24);}
+      if(tot>D-4){g.fillStyle='#FFC21A';g.font='800 26px Poppins,Arial,sans-serif';g.fillText('Full video: '+handle,W/2,H-24);}
       g.textAlign='left';
       $('shBar').style.display='block';$('shBar').firstChild.style.width=Math.min(100,tot/D*100)+'%';S('Creating… '+Math.round(tot)+' of '+Math.round(D)+' s, part '+(cur+1)+' of '+segs.length+' (keep this page open)');
       raf=requestAnimationFrame(draw);};
@@ -482,15 +482,15 @@ $('shGo').onclick=async()=>{
     try{src.disconnect(dst);}catch(e){}
     const type=mr.mimeType||mime||'video/mp4',blob=new Blob(chunks,{type}),ext=/mp4/.test(type)?'mp4':'webm',url=URL.createObjectURL(blob);shortBlob=blob;
     cv.style.display='none';$('shBar').style.display='none';S('<span class="ok">Short ready. '+(blob.size/1048576).toFixed(1)+' MB, '+Math.round(D)+' s'+(D>60?' (over 60 s: it will be a normal video, not a Short, in the Shorts shelf)':'')+'</span>');
-    $('shOut').innerHTML='<video controls playsinline src="'+url+'" style="max-height:60vh"></video><a class="btn dl" href="'+url+'" download="trade-with-bk-short-'+ep.j.asOf+'.'+ext+'">Save the Short to this phone</a>';
+    $('shOut').innerHTML='<video controls playsinline src="'+url+'" style="max-height:60vh"></video><a class="btn dl" href="'+url+'" download="4pct-swing-trades-short-'+ep.j.asOf+'.'+ext+'">Save the Short to this phone</a>';
     shortThumbIdx=all.indexOf(scenes[segs[0].i]);const stU=ep.m+'/thumbs/short-'+shortThumbIdx+'.jpg';$('shTh').innerHTML='<div class="mut" style="margin:8px 0 4px">Cover image for this Short (9:16, set automatically when you upload it here):</div><img src="'+stU+'" style="height:220px;border-radius:10px;border:1px solid #2A3B61" onerror="this.parentNode.innerHTML=\'\'"> <a class="btn dl" href="'+stU+'" download="short-cover.jpg">Save the cover image</a>';
-    const f0=scenes[segs[0].i].heading;$('shT').value=((segs.length===1?f0.charAt(0)+f0.slice(1).toLowerCase():'Market recap')+' | Trade With BK #Shorts').slice(0,100);$('shUpBox').style.display='block';
+    const f0=scenes[segs[0].i].heading;$('shT').value=((segs.length===1?f0.charAt(0)+f0.slice(1).toLowerCase():'Market recap')+' | The 4% Swing Trades #Shorts').slice(0,100);$('shUpBox').style.display='block';
   }catch(e){S('<span class="err">'+(e&&e.message?e.message:e)+'</span>');$('shCv').style.display='none';}
   btn.disabled=false;
 };
 $('shUp').onclick=async()=>{
   const btn=$('shUp');btn.disabled=true;const S=h=>$('shSt').innerHTML=h;
-  try{const md=await ytMeta();const fl=($('shLink').value||'').trim();try{localStorage.setItem(fullKey(),(fl.match(/(?:youtu\.be\/|v=)([\w-]{6,})/)||[])[1]||'');}catch(e){}const desc=[fl?'Watch the full video: '+fl:'Full video on the channel: @TradeWithBK','Channel: @TradeWithBK',md&&md.tail,'#Shorts'].filter(Boolean).join('\n\n');
+  try{const md=await ytMeta();const fl=($('shLink').value||'').trim();try{localStorage.setItem(fullKey(),(fl.match(/(?:youtu\.be\/|v=)([\w-]{6,})/)||[])[1]||'');}catch(e){}const desc=[fl?'Watch the full video: '+fl:'Full video on the channel: The 4% Swing Trades','Channel: The 4% Swing Trades',md&&md.tail,'#Shorts'].filter(Boolean).join('\n\n');
     const r=await ytUpload({blob:shortBlob,title:$('shT').value,desc,tags:(md?md.tags:[]).concat(['shorts']),priv:$('shPriv').value,thumbUrl:shortThumbIdx>=0?ep.m+'/thumbs/short-'+shortThumbIdx+'.jpg':undefined,st:S,bar:$('shBar')});
     $('shBar').style.display='none';S('<span class="ok">Short uploaded as '+$('shPriv').value+'.</span> <a href="https://studio.youtube.com/video/'+r.id+'/edit" target="_blank" rel="noopener">Open it in YouTube Studio</a> to check it, then make it public. To link the full video as the Short\'s <b>Related video</b>, open the Short in Studio, Details, Related video.');
   }catch(e){S('<span class="err">'+(e&&e.message?e.message:e)+'</span>');}
