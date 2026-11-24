@@ -34,7 +34,7 @@
    "target": 346.53,
    "stop": 283.07,
    "ocoOrderId": "c341d9ed-a5af-491c-8ba2-17249336811d",
-   "now": 324
+   "now": 324.67
   },
   "FISV": {
    "strategy": "dip",
@@ -64,7 +64,7 @@
    "target": 60.63,
    "stop": 46,
    "ocoOrderId": "d7b2ba9c-0295-4406-a6b1-ff6939a9d77d",
-   "now": 57.4
+   "now": 57.81
   },
   "VEEV": {
    "strategy": "dip",
@@ -1621,8 +1621,8 @@
   },
   {
    "d": "2026-11-24",
-   "value": 96182,
-   "pct": -3.82,
+   "value": 96226,
+   "pct": -3.77,
    "spy": -6.04
   }
  ],
