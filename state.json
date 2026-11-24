@@ -64,7 +64,7 @@
    "target": 56.33,
    "stop": 49.03,
    "ocoOrderId": "f190c982-c28e-4ee0-a2ed-b3ade37fa8d6",
-   "now": 55.18
+   "now": 55.2
   },
   "FISV": {
    "strategy": "dip",
@@ -1553,8 +1553,8 @@
   },
   {
    "d": "2026-11-24",
-   "value": 95485,
-   "pct": -4.52,
+   "value": 95487,
+   "pct": -4.51,
    "spy": null
   }
  ],
