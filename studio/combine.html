@@ -17,7 +17,7 @@ canvas{width:100%;border-radius:12px;background:#000;margin-top:10px;display:non
 nav.top{position:sticky;top:0;z-index:9;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:-18px -16px 14px;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;background:rgba(10,15,28,.94);backdrop-filter:blur(8px);border-bottom:1px solid #22304D}nav.top a{padding:11px 6px;border-radius:12px;border:1px solid #2A3B61;background:#121C33;color:#fff;text-decoration:none;text-align:center;font-weight:700;font-size:14px}nav.top a.cur{background:#2563EB;border-color:#2563EB}
 a.btn.dl{display:block;background:#2563EB;border-color:#2563EB;margin-top:10px}
 </style></head><body>
-<nav class="top"><a href="./">‹ Studio</a><a id="navtp" href="welcome/teleprompter.html">Teleprompter</a><a class="cur" href="combine.html">Combine</a></nav>
+<nav class="top"><a href="./">‹ Studio</a><a id="navtp" href="daily/teleprompter.html">Teleprompter</a><a class="cur" href="combine.html">Combine</a></nav>
 <h1>Combine your video</h1>
 <p class="mut">Put your face and voice together with the visuals. It all happens in this page, on your phone. Nothing is uploaded.</p>
 
@@ -26,6 +26,7 @@ a.btn.dl{display:block;background:#2563EB;border-color:#2563EB;margin-top:10px}
 
 <div class="card"><h2>2. Your recording</h2>
   <input id="rec" type="file" accept="video/*,audio/*,.mp4,.mov,.m4v,.webm,.m4a,.mp3,.wav">
+  <div class="row" style="margin-top:10px"><button id="ghLoad" type="button">Or load a recording saved on GitHub</button></div><div id="ghList" class="mut"></div>
   <div id="recinfo" class="mut" style="margin-top:8px"></div></div>
 
 <div class="card"><h2>3. Scenes in this video</h2><div class="mut">Untick a scene to leave it out, or move it up or down. These are the same choices as in the teleprompter review.</div><div id="plan" style="margin-top:8px"></div></div>
@@ -77,7 +78,7 @@ a.btn.dl{display:block;background:#2563EB;border-color:#2563EB;margin-top:10px}
   <p class="warn">Like the full video, it plays that part of your recording in real time. Keep the page open.</p>
   <div id="shBar" style="display:none"><i></i></div><div id="shSt" class="mut" style="margin-top:8px"></div>
   <canvas id="shCv" style="display:none;max-width:100%;max-height:60vh;margin:10px auto"></canvas><div id="shOut"></div>
-  <div id="shUpBox" style="display:none"><div class="row"><input id="shT" style="width:100%;font:inherit;padding:12px;border-radius:12px;border:1px solid #2A3B61;background:#0B1328;color:#fff"></div>
+  <div id="shUpBox" style="display:none"><div id="shTh"></div><div class="row"><input id="shT" style="width:100%;font:inherit;padding:12px;border-radius:12px;border:1px solid #2A3B61;background:#0B1328;color:#fff"></div>
   <div class="row"><select id="shPriv"><option value="private">Private</option><option value="unlisted">Unlisted</option></select><button id="shUp" class="go">Upload the Short to YouTube</button></div></div>
 </div>
 
@@ -86,9 +87,10 @@ a.btn.dl{display:block;background:#2563EB;border-color:#2563EB;margin-top:10px}
 <video id="rv" playsinline preload="auto" style="position:fixed;left:0;bottom:0;width:2px;height:2px;opacity:.01;pointer-events:none"></video>
 
 <script src="popover.js"></script>
+<script src="gh.js"></script>
 <script>
 let CUES={};const $=id=>document.getElementById(id);
-const EPS=(new URLSearchParams(location.search).get('eps')||'welcome,bottom,daily,weekly').split(',');
+const EPS=(new URLSearchParams(location.search).get('eps')||'daily,weekly').split(',');
 let studioImg=null,thImg=null,thPh=null,thMode='photo',thSelf=null;let ep=null,all=[],planOrder=[],skipSet=new Set(),markById={},scenes=[],starts=[],visUrl=null,recUrl=null,recDur=0,marks=[],layout='side',pos='br';
 const label={welcome:'Welcome video',bottom:'Market bottoms (special)',daily:'Daily video',weekly:'Weekly review'};
 const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0');
@@ -123,12 +125,20 @@ function renderPlan(){
 }
 $('plan').onclick=e=>{const b=e.target.closest('button');if(!b)return;const i=+b.dataset.i;if(b.dataset.a==='u'&&i>0)[planOrder[i-1],planOrder[i]]=[planOrder[i],planOrder[i-1]];else if(b.dataset.a==='d'&&i<planOrder.length-1)[planOrder[i+1],planOrder[i]]=[planOrder[i],planOrder[i+1]];else return;syncMarks();savePlan();rebuild();};
 $('plan').onchange=e=>{const cb=e.target.closest('input[type=checkbox]');if(!cb)return;if(cb.checked)skipSet.delete(cb.dataset.id);else skipSet.add(cb.dataset.id);syncMarks();savePlan();rebuild();};
-$('rec').onchange=e=>{
-  const f=e.target.files[0];if(!f)return;if(recUrl)URL.revokeObjectURL(recUrl);recUrl=URL.createObjectURL(f);
+function useRec(f){
+  if(recUrl)URL.revokeObjectURL(recUrl);recUrl=URL.createObjectURL(f);
   const v=$('prev');v.src=recUrl;v.style.display='block';$('rv').src=recUrl;
   v.onloadedmetadata=()=>{recDur=v.duration;$('recinfo').innerHTML='<span class="ok">Loaded: '+fmt(recDur)+'</span>';$('markhelp').textContent='You decide exactly when each visual appears. Play your recording below and tap the blue button each time you want the next visual. Then fine-tune any scene: Go jumps there, −0.5 and +0.5 nudge it, Here sets it to the moment the player is at. Every visual stays on screen until the next one starts.';$('markbtns').style.display='flex';$('markbtns2').style.display='flex';renderMarks();ready();};
   v.onerror=()=>{$('recinfo').innerHTML='<span class="err">This browser cannot play that file. Try an .mp4 or .mov recording.</span>';};
-};
+}
+$('rec').onchange=e=>{const f=e.target.files[0];if(f)useRec(f);};
+$('ghLoad').onclick=async()=>{const L=$('ghList');
+  if(!window.bkgh||!bkgh.ok()){L.innerHTML='Set up GitHub saving first: <a href="./#github">Studio page, GitHub saving</a>.';return;}
+  L.textContent='Looking…';
+  try{const rs=await bkgh.list();if(!rs.length){L.textContent='Nothing saved on GitHub right now (recordings are deleted after 2 days).';return;}
+    L.innerHTML=rs.map(r=>'<div style="display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid #1B2A47"><span style="flex:1;word-break:break-all">'+r.name.replace(/</g,'&lt;')+' <span class="mut">('+(r.size/1048576).toFixed(0)+' MB)</span></span><button type="button" data-use="'+r.name+'">Use</button></div>').join('');
+    L.querySelectorAll('[data-use]').forEach(b=>b.onclick=async()=>{b.disabled=true;try{const blob=await bkgh.load(b.dataset.use,p=>{b.textContent=Math.round(p*100)+'%';});L.innerHTML='<span class="ok">Loaded from GitHub.</span>';useRec(blob);}catch(e){L.innerHTML='<span class="err">'+(e&&e.message?e.message:e)+'</span>';}});
+  }catch(e){L.innerHTML='<span class="err">'+(e&&e.message?e.message:e)+'</span>';}};
 function loadAuto(){}
 $('auto').onclick=()=>{const a=store.get('bkstudio-marks2-'+mkey());if(!a||!a.t)return;if(a.order){const rest=planOrder.filter(id=>!a.order.includes(id));planOrder=a.order.filter(id=>all.some(s=>s.id===id)).concat(rest);skipSet=new Set(rest.filter(id=>skipSet.has(id)||true));savePlan();}markById={};Object.entries(a.t).forEach(([id,t])=>{markById[id]=t;});rebuild();};
 function renderMarks(){
@@ -320,7 +330,7 @@ async function ytUpload(o){ // o: blob,title,desc,tags,priv,thumbUrl,st(fn),bar(
   if(!r.ok)throw new Error('YouTube refused to start the upload ('+r.status+'): '+(await r.text()).slice(0,200));
   const loc=r.headers.get('Location');if(!loc)throw new Error('YouTube did not return an upload address.');
   const v=await ytPut(loc,blob,type,o.bar,st);let note='';
-  if(o.thumbUrl){try{const tr=await fetch(o.thumbUrl,{cache:'no-store'});if(tr.ok){const tb=await tr.blob();const up=await fetch('https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId='+v.id,{method:'POST',headers:{Authorization:'Bearer '+tok,'Content-Type':'image/png'},body:tb});note=up.ok?' Thumbnail set.':' The thumbnail was not accepted (YouTube needs a verified channel for custom thumbnails); add it in YouTube Studio.';}}catch(e){note=' Thumbnail not set; add it in YouTube Studio.';}}
+  if(o.thumbUrl){try{const tr=await fetch(o.thumbUrl,{cache:'no-store'});if(tr.ok){const tb=await tr.blob();const up=await fetch('https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId='+v.id,{method:'POST',headers:{Authorization:'Bearer '+tok,'Content-Type':tb.type&&/^image\//.test(tb.type)?tb.type:'image/png'},body:tb});note=up.ok?' Thumbnail set.':' The thumbnail was not accepted (YouTube needs a verified channel for custom thumbnails); add it in YouTube Studio.';}}catch(e){note=' Thumbnail not set; add it in YouTube Studio.';}}
   return {id:v.id,note};
 }
 $('ytGo').onclick=async()=>{
@@ -338,7 +348,7 @@ $('ytGo').onclick=async()=>{
 
 
 /* ---- Shorts: one scene, 9:16, face + visual + captions ---- */
-let shortBlob=null;
+let shortBlob=null,shortThumbIdx=-1;
 function shSel(){return [...document.querySelectorAll('#shList input:checked')].map(x=>+x.value);}
 function shTrim(i){const r=document.querySelector('#shList .shr[data-i="'+i+'"]');return r?{a:parseFloat(r.querySelector('.shA').value),b:parseFloat(r.querySelector('.shB').value)}:{};}
 function shSegs(){return shSel().map(i=>{const s0=i===0?0:marks[i],e0=(i+1<scenes.length&&marks[i+1]!=null)?marks[i+1]:recDur,full=Math.max(0,(e0||0)-s0),t=shTrim(i);
@@ -421,7 +431,9 @@ $('shGo').onclick=async()=>{
     try{src.disconnect(dst);}catch(e){}
     const type=mr.mimeType||mime||'video/mp4',blob=new Blob(chunks,{type}),ext=/mp4/.test(type)?'mp4':'webm',url=URL.createObjectURL(blob);shortBlob=blob;
     cv.style.display='none';$('shBar').style.display='none';S('<span class="ok">Short ready. '+(blob.size/1048576).toFixed(1)+' MB, '+Math.round(D)+' s'+(D>60?' (over 60 s: it will be a normal video, not a Short, in the Shorts shelf)':'')+'</span>');
-    $('shOut').innerHTML='<video controls playsinline src="'+url+'" style="max-height:60vh"></video><a class="btn dl" href="'+url+'" download="trade-with-bk-short-'+ep.j.asOf+'.'+ext+'">Save the Short</a>';
+    $('shOut').innerHTML='<video controls playsinline src="'+url+'" style="max-height:60vh"></video><a class="btn dl" href="'+url+'" download="trade-with-bk-short-'+ep.j.asOf+'.'+ext+'">Save the Short to this phone</a><a class="btn dl" href="#" id="shGh">Save the Short to GitHub (not on your phone)</a><div id="shGhSt" class="mut"></div>';
+    $('shGh').onclick=async e=>{e.preventDefault();const o=$('shGhSt');if(!window.bkgh||!bkgh.ok()){o.innerHTML='Set up GitHub saving first: <a href="./#github">Studio page</a>.';return;}try{o.textContent='Uploading…';const n=await bkgh.save(blob,'short.'+ext,p=>{o.textContent='Uploading… '+Math.round(p*100)+'%';});o.innerHTML='<span class="ok">Saved to GitHub ('+n+'). It is deleted after 2 days.</span>';}catch(x){o.innerHTML='<span class="err">'+(x&&x.message?x.message:x)+'</span>';}};
+    shortThumbIdx=all.indexOf(scenes[segs[0].i]);const stU=ep.m+'/thumbs/short-'+shortThumbIdx+'.jpg';$('shTh').innerHTML='<div class="mut" style="margin:8px 0 4px">Cover image for this Short (9:16, set automatically when you upload it here):</div><img src="'+stU+'" style="height:220px;border-radius:10px;border:1px solid #2A3B61" onerror="this.parentNode.innerHTML=\'\'"> <a class="btn dl" href="'+stU+'" download="short-cover.jpg">Save the cover image</a>';
     const f0=scenes[segs[0].i].heading;$('shT').value=((segs.length===1?f0.charAt(0)+f0.slice(1).toLowerCase():'Market recap')+' | Trade With BK #Shorts').slice(0,100);$('shUpBox').style.display='block';
   }catch(e){S('<span class="err">'+(e&&e.message?e.message:e)+'</span>');$('shCv').style.display='none';}
   btn.disabled=false;
@@ -429,7 +441,7 @@ $('shGo').onclick=async()=>{
 $('shUp').onclick=async()=>{
   const btn=$('shUp');btn.disabled=true;const S=h=>$('shSt').innerHTML=h;
   try{const md=await ytMeta();const desc=['Full video on the channel: @TradeWithBK',md&&md.tail,'#Shorts'].filter(Boolean).join('\n\n');
-    const r=await ytUpload({blob:shortBlob,title:$('shT').value,desc,tags:(md?md.tags:[]).concat(['shorts']),priv:$('shPriv').value,st:S,bar:$('shBar')});
+    const r=await ytUpload({blob:shortBlob,title:$('shT').value,desc,tags:(md?md.tags:[]).concat(['shorts']),priv:$('shPriv').value,thumbUrl:shortThumbIdx>=0?ep.m+'/thumbs/short-'+shortThumbIdx+'.jpg':undefined,st:S,bar:$('shBar')});
     $('shBar').style.display='none';S('<span class="ok">Short uploaded as '+$('shPriv').value+'.</span> <a href="https://studio.youtube.com/video/'+r.id+'/edit" target="_blank" rel="noopener">Open it in YouTube Studio</a> to check it, then make it public.');
   }catch(e){S('<span class="err">'+(e&&e.message?e.message:e)+'</span>');}
   btn.disabled=false;};

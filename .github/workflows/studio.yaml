@@ -16,7 +16,7 @@ on:
         description: 'Which episode to build'
         type: choice
         default: daily
-        options: [daily, weekly, welcome, bottom]
+        options: [daily, weekly]
 
 permissions:
   contents: write
@@ -46,7 +46,7 @@ jobs:
           if [ "${{ github.event_name }}" = "schedule" ] && [ "${{ github.event.schedule }}" = "55 23 * * 5" ]; then m=weekly; fi
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then m="${{ inputs.mode }}"; fi
           if [ "${{ github.event_name }}" = "push" ] && [ -f research-trigger/studio.txt ]; then m=$(sed -n 1p research-trigger/studio.txt | tr -cd 'a-z'); fi
-          case "$m" in daily|weekly|welcome|bottom) ;; *) m=daily;; esac
+          case "$m" in daily|weekly) ;; *) m=daily;; esac
           echo "m=$m" >> "$GITHUB_OUTPUT"
 
       - name: Install the video tools
@@ -79,6 +79,7 @@ jobs:
           mkdir -p /tmp/pub
           if git fetch -q --depth=1 origin studio-latest 2>/dev/null; then git archive FETCH_HEAD | tar -x -C /tmp/pub; fi
           m="${{ steps.mode.outputs.m }}"
+          rm -rf /tmp/pub/welcome /tmp/pub/bottom   # old one-off templates are no longer offered
           rm -rf "/tmp/pub/$m"; mkdir -p "/tmp/pub/$m"
           cp studio-out/$m/{visuals.mp4,thumbnail.png,thumbnail-bg.png,studio-bg.png,script.txt,metadata.txt,teleprompter.html,meta.json,scenes.json} "/tmp/pub/$m/"
           [ -d studio-out/$m/stills ] && cp -r studio-out/$m/stills "/tmp/pub/$m/stills"
@@ -86,6 +87,7 @@ jobs:
           [ -d studio-out/$m/thumbs ] && cp -r studio-out/$m/thumbs "/tmp/pub/$m/thumbs"
           cp studio/combine.html /tmp/pub/combine.html
           cp studio/popover.js /tmp/pub/popover.js
+          cp studio/gh.js /tmp/pub/gh.js
           node studio/publish-index.js /tmp/pub
           cd /tmp/pub
           rm -rf .git; git init -q -b studio-latest

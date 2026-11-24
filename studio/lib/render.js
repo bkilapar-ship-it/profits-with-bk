@@ -570,7 +570,7 @@ function studioBgHtml(ep, dir) {
 
 
 /** A thumbnail for ONE scene, with no photo: brand, big headline, and the scene's own visual as a framed card. */
-function sceneThumbHtml(ep, i, dir, stillFile) {
+function sceneThumbHtml(ep, i, dir, stillFile, vertical) {
   const sc = ep.scenes[i], raw = String(sc.heading || '').trim().toUpperCase(), words = raw.split(/\s+/);
   const last = words.length > 1 ? words.pop() : '', first = words.join(' ');
   const len = raw.length, fs0 = len <= 10 ? 150 : len <= 16 ? 118 : len <= 24 ? 92 : len <= 32 ? 74 : 60;
@@ -598,6 +598,24 @@ function sceneThumbHtml(ep, i, dir, stillFile) {
     <div class="abs" style="left:560px;top:110px;width:700px;height:480px;background:radial-gradient(closest-side,rgba(${accRgb},.55),transparent 72%);filter:blur(10px)"></div>
     <div class="abs" style="left:580px;top:150px;width:660px;height:371px;transform:rotate(-3deg);border-radius:20px;overflow:hidden;border:5px solid ${acc};box-shadow:0 0 0 3px rgba(0,0,0,.6),0 0 60px rgba(${accRgb},.7),0 24px 50px rgba(0,0,0,.7)"><img src="${stillFile}" style="width:100%;height:100%;object-fit:cover"></div>` : '';
   const badge = hero ? `<div class="abs" style="left:${stillFile ? 770 : 640}px;top:${stillFile ? 470 : 250}px;transform:rotate(-4deg);display:flex;align-items:center;gap:16px;padding:14px 34px 16px 26px;border-radius:22px;background:linear-gradient(135deg,rgba(0,0,0,.92),rgba(10,16,28,.92));border:4px solid ${acc};box-shadow:0 0 44px rgba(${accRgb},.75),0 14px 30px rgba(0,0,0,.6);color:${acc}">${icon}<div><div style="font-weight:900;font-size:${hero.length > 6 ? 70 : 96}px;line-height:1;letter-spacing:-.01em;text-shadow:0 0 26px rgba(${accRgb},.7)">${esc(hero)}</div>${sub ? `<div style="font-weight:800;font-size:23px;letter-spacing:.18em;color:#fff;margin-top:4px">${esc(sub)}</div>` : ''}</div></div>` : '';
+  if (vertical) {
+    // 9:16 cover for Shorts. Everything that matters sits in the middle 16:9 band (y 656-1263), the part YouTube keeps when it crops a Short to landscape.
+    const hf = Math.min(170, Math.floor(1700 / (0.66 * Math.max(8, len))));
+    const vimg = stillFile ? `<div class="abs" style="left:90px;top:150px;width:900px;height:506px;transform:rotate(-2deg);border-radius:24px;overflow:hidden;border:6px solid ${acc};box-shadow:0 0 70px rgba(${accRgb},.7),0 26px 60px rgba(0,0,0,.7)"><img src="${stillFile}" style="width:100%;height:100%;object-fit:cover"></div>` : '';
+    const vbadge = hero ? `<div class="abs" style="left:0;right:0;top:1042px;display:flex;justify-content:center"><div style="display:flex;align-items:center;gap:20px;padding:16px 44px 18px 34px;border-radius:26px;background:linear-gradient(135deg,rgba(0,0,0,.92),rgba(10,16,28,.92));border:5px solid ${acc};box-shadow:0 0 60px rgba(${accRgb},.75);color:${acc};transform:rotate(-2deg)">${icon}<div><div style="font-weight:900;font-size:${hero.length > 6 ? 96 : 124}px;line-height:1;text-shadow:0 0 30px rgba(${accRgb},.7)">${esc(hero)}</div>${sub ? `<div style="font-weight:800;font-size:30px;letter-spacing:.18em;color:#fff;margin-top:6px">${esc(sub)}</div>` : ''}</div></div></div>` : '';
+    const vtick = st ? `<div class="abs" style="left:0;right:0;top:1330px;text-align:center"><div style="font-weight:800;font-size:64px;color:#fff;text-shadow:0 0 24px rgba(${accRgb},.6)">${esc(st.ticker)}</div>${num(st.vs200) ? `<span class="chip g" style="font-size:30px;padding:8px 22px;margin-top:12px">${st.vs200 >= 0 ? '+' : '−'}${Math.abs(st.vs200).toFixed(1)}% vs 200-DAY AVERAGE</span>` : ''}</div>` : '';
+    return `<!doctype html><html><head><meta charset="utf-8"><style>${fontCss(dir)}${CSS.replace(/html,body\{width:1920px;height:1080px/, 'html,body{width:1080px;height:1920px')}</style></head><body>
+    ${bgCandles(1080, 1920, 31 + i)}
+    <div class="abs" style="inset:0;background:radial-gradient(ellipse at 50% 42%,rgba(${accRgb},.30),transparent 60%),linear-gradient(180deg,rgba(0,0,0,.55),rgba(0,0,0,.1) 40%,rgba(0,0,0,.6))"></div>
+    <div class="abs" style="left:-200px;top:1500px;width:1700px;height:30px;transform:rotate(-8deg);background:linear-gradient(90deg,transparent,${acc} 30%,${acc} 70%,transparent);opacity:.85;box-shadow:0 0 34px ${acc}"></div>
+    <div class="abs" style="left:60px;top:46px;display:flex;align-items:center;gap:16px">${logoSvg(70, { id: 'sthv' })}<span style="font-weight:800;letter-spacing:.14em;font-size:30px">TRADE WITH BK</span></div>
+    ${vimg}
+    <div class="abs" style="left:0;right:0;top:684px;text-align:center"><span style="display:inline-block;font-weight:800;font-size:28px;letter-spacing:.2em;color:#000;background:${acc};padding:8px 22px;border-radius:10px;box-shadow:0 0 28px rgba(${accRgb},.7)">${esc(kick)}</span></div>
+    <div class="abs" style="left:70px;right:70px;top:750px;text-align:center"><div class="h1" style="font-size:${hf}px;line-height:1;text-align:center;background:linear-gradient(180deg,#fff 30%,${acc});-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 5px 0 rgba(0,0,0,.55)) drop-shadow(0 0 26px rgba(${accRgb},.5))">${esc(first)}${last ? ` ${esc(last)}` : ''}</div></div>
+    ${vbadge}${vtick}
+    <div class="abs" style="left:0;right:0;bottom:60px;text-align:center"><span class="chip" style="font-size:24px;padding:8px 20px;opacity:.85">EDUCATIONAL ONLY · NOT FINANCIAL ADVICE</span></div>
+    </body></html>`;
+  }
   const h1c = `background:linear-gradient(180deg,#fff 30%,${acc});-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 4px 0 rgba(0,0,0,.55)) drop-shadow(0 0 22px rgba(${accRgb},.5))`;
   return `<!doctype html><html><head><meta charset="utf-8"><style>${fontCss(dir)}${CSS.replace(/html,body\{width:1920px;height:1080px/, 'html,body{width:1280px;height:720px')}</style></head><body>
     ${bgCandles(1280, 720, 11 + i)}
@@ -629,6 +647,11 @@ async function renderBrandAssets(ep, outDir, { chromium }) {
       const f = path.join(work, `sceneth-${i}.html`); fs.writeFileSync(f, sceneThumbHtml(ep, i, work, rel));
       await page.setViewportSize({ width: 1280, height: 720 }); await page.goto('file://' + f); await page.evaluate(() => document.fonts.ready);
       await page.screenshot({ path: path.join(td, `scene-${i}.png`) });
+      // 9:16 cover for a Short made from this scene (jpeg keeps it under YouTube's 2 MB limit)
+      const fv = path.join(work, `shortth-${i}.html`); fs.writeFileSync(fv, sceneThumbHtml(ep, i, work, rel, true));
+      await page.setViewportSize({ width: 1080, height: 1920 }); await page.goto('file://' + fv); await page.evaluate(() => document.fonts.ready);
+      await page.screenshot({ path: path.join(td, `short-${i}.jpg`), type: 'jpeg', quality: 90 });
+      await page.setViewportSize({ width: 1280, height: 720 });
     }
   } finally { await browser.close(); fs.rmSync(work, { recursive: true, force: true }); }
 }
