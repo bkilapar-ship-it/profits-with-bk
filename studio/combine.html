@@ -55,9 +55,14 @@ button.go{border-radius:14px;box-shadow:0 6px 20px rgba(37,99,235,.35)}
     <details><summary>One-time setup (about 5 minutes)</summary><ol class="mut"><li>Open console.cloud.google.com, create a project, and enable <b>YouTube Data API v3</b>.</li><li>APIs &amp; Services, OAuth consent screen: set it to External and add your own Google account as a test user.</li><li>Credentials, Create credentials, OAuth client ID, type <b>Web application</b>. Under Authorized JavaScript origins add the address of this site (the part before /studio/).</li><li>Paste the client ID above.</li></ol><p class="mut">Until Google audits the project, YouTube keeps API uploads private. That is fine here: you switch it to public by hand.</p></details>
   </details></div>
 <div class="card" id="shcard"><div class="step"><span class="n">3</span><div><h2>Make Shorts</h2><p class="mut">Pick scenes (or just part of one). Each Short is vertical, uses your voice only and shows the visual with big captions. Up to 3 minutes; under 60 seconds works best.</p></div></div>
-  <div class="row"><button id="shAll" type="button">Tick all</button><button id="shNone" type="button">Clear</button><button id="shPc" type="button">Calls Short</button><button id="shPp" type="button">How we performed</button></div>
+  <div class="row"><button id="shAll" type="button">Tick all</button><button id="shNone" type="button">Clear</button><button id="shPp" type="button">How we performed Short</button></div>
   <div class="lbl">Link to the full video</div><input id="shLink" class="in" placeholder="https://youtu.be/… (filled in automatically after you upload the full video)" inputmode="url">
   <p class="mut" style="margin:-4px 0 10px;font-size:13px">It goes at the top of every Short's description. YouTube's own <b>Related video</b> button can only be set by hand: in YouTube Studio open the Short, tap Related video and pick the full video.</p>
+  <details class="adv" id="addBox" style="margin:10px 0"><summary><b>Add-on clips for the end of a Short</b> (record each one once)</summary>
+    <p class="mut" style="font-size:13px">Short voice lines you record one time. They are kept on this phone and added automatically to the end of a Short, so the main video never needs them. Voice only, no face.</p>
+    <div id="adds"></div></details>
+  <label class="mrow" style="display:flex;gap:10px;align-items:center;margin:6px 0"><input type="checkbox" id="addFull"><span>End with the clip: <i>for the full list of today's signals, watch the full video</i></span></label>
+  <label class="mrow" style="display:flex;gap:10px;align-items:center;margin:6px 0"><input type="checkbox" id="addSub"><span>End with the clip: <i>if the calls are useful, please like and subscribe</i></span></label>
   <div id="shList"></div><div id="shTot" class="mut" style="margin:8px 0"></div>
   <div class="row"><button id="shGo" class="go">Create the Short</button></div>
   <p class="warn">Like the full video, it plays that part of your recording in real time. Keep the page open.</p>
@@ -415,10 +420,40 @@ function shFill(){const el=$('shList');if(!el)return;const keep=new Set(shSel())
       +'<div class="mut" style="display:flex;gap:8px;align-items:center;margin:6px 0 0 30px;font-size:13px">From <input class="shA" type="number" min="0" max="'+Math.floor(d)+'" step="0.5" value="'+(pv.a!=null?pv.a:0)+'" style="width:70px;font:inherit;padding:6px;border-radius:8px;border:1px solid #2A3B61;background:#0B1328;color:#fff"> s to <input class="shB" type="number" min="0" max="'+Math.ceil(d)+'" step="0.5" value="'+(pv.b!=null?pv.b:Math.round(d*10)/10)+'" style="width:70px;font:inherit;padding:6px;border-radius:8px;border:1px solid #2A3B61;background:#0B1328;color:#fff"> s <span>(of '+Math.round(d)+' s)</span></div>'
       +'<details style="margin:4px 0 0 30px"><summary class="mut" style="font-size:13px">Show what is said, and when</summary><div class="mut" style="font-size:13px;line-height:1.4">'+tl+'</div></details></div>';}).join(''):'<div class="mut">Choose your recording and set the scene marks first.</div>';
   shTotal();}
-$('shList').onchange=shTotal;$('shList').oninput=shTotal;const shPre=ids=>{document.querySelectorAll('#shList input').forEach(x=>{const sc=scenes[+x.value];x.checked=!!(sc&&ids.includes(sc.id));});shTotal();};if($('shPc'))$('shPc').onclick=()=>shPre(['callsend']);if($('shPp'))$('shPp').onclick=()=>shPre(['perf']);$('shAll').onclick=()=>{document.querySelectorAll('#shList input').forEach(x=>x.checked=true);shTotal();};$('shNone').onclick=()=>{document.querySelectorAll('#shList input').forEach(x=>x.checked=false);shTotal();};
+$('shList').onchange=shTotal;$('shList').oninput=shTotal;const shPre=ids=>{document.querySelectorAll('#shList input').forEach(x=>{const sc=scenes[+x.value];x.checked=!!(sc&&ids.includes(sc.id));});shTotal();};if($('shPp'))$('shPp').onclick=()=>{shPre(['calls']);const i=scenes.findIndex(x=>x.id==='calls'),r=i>=0?document.querySelector('#shList .shr[data-i="'+i+'"]'):null;if(r){const sc=scenes[i],en=(i+1<scenes.length&&marks[i+1]!=null)?marks[i+1]:recDur,d=Math.max(0,(en||0)-(i===0?0:marks[i])),b=Math.max(6,Math.min(d,Math.round((sc.openFrac||0.3)*d+1.5)));r.querySelector('.shA').value=0;r.querySelector('.shB').value=b;shTotal();}$('addSub').checked=true;$('addFull').checked=false;$('addSub').dataset.t='1';$('addFull').dataset.t='1';};$('shAll').onclick=()=>{document.querySelectorAll('#shList input').forEach(x=>x.checked=true);shTotal();};$('shNone').onclick=()=>{document.querySelectorAll('#shList input').forEach(x=>x.checked=false);shTotal();};
 const _ready=ready;ready=function(){_ready();try{shFill();}catch(e){}};
 function shChunks(text){const w=String(text||'').replace(/\s+/g,' ').trim().split(' ').filter(Boolean);const out=[];let cur=[];w.forEach(x=>{cur.push(x);if(cur.length>=5||/[.!?]$/.test(x)||(cur.length>=3&&/[,;:]$/.test(x))){out.push(cur.join(' '));cur=[];}});if(cur.length)out.push(cur.join(' '));return out;}
 function shWrap(g,t,maxW){const w=t.split(' '),L=[];let c='';w.forEach(x=>{const n=c?c+' '+x:x;if(g.measureText(n).width>maxW&&c){L.push(c);c=x;}else c=n;});if(c)L.push(c);return L;}
+
+/* ---- add-on clips: recorded once on this phone (small, kept in their own IndexedDB), added to the end of a Short ---- */
+const ADD_DEF={full:{label:'Line 1: the full list is in the full video',text:"For the full list of today's signals, watch the full video.",big:["FULL LIST OF","TODAY'S SIGNALS","IN THE FULL VIDEO"]},sub:{label:'Line 2: like and subscribe',text:'If these calls are useful to you, please like and subscribe for more videos like this.',big:['FINDING THESE','USEFUL?','LIKE & SUBSCRIBE']}};
+function adb(){return new Promise((res,rej)=>{const r=indexedDB.open('bkstudio-addons',1);r.onupgradeneeded=()=>r.result.createObjectStore('clips');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);setTimeout(()=>rej(new Error('timeout')),5000);});}
+async function aget(k){const d=await adb();return new Promise(res=>{const q=d.transaction('clips').objectStore('clips').get(k);q.onsuccess=()=>res(q.result||null);q.onerror=()=>res(null);});}
+async function aput(k,v){const d=await adb();return new Promise((res,rej)=>{const t=d.transaction('clips','readwrite');t.objectStore('clips').put(v,k);t.oncomplete=()=>res();t.onerror=()=>rej(t.error);});}
+async function adel(k){const d=await adb();return new Promise(res=>{const t=d.transaction('clips','readwrite');t.objectStore('clips').delete(k);t.oncomplete=()=>res();t.onerror=()=>res();});}
+let addRec=null;
+async function addUI(){const box=$('adds');if(!box)return;let h='';
+  for(const k of Object.keys(ADD_DEF)){let rec=null;try{rec=await aget(k);}catch(e){}const d=ADD_DEF[k],txt=(rec&&rec.text)||d.text;
+    h+='<div class="shr" data-k="'+k+'" style="margin:8px 0"><div class="lbl">'+d.label+'</div><input class="in addTxt" value="'+txt.replace(/"/g,'&quot;')+'" aria-label="Words of this clip (used as the caption)">'
+      +'<div class="row" style="margin-top:6px"><button type="button" class="addR">'+(addRec&&addRec.k===k?'Stop':(rec?'Record again':'Record'))+'</button>'+(rec?'<button type="button" class="addP">Play</button><button type="button" class="addD">Delete</button>':'')+'</div>'
+      +'<div class="mut addS" style="font-size:13px;margin-top:4px">'+(addRec&&addRec.k===k?'Recording… say the words above, then tap Stop.':(rec?'Saved ('+rec.dur.toFixed(1)+' s). It is added automatically.':'Not recorded yet: a 4-second text card is used until you record it.'))+'</div></div>';}
+  box.innerHTML=h;
+  box.querySelectorAll('.shr').forEach(r=>{const k=r.dataset.k;
+    r.querySelector('.addR').onclick=async()=>{try{
+      if(addRec&&addRec.k===k){addRec.mr.stop();return;}
+      if(addRec)return;
+      const text=r.querySelector('.addTxt').value.trim()||ADD_DEF[k].text;
+      const st=await navigator.mediaDevices.getUserMedia({audio:true});const mt=['audio/mp4','audio/webm;codecs=opus','audio/webm'].find(t=>MediaRecorder.isTypeSupported(t))||'';
+      const mr=new MediaRecorder(st,mt?{mimeType:mt}:undefined),ch=[],t0=Date.now();mr.ondataavailable=e=>{if(e.data&&e.data.size)ch.push(e.data);};
+      mr.onstop=async()=>{st.getTracks().forEach(t=>t.stop());const b=new Blob(ch,{type:mr.mimeType||mt||'audio/mp4'});addRec=null;try{const buf=await b.arrayBuffer();let dur=(Date.now()-t0)/1000;try{const ab=await getAC().decodeAudioData(buf.slice(0));dur=ab.duration;}catch(e){}await aput(k,{buf,type:b.type,dur,text});}catch(e){alert('Could not save the clip on this phone: '+(e&&e.message?e.message:e));}addUI();};
+      mr.start();addRec={k,mr};addUI();}catch(e){addRec=null;r.querySelector('.addS').innerHTML='<span class="err">'+(e&&e.message?e.message:e)+' (allow the microphone for this page)</span>';}};
+    const pb=r.querySelector('.addP');if(pb)pb.onclick=async()=>{try{const rec=await aget(k);const ac=getAC();ac.resume();const ab=await ac.decodeAudioData(rec.buf.slice(0));const bs=ac.createBufferSource();bs.buffer=ab;bs.connect(ac.destination);bs.start();}catch(e){r.querySelector('.addS').textContent='Could not play it: '+(e&&e.message?e.message:e);}};
+    const db=r.querySelector('.addD');if(db)db.onclick=async()=>{await adel(k);addUI();};
+    r.querySelector('.addTxt').onchange=async()=>{try{const rec=await aget(k);if(rec){rec.text=r.querySelector('.addTxt').value.trim()||ADD_DEF[k].text;await aput(k,rec);}}catch(e){}};});}
+const shAuto=()=>{try{const ids=shSel().map(i=>scenes[i]&&scenes[i].id);const sig=ids.some(x=>/^(setup-|short-|calls$|closest|watch)/.test(x||''));const f=$('addFull'),u=$('addSub');if(f&&!f.dataset.t)f.checked=sig&&!(u&&u.checked);}catch(e){}};
+['addFull','addSub'].forEach(id=>{const e=$(id);if(e)e.onchange=()=>{e.dataset.t='1';};});
+if($('shList'))$('shList').addEventListener('change',shAuto);
+try{addUI();}catch(e){}
 $('shGo').onclick=async()=>{
   const btn=$('shGo');btn.disabled=true;$('shOut').innerHTML='';$('shUpBox').style.display='none';shortBlob=null;const S=h=>$('shSt').innerHTML=h;
   try{
@@ -426,8 +461,10 @@ $('shGo').onclick=async()=>{
     if(!ep||!recUrl||!recDur)throw new Error('Choose your recording in section 2 first.');
     const segs=shSegs();if(!segs.length)throw new Error('Tick at least one scene.');
     if(segs.some(x=>!(x.d>=3)))throw new Error('A ticked scene is too short or its marks are wrong.');
-    const D=segs.reduce((a,x)=>a+x.d,0);if(D>180)throw new Error('A Short can be at most 3 minutes; your selection is '+Math.round(D)+' seconds. Untick a scene.');
+    let D=segs.reduce((a,x)=>a+x.d,0);if(D>180)throw new Error('A Short can be at most 3 minutes; your selection is '+Math.round(D)+' seconds. Untick a scene.');
     const rv=$('rv'),vis=$('vis'),ac=getAC();ac.resume();rv.play().then(()=>rv.pause()).catch(()=>{});
+    const AD=[];for(const k of ['full','sub']){if(!$(k==='full'?'addFull':'addSub').checked)continue;let rec=null;try{rec=await aget(k);}catch(e){}const def=ADD_DEF[k],text=(rec&&rec.text)||def.text;let ab=null,dur=4;if(rec&&rec.buf){try{ab=await ac.decodeAudioData(rec.buf.slice(0));dur=ab.duration+0.6;}catch(e){}}AD.push({k,def,text,ab,dur,chunks:shChunks(text)});}
+    D+=AD.reduce((a,x)=>a+x.dur,0);let addCur=null,addT0=0;
     // load the reveal frames for every ticked scene
     S('Loading the visuals…');const SD={};let needVid=false;let bj=null,cues={};
     try{bj=await fetch(ep.m+'/frames/beats.json').then(r=>r.ok?r.json():null);cues=await fetch(ep.m+'/frames/cues.json').then(r=>r.ok?r.json():{}).catch(()=>({}));}catch(e){}
@@ -451,7 +488,16 @@ $('shGo').onclick=async()=>{
     const vframe=(x,y,w,h,el,sg)=>{const d=SD[sg.i];if(!d.ok){g.drawImage(vis,x,y,w,h);return;}const fr=Math.min(1,el/sg.full);let k=0;d.th.forEach(t=>{if(fr>=t)k++;});k=Math.min(d.B,k);const c=d.im[k]||d.still||d.im[0],bs=k>0?d.im[k-1]:null;
       const tb=k===0?el:Math.max(0,el-d.th[k-1]*sg.full),q0=Math.min(1,tb/0.6),q=q0*q0*(3-2*q0);if(!c)return;
       if(bs){g.drawImage(bs,x,y,w,h);g.globalAlpha=q;g.drawImage(c,x,y,w,h);g.globalAlpha=1;}else g.drawImage(c,x,y,w,h);};
-    const draw=()=>{if(!running)return;const sg=segs[cur],sc=scenes[sg.i],t=rv.currentTime,el=Math.max(0,Math.min(sg.d,t-sg.st)),tot=base+el,se=el+sg.o,fr=Math.min(1,se/sg.full);
+    const drawAdd=()=>{const a=addCur,el=(performance.now()-addT0)/1000,tot=base+Math.min(a.dur,el);
+      g.fillStyle=bg;g.fillRect(0,0,W,H);const gl=g.createRadialGradient(W*.5,H*.35,10,W*.5,H*.35,W);gl.addColorStop(0,'rgba(38,208,255,.14)');gl.addColorStop(1,'rgba(38,208,255,0)');g.fillStyle=gl;g.fillRect(0,0,W,H);
+      g.textAlign='center';g.fillStyle='#fff';g.shadowColor='#26D0FF';g.shadowBlur=18;g.font='800 40px Poppins,Arial,sans-serif';g.fillText('THE 4% SWING TRADES',W/2,90);g.shadowBlur=0;
+      g.fillStyle='#FFC21A';g.font='800 62px Poppins,Arial,sans-serif';a.def.big.forEach((l,j)=>{g.fillText(l,W/2,330+j*84);});
+      if(window.bkPop&&a.k==='sub')bkPop(g,0,620,W,405,el-0.4);
+      const fr=Math.min(1,el/a.dur);let k=0,acc=0;const tw=a.chunks.reduce((x,y)=>x+y.split(' ').length,0)||1;a.chunks.forEach((c,j)=>{if(fr>=acc/tw)k=j;acc+=c.split(' ').length;});
+      g.font='800 50px Poppins,Arial,sans-serif';const L=shWrap(g,a.chunks[k]||'',W-70);L.slice(0,3).forEach((l,j)=>{const y=1090+j*62;g.lineWidth=9;g.strokeStyle='rgba(0,0,0,.85)';g.strokeText(l,W/2,y);g.fillStyle='#fff';g.fillText(l,W/2,y);});
+      g.fillStyle='#8FA3C7';g.font='600 20px Poppins,Arial,sans-serif';g.fillText('Educational only. Not financial advice.',W/2,H-62);g.fillStyle='#FFC21A';g.font='800 26px Poppins,Arial,sans-serif';g.fillText('Full video: '+handle,W/2,H-24);g.textAlign='left';
+      $('shBar').style.display='block';$('shBar').firstChild.style.width=Math.min(100,tot/D*100)+'%';S('Creating… add-on clip '+Math.round(tot)+' of '+Math.round(D)+' s (keep this page open)');raf=requestAnimationFrame(draw);};
+    const draw=()=>{if(!running)return;if(addCur){drawAdd();return;}const sg=segs[cur],sc=scenes[sg.i],t=rv.currentTime,el=Math.max(0,Math.min(sg.d,t-sg.st)),tot=base+el,se=el+sg.o,fr=Math.min(1,se/sg.full);
       g.fillStyle=bg;g.fillRect(0,0,W,H);
       const gl=g.createRadialGradient(W*.5,H*.35,10,W*.5,H*.35,W);gl.addColorStop(0,'rgba(38,208,255,.14)');gl.addColorStop(1,'rgba(38,208,255,0)');g.fillStyle=gl;g.fillRect(0,0,W,H);
       const vx=0,vw=W,vh=Math.round(vw*9/16),vy=300;
@@ -461,7 +507,7 @@ $('shGo').onclick=async()=>{
       g.textAlign='center';g.fillStyle='#fff';g.shadowColor='#26D0FF';g.shadowBlur=18;g.font='800 40px Poppins,Arial,sans-serif';g.fillText('THE 4% SWING TRADES',W/2,90);g.shadowBlur=0;
       g.fillStyle='#FFC21A';g.font='700 24px Poppins,Arial,sans-serif';g.fillText(sc.heading.slice(0,34),W/2,134);
       g.save();g.shadowColor='rgba(38,208,255,.45)';g.shadowBlur=26;g.fillStyle='#000';g.fillRect(vx,vy,vw,vh);g.restore();
-      g.save();g.beginPath();g.rect(vx,vy,vw,vh);g.clip();vframe(vx,vy,vw,vh,se,sg);if(window.bkPop){if(sc.type==='outro'||sc.pop)bkPop(g,vx,vy,vw,vh,se-(sc.pop&&sc.popAt!=null?sc.popAt:bkPopAt(sc.narration))*sg.full);else if(cur===segs.length-1&&tot>D-5)bkPop(g,vx,vy,vw,vh,tot-(D-5));}g.restore();
+      g.save();g.beginPath();g.rect(vx,vy,vw,vh);g.clip();vframe(vx,vy,vw,vh,se,sg);if(window.bkPop){if(sc.type==='outro'||sc.pop)bkPop(g,vx,vy,vw,vh,se-(sc.pop&&sc.popAt!=null?sc.popAt:bkPopAt(sc.narration))*sg.full);else if(!AD.length&&cur===segs.length-1&&tot>D-5)bkPop(g,vx,vy,vw,vh,tot-(D-5));}g.restore();
       const fy=vy+vh,fh=60;
       let k=0;CH[cur].cs.forEach((c,j)=>{if(fr>=c)k=j;});const cap=CH[cur].c[k]||'';
       g.font='800 50px Poppins,Arial,sans-serif';const L=shWrap(g,cap,W-70),cy=fy+fh+70;
@@ -478,6 +524,8 @@ $('shGo').onclick=async()=>{
       await rv.play();
       await new Promise(r=>{const iv=setInterval(()=>{if(rv.ended||rv.currentTime>=sg.en-0.05||rv.currentTime>=(rv.duration||1e9)-0.25){clearInterval(iv);r();}},100);});
       rv.pause();base+=sg.d;}
+    for(const a of AD){addCur=a;addT0=performance.now();if(a.ab){const bs=ac.createBufferSource();bs.buffer=a.ab;bs.connect(dst);bs.start(ac.currentTime+0.25);}await new Promise(r=>setTimeout(r,a.dur*1000));base+=a.dur;}
+    addCur=null;
     running=false;cancelAnimationFrame(raf);vis.pause();try{mr.requestData();}catch(e){}mr.stop();await Promise.race([done,new Promise(r=>setTimeout(r,15000))]);if(wake)try{wake.release();}catch(e){}
     try{src.disconnect(dst);}catch(e){}
     const type=mr.mimeType||mime||'video/mp4',blob=new Blob(chunks,{type}),ext=/mp4/.test(type)?'mp4':'webm',url=URL.createObjectURL(blob);shortBlob=blob;

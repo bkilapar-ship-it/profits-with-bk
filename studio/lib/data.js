@@ -39,7 +39,19 @@ async function fetchBars(symbols, { keyId, secret, base = 'https://data.alpaca.m
 }
 
 /** VIX daily closes [{t,c}] from Cboe (FRED as a fallback). */
+async function fetchVixLive() { // the free VIX history files lag a day; Yahoo's chart has today's value (a close once the market is shut)
+  const res = await fetch('https://query1.finance.yahoo.com/v8/finance/chart/%5EVIX?range=1mo&interval=1d', { headers: { 'User-Agent': 'Mozilla/5.0' }, signal: AbortSignal.timeout(30000) });
+  if (!res.ok) throw new Error('HTTP ' + res.status);
+  const r = (await res.json()).chart.result[0], ts = r.timestamp, cl = r.indicators.quote[0].close, out = [];
+  ts.forEach((t, i) => { if (Number.isFinite(cl[i])) out.push({ t: new Date(t * 1000).toLocaleDateString('en-CA', { timeZone: 'America/New_York' }), c: cl[i] }); });
+  return out;
+}
 async function fetchVix() {
+  const base = await fetchVixFiles();
+  try { const live = await fetchVixLive(); const m = new Map(base.map(x => [x.t, x])); live.forEach(x => m.set(x.t, x)); const out = [...m.values()].sort((a, b) => (a.t < b.t ? -1 : 1)); console.log('VIX latest: ' + out[out.length - 1].t + ' ' + out[out.length - 1].c.toFixed(2)); return out; }
+  catch (e) { console.log('Note: live VIX not available (' + e.message + '), using the history file (last ' + base[base.length - 1].t + ').'); return base; }
+}
+async function fetchVixFiles() {
   const urls = ['https://cdn.cboe.com/api/global/us_indices/daily_prices/VIX_History.csv', 'https://fred.stlouisfed.org/graph/fredgraph.csv?id=VIXCLS'];
   let lastErr;
   for (const u of urls) {
