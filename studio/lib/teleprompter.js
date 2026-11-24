@@ -28,7 +28,7 @@ body.full .pts{display:none}body.full p.full{display:block}
 .blk.now .pts li,.blk.now p.full{color:#fff}.blk:not(.now) .pts li,.blk:not(.now) p.full{color:#8394B8}
 #line{position:fixed;left:0;right:0;top:calc(40px + env(safe-area-inset-top) + var(--ln,22vh));height:0;border-top:2px dashed rgba(91,140,255,.55);pointer-events:none;z-index:3}
 #bar{position:fixed;left:0;right:0;bottom:0;padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:#080D18;border-top:1px solid #1E2A44;z-index:5}
-#row0{margin-bottom:8px}#row0 button{width:100%;background:#0E7A4B;border-color:#0E7A4B;font-size:17px;padding:15px}#row1,#row2{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}#row1{grid-template-columns:1.1fr 1fr 1fr 1fr}#row1 button{padding-left:4px;padding-right:4px}#row2{margin-top:8px}
+#row0{margin-bottom:8px}#rowr{display:none;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}body.recon #rowr{display:grid}#rowr button{background:#7A4B0E;border-color:#C98A2B;font-size:15px;padding:12px 6px}#row0 button{width:100%;background:#0E7A4B;border-color:#0E7A4B;font-size:17px;padding:15px}#row1,#row2{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}#row1{grid-template-columns:1.1fr 1fr 1fr 1fr}#row1 button{padding-left:4px;padding-right:4px}#row2{margin-top:8px}
 button{font:inherit;font-size:15px;font-weight:700;padding:13px 6px;border-radius:13px;border:1px solid #2A3B61;background:#121C33;color:#fff;touch-action:manipulation}
 button.go{background:#2563EB;border-color:#2563EB}button.rec{background:#C0213A;border-color:#C0213A}button.on{outline:2px solid #5B8CFF}
 select{background:#0E1626;color:#fff;border:1px solid #2A3B61;border-radius:10px;padding:10px;font-size:14px}#set{display:none;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px}#set.open{display:grid}
@@ -57,6 +57,7 @@ label{font-size:11px;color:#8FA3C7;display:flex;flex-direction:column;gap:4px;fo
   <div id="row1"><button id="play" class="go">▶ Start</button><button id="cambtn">Camera</button><button id="rec">● Record</button><button id="rst">↺ Restart</button></div>
   <div id="rowm"><button id="mLive">Live: visuals in the video</button><button id="mCam">Camera only</button></div>
   <div id="row0"><button id="next" class="go2">Next visual ▶</button></div>
+  <div id="rowr"><button id="redo">↩ Redo this scene</button><button id="redo2">↩ Redo previous scene</button></div>
   <div id="row2"><button id="mode">Full script</button><button id="mir">Mirror</button><button id="gear">Settings</button></div>
   <div id="row3" style="margin-top:8px"><button id="review" style="width:100%">Review scenes and edit</button></div>
   <div id="rvbar"><button id="rvdone" class="go">▶ Done: back to the teleprompter</button><button id="rvreset">Reset</button></div>
@@ -65,7 +66,7 @@ label{font-size:11px;color:#8FA3C7;display:flex;flex-direction:column;gap:4px;fo
 <script src="../popover.js"></script>
 <script>
 const MD=${JSON.stringify(metaParts(ep)).replace(/</g, '\\u003c')},HEADS=${heads},KEY='${ep.mode}-${ep.asOf}-${sigOf(ep.scenes)}';
-const $=id=>document.getElementById(id);let rt={},lastMark=0;let y=0,run=false,last=0,stream=null,mr=null,chunks=[],t0=0,mime='';
+const $=id=>document.getElementById(id);let rt={},lastMark=0,cuts=[],pendCut=false;let y=0,run=false,last=0,stream=null,mr=null,chunks=[],t0=0,mime='';
 const sc=$('scroller');
 const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 const blks=()=>[...document.querySelectorAll('.blk')];
@@ -99,7 +100,7 @@ function apply(){if(document.body.classList.contains('review'))return;sc.style.t
 let ppw=14;function calcPpw(){try{const w=sc.innerText.trim().split(/\\s+/).length;if(w>20)ppw=sc.scrollHeight/w;}catch(e){}}setInterval(calcPpw,1500);
 function tick(ts){if(run){const dt=(ts-last)/1000;y+=parseFloat($('spd').value)/60*ppw*dt;const max=sc.scrollHeight-$('stage').clientHeight*.8;if(y>=max){y=max;run=false;$('play').textContent='▶ Start';}apply();}last=ts;if(t0)$('clock').textContent=fmt((Date.now()-t0)/1000);requestAnimationFrame(tick);}
 const fmt=s=>String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0');
-$('play').onclick=()=>{run=!run;$('play').textContent=run?'❚❚ Pause':'▶ Start';};
+$('play').onclick=()=>{run=!run;$('play').textContent=run?'❚❚ Pause':'▶ Start';if(run&&pendCut&&t0){const now=(Date.now()-t0)/1000;cuts[cuts.length-1][1]=now;pendCut=false;const bb=vis()[curIdx()];if(bb)rt[bb.dataset.id]=now;$('msg').textContent='Recording the new take. The earlier attempt will be cut out automatically.';}};
 $('next').onclick=()=>{const bl=vis();let cur=0;bl.forEach((b,i)=>{if(b.classList.contains('now'))cur=i;});const j=Math.min(bl.length-1,cur+1);if(j===cur)return;const lineRel=$('line').getBoundingClientRect().top-$('stage').getBoundingClientRect().top;y=Math.max(0,bl[j].offsetTop-lineRel+4);apply();};
 document.querySelectorAll('a.nav').forEach(a=>a.addEventListener('click',e=>{if(typeof mr!=='undefined'&&mr&&mr.state==='recording'&&!confirm('Your recording is still running. Leave this page and lose it?'))e.preventDefault();}));
 $('gear').onclick=()=>{$('set').classList.toggle('open');$('gear').classList.toggle('on');fit();};
@@ -213,7 +214,7 @@ if(lvMode()!=='off')setTimeout(lvPrefetch,1500);
 $('rst').onclick=()=>{
   const recording=mr&&mr.state==='recording';
   if(!confirm(recording?'Restart? This throws away the take so far (nothing is saved) and takes you back to the first page of the script.':'Go back to the first page of the script?'))return;
-  if(recording){stopLive();if(bmr){try{bmr.onstop=null;bmr.ondataavailable=null;bmr.stop();}catch(e){}bmr=null;}mr.onstop=null;mr.ondataavailable=null;try{mr.stop();}catch(e){}chunks=[];rt={};lastMark=0;t0=0;$('rec').textContent='● Record';$('rec').classList.remove('on');}
+  if(recording){stopLive();if(bmr){try{bmr.onstop=null;bmr.ondataavailable=null;bmr.stop();}catch(e){}bmr=null;}mr.onstop=null;mr.ondataavailable=null;try{mr.stop();}catch(e){}chunks=[];rt={};lastMark=0;t0=0;cuts=[];pendCut=false;document.body.classList.remove('recon');$('rec').textContent='● Record';$('rec').classList.remove('on');}
   run=false;$('play').textContent='▶ Start';y=0;apply();$('msg').textContent=recording?'Take discarded. Press Record when you are ready to go again.':'';
 };
 $('rec').onclick=async()=>{
@@ -229,13 +230,59 @@ $('rec').onclick=async()=>{
   const takeId=Date.now();let ci=0;idbStart(takeId);
   mr.ondataavailable=e=>{if(e.data&&e.data.size){chunks.push(e.data);idbPut(takeId,ci++,e.data);}};
   bmr=null;bchunks=[];if(useLive&&$('lb').value==='on'){try{bmr=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:3e6,audioBitsPerSecond:96e3}:undefined);bmr.ondataavailable=e=>{if(e.data&&e.data.size)bchunks.push(e.data);};}catch(e){bmr=null;}}
-  const fin=()=>{if(fin.done)return;fin.done=true;t0=0;store.set('bkstudio-marks2-'+KEY,{order:vis().map(b=>b.dataset.id),t:rt});$('rec').textContent='● Record';$('rec').classList.remove('on');const type=mr.mimeType||mime||'video/mp4';const blob=new Blob(chunks,{type});const ext=/mp4/.test(type)?'mp4':'webm';const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(window._lg&&window._lg.used?'trade-with-bk-':'recording-')+'${esc(ep.asOf)}.'+ext;document.body.appendChild(a);a.click();a.remove();const mainUrl=a.href,mainName=a.download;let bkUrl='',bkName='';
-  const showRes=()=>{$('res').innerHTML='<h2>Your take is ready</h2><p>Check the preview below. '+(window._lg&&window._lg.used?'The charts should be on the right and you on the left.':'This one is camera only.')+(hiccups?' The camera stalled '+hiccups+' time(s), so watch the whole preview.':'')+(window._diag?' <small style="opacity:.7">['+window._diag+']</small>':'')+'</p>'+(blob.size<120e6?'<video src="'+mainUrl+'" controls playsinline></video>':'<p>This video is large, so it is not previewed here. Save it, then open it from Files or Photos to check it.</p>')+'<a class="btn" href="'+mainUrl+'" download="'+mainName+'">Save the finished video</a>'+(bkUrl?'<a class="btn alt" href="'+bkUrl+'" download="'+bkName+'">Save the camera-only backup (no visuals)</a>':'')+ytDetails()+'<a class="btn alt" href="#" id="resx">Close and record again</a>';$('res').classList.add('on');const x=$('resx');if(x)x.onclick=e=>{e.preventDefault();$('res').classList.remove('on');$('res').innerHTML='';};};
+  let rawBlob=null;const finCore=()=>{t0=0;document.body.classList.remove('recon');store.set('bkstudio-marks2-'+KEY,{order:vis().map(b=>b.dataset.id),t:rt});$('rec').textContent='● Record';$('rec').classList.remove('on');const type=mr.mimeType||mime||'video/mp4';const blob=new Blob(chunks,{type});const ext=/mp4/.test(type)?'mp4':'webm';const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(window._lg&&window._lg.used?'trade-with-bk-':'recording-')+'${esc(ep.asOf)}.'+ext;document.body.appendChild(a);a.click();a.remove();const mainUrl=a.href,mainName=a.download;let bkUrl='',bkName='';
+  const showRes=()=>{$('res').innerHTML='<h2>Your take is ready</h2><p>Check the preview below. '+(window._lg&&window._lg.used?'The charts should be on the right and you on the left.':'This one is camera only.')+(hiccups?' The camera stalled '+hiccups+' time(s), so watch the whole preview.':'')+(window._diag?' <small style="opacity:.7">['+window._diag+']</small>':'')+'</p>'+(blob.size<120e6?'<video src="'+mainUrl+'" controls playsinline></video>':'<p>This video is large, so it is not previewed here. Save it, then open it from Files or Photos to check it.</p>')+'<a class="btn" href="'+mainUrl+'" download="'+mainName+'">Save the finished video</a>'+(rawBlob?'<a class="btn alt" href="'+URL.createObjectURL(rawBlob)+'" download="uncut-take-${esc(ep.asOf)}.'+ext+'">Save the uncut original (with the retakes)</a>':'')+(bkUrl?'<a class="btn alt" href="'+bkUrl+'" download="'+bkName+'">Save the camera-only backup (no visuals)</a>':'')+ytDetails()+'<a class="btn alt" href="#" id="resx">Close and record again</a>';$('res').classList.add('on');const x=$('resx');if(x)x.onclick=e=>{e.preventDefault();$('res').classList.remove('on');$('res').innerHTML='';};};
   if(bmr&&bmr.state!=='inactive'){const bm=bmr;bm.onstop=()=>{const bb=new Blob(bchunks,{type:bm.mimeType||type});bkUrl=URL.createObjectURL(bb);bkName='camera-backup-${esc(ep.asOf)}.'+ext;showRes();};try{bm.stop();}catch(e){showRes();}}else showRes();
   stopLive();$('msg').textContent=(hiccups?'The camera stalled '+hiccups+' time(s) during this take, so check your video. ':'')+(window._lg&&window._lg.used?'Your finished video is saved (camera and visuals together). ':'Saved. ')+'If nothing downloaded, long-press the video that opened and choose Save.';};
+  const fin=async()=>{if(fin.done)return;fin.done=true;
+    if(pendCut&&t0)cuts[cuts.length-1][1]=(Date.now()-t0)/1000;
+    if(!cuts.length||!cuts.every(c=>c[1]!=null)){finCore();return;}
+    const recLen=(Date.now()-t0)/1000,type0=mr.mimeType||mime||'video/mp4',raw=new Blob(chunks,{type:type0}),keep=keepRanges(recLen),removed=cuts.reduce((a,c)=>a+c[1]-c[0],0);
+    $('res').innerHTML='<h2>Removing your retakes…</h2><p>'+cuts.length+' retake'+(cuts.length>1?'s':'')+' ('+Math.round(removed)+' s) are being cut out. This runs in real time, so it takes about as long as the final video. Keep this page open and the screen on. <b id="cleanp">0%</b></p>';$('res').classList.add('on');
+    getWake();
+    try{const cb=await cleanTake(raw,keep,p=>{const e=$('cleanp');if(e)e.textContent=Math.round(p*100)+'%';});
+      if(!cb||cb.size<50000)throw new Error('The cleaned video came out empty.');
+      Object.keys(rt).forEach(k=>{rt[k]=adjTime(rt[k]);});rawBlob=raw;chunks=[cb];
+    }catch(e){$('msg').textContent='Could not cut the retakes automatically ('+(e&&e.message?e.message:e)+'). Saving the uncut take; the retakes are at '+cuts.map(c=>mm(c[0])+' to '+mm(c[1])).join(', ')+'. Chapter times in the details below are for the uncut take.';}
+    finCore();};
   window._fin=fin;mr.onstop=fin;
-  rt={};{const v0=vis();if(v0[0])rt[v0[0].dataset.id]=0;}lastMark=0;mr.start(1000);if(bmr)try{bmr.start(2000);}catch(e){}t0=Date.now();hiccups=0;getWake();wCt=-1;wAt=performance.now();if(useLive){live=true;liveId=null;const v1=vis();if(v1[0])showScene(v1[0].dataset.id);liveDraw(window._lg.W,window._lg.H,window._lg.c,lvMode());}$('rec').textContent='■ Stop and save';$('rec').classList.add('on');y=0;apply();
+  rt={};{const v0=vis();if(v0[0])rt[v0[0].dataset.id]=0;}lastMark=0;mr.start(1000);if(bmr)try{bmr.start(2000);}catch(e){}cuts=[];pendCut=false;document.body.classList.add('recon');t0=Date.now();hiccups=0;getWake();wCt=-1;wAt=performance.now();if(useLive){live=true;liveId=null;const v1=vis();if(v1[0])showScene(v1[0].dataset.id);liveDraw(window._lg.W,window._lg.H,window._lg.c,lvMode());}$('rec').textContent='■ Stop and save';$('rec').classList.add('on');y=0;apply();
 };
+
+/* ---- retakes: redo a scene while recording; the failed attempt is cut out afterwards ---- */
+function curIdx(){const v=vis();let c=0;v.forEach((b,i)=>{if(b.classList.contains('now'))c=i;});return c;}
+function redoTo(idx){if(!(mr&&mr.state==='recording')||!t0)return;const v=vis(),b=v[idx];if(!b)return;
+  const id=b.dataset.id,a0=rt[id]!==undefined?rt[id]:0;
+  if(!pendCut){cuts.push([a0,null]);pendCut=true;}else if(a0<cuts[cuts.length-1][0])cuts[cuts.length-1][0]=a0;
+  for(let j=idx;j<v.length;j++)delete rt[v[j].dataset.id];lastMark=idx-1;
+  run=false;$('play').textContent='▶ Start';const lineRel=$('line').getBoundingClientRect().top-$('stage').getBoundingClientRect().top;y=Math.max(0,b.offsetTop-lineRel+4);apply();if(live)showScene(id);
+  $('msg').textContent='Scene '+(idx+1)+': take a breath, then press Start and read it again from the top. The earlier attempt is cut out automatically.';}
+$('redo').onclick=()=>redoTo(curIdx());$('redo2').onclick=()=>redoTo(Math.max(0,curIdx()-1));
+function keepRanges(len){const cs=cuts.map(c=>[c[0],c[1]==null?len:c[1]]).sort((a,b)=>a[0]-b[0]);const out=[];let p=0;cs.forEach(c=>{if(c[0]>p+0.05)out.push([p,c[0]]);p=Math.max(p,c[1]);});if(len>p+0.05)out.push([p,len]);return out;}
+function adjTime(t){let d=0;cuts.forEach(c=>{if(c[1]!=null&&c[1]<=t+0.001)d+=c[1]-c[0];});return Math.max(0,t-d);}
+async function cleanTake(blob,keep,onP){
+  const url=URL.createObjectURL(blob),v=document.createElement('video');v.playsInline=true;v.preload='auto';v.src=url;v.style.cssText='position:fixed;left:-9999px;top:0;width:2px;height:2px';document.body.appendChild(v);
+  try{
+    await new Promise((res,rej)=>{v.onloadedmetadata=res;v.onerror=()=>rej(new Error('The browser could not reopen the take.'));setTimeout(res,8000);});
+    const W=v.videoWidth||1280,H=v.videoHeight||720,cv=document.createElement('canvas');cv.width=W;cv.height=H;const g=cv.getContext('2d');
+    const AC=window.AudioContext||window.webkitAudioContext,ac=new AC();try{await ac.resume();}catch(e){}
+    const src=ac.createMediaElementSource(v),dst=ac.createMediaStreamDestination();src.connect(dst);
+    const st=cv.captureStream(30);dst.stream.getAudioTracks().forEach(t=>st.addTrack(t));
+    const out=[],m=new MediaRecorder(st,mime?{mimeType:mime,videoBitsPerSecond:H>=1000?6e6:3e6,audioBitsPerSecond:128e3}:undefined);m.ondataavailable=e=>{if(e.data&&e.data.size)out.push(e.data);};
+    const stopped=new Promise(r=>{m.onstop=r;});let running=true;const draw=()=>{if(!running)return;try{g.drawImage(v,0,0,W,H);}catch(e){}requestAnimationFrame(draw);};
+    const seek=t=>new Promise(r=>{v.addEventListener('seeked',()=>r(),{once:true});v.currentTime=Math.max(0,t);setTimeout(r,3000);});
+    const dur=isFinite(v.duration)&&v.duration>0?v.duration:1e9,rg=keep.map(k=>[k[0],Math.min(k[1],dur)]).filter(k=>k[1]-k[0]>0.05),tot=rg.reduce((a,k)=>a+k[1]-k[0],0)||1;let done=0;
+    for(let n=0;n<rg.length;n++){const a=rg[n][0],b=rg[n][1];
+      v.pause();if(m.state==='recording')m.pause();await seek(a);
+      if(n===0){draw();m.start(1000);}else m.resume();
+      v.volume=1;await v.play();
+      await new Promise(r=>{const iv=setInterval(()=>{const c=v.currentTime;onP(Math.min(1,(done+Math.max(0,c-a))/tot));if(v.ended||c>=b-0.04){clearInterval(iv);r();}},40);});
+      done+=b-a;}
+    v.pause();running=false;try{m.requestData();}catch(e){}m.stop();await Promise.race([stopped,new Promise(r=>setTimeout(r,15000))]);
+    try{ac.close();}catch(e){}
+    return new Blob(out,{type:m.mimeType||mime||blob.type});
+  }finally{try{v.remove();}catch(e){}URL.revokeObjectURL(url);}
+}
 try{const sv=store.get('bkstudio-wpm2');if(sv)$('spd').value=sv;}catch(e){}
 $('wpmv').textContent=$('spd').value;$('spd').addEventListener('input',()=>{$('wpmv').textContent=$('spd').value;try{store.set('bkstudio-wpm2',$('spd').value);}catch(e){}});
 loadPlan();calcPpw();requestAnimationFrame(tick);fit();if(location.hash==='#review')$('review').click();
