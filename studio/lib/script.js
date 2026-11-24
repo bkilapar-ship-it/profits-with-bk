@@ -14,9 +14,17 @@ const REASON_TEXT = { 'closed near the day’s low': 'it closed near the low of 
 const sortLive = (a, b) => (a.priority - b.priority) || (b.vs200 - a.vs200);
 /** The calls the channel gave on earlier sessions (days 1-3 of their three-day window): the top maxSetups S&P 500 signals of each session. */
 function callRows(setups, cfg) {
+  // Rebuild what the channel actually featured on each earlier session, oldest first: the same repeat rule as today's picks
+  // (a stock already called in the last 3 sessions is skipped unless it fell more than 4% below that call's close), and the
+  // pick limit in force on that day (5 before 2026-11-24, cfg.maxSetups after).
   const by = {};
   (setups.dip || []).filter(x => x.sp500 && x.sessionsAgo >= 1 && x.sessionsAgo <= 3 && (!cfg.callsFrom || String(x.signalDate) >= cfg.callsFrom)).forEach(x => (by[x.sessionsAgo] = by[x.sessionsAgo] || []).push(x));
-  return Object.keys(by).map(Number).sort((a, b) => a - b).flatMap(k => by[k].sort(sortLive).slice(0, cfg.maxSetups).map(x => ({ ...x, day: k })));
+  const prior = new Map(), out = [];
+  Object.keys(by).map(Number).sort((a, b) => b - a).forEach(k => {
+    const day = by[k].sort(sortLive).filter(x => { const p = prior.get(x.ticker); return !p || (1 - x.close / p.close) * 100 > 4; }).slice(0, String(by[k][0].signalDate) < '2026-11-24' ? 5 : cfg.maxSetups);
+    day.forEach(x => { prior.set(x.ticker, { close: x.close }); out.push({ ...x, day: k }); });
+  });
+  return out.sort((a, b) => a.day - b.day);
 }
 
 function plan(x) {
