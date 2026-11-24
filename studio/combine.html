@@ -31,7 +31,9 @@ summary{cursor:pointer;color:#9DB8FF;font-weight:700;padding:10px 0;list-style:n
 #ytBar,#shBar,#bar{height:8px;border-radius:6px;background:#1B2742;overflow:hidden;margin-top:12px}#ytBar i,#shBar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#2563EB,#26D0FF)}
 button.go{border-radius:14px;box-shadow:0 6px 20px rgba(37,99,235,.35)}
 .notake #ytGo,.notake #shGo,.notake #shUp{opacity:.4;pointer-events:none}
+.embed nav.top{display:none}.embedbar{display:none}.embed .embedbar{display:block;position:sticky;top:0;z-index:9;margin:-18px -16px 14px;padding:calc(10px + env(safe-area-inset-top)) 16px 10px;background:rgba(10,15,28,.94);backdrop-filter:blur(8px);border-bottom:1px solid #22304D}.embedbar button{width:100%}
 </style></head><body class="notake">
+<div class="embedbar"><button type="button" id="embBack">‹ Back to my recording</button></div>
 <nav class="top"><a href="./">‹ Studio</a><a id="navtp" href="daily/teleprompter.html">Teleprompter</a><a class="cur" href="combine.html">Publish</a></nav>
 <h1>Review and publish</h1>
 <p class="mut" id="epline">Check your take, upload it to YouTube, then turn the best scenes into Shorts. Everything happens on this phone.</p>
@@ -157,20 +159,29 @@ let takeBlob=null;
 function idbOpen(){return new Promise((res,rej)=>{const q=indexedDB.open('bkstudio-rec',1);q.onupgradeneeded=()=>{const d=q.result;d.createObjectStore('chunks',{autoIncrement:true});d.createObjectStore('meta');};q.onsuccess=()=>res(q.result);q.onerror=()=>rej(q.error);});}
 async function idbTake(){try{const d=await idbOpen();return await new Promise(r=>{const t=d.transaction(['chunks','meta'],'readonly');const m=t.objectStore('meta').get('cur'),c=t.objectStore('chunks').getAll();t.oncomplete=()=>r({meta:m.result,chunks:(c.result||[]).sort((a,b)=>a.i-b.i).map(x=>x.blob)});t.onerror=()=>r(null);});}catch(e){return null;}}
 async function idbClear(){try{const d=await idbOpen();await new Promise(r=>{const t=d.transaction(['chunks','meta'],'readwrite');t.objectStore('chunks').clear();t.objectStore('meta').clear();t.oncomplete=r;t.onerror=r;t.onabort=r;});}catch(e){}}
+const EMBED=new URLSearchParams(location.search).get('embed')==='1';if(EMBED)document.documentElement.classList.add('embed'),document.body.classList.add('embed');
+let _epsReady=false,_pending=null;
+function showTake(blob,at,note){const I=$('takeinfo');takeBlob=blob;lastBlob=blob;
+  const mins=Math.max(1,Math.round((Date.now()-at)/60000)),ago=mins<2?'just now':mins<90?mins+' min ago':Math.round(mins/60)+' h ago',mb=(blob.size/1048576).toFixed(0);
+  $('takeSave').style.display='';$('takeDel').style.display='';
+  I.textContent='Recorded '+ago+' · '+mb+' MB · loading the preview…';
+  $('prev').addEventListener('loadedmetadata',()=>{I.textContent='Recorded '+ago+(isFinite($('prev').duration)?' · '+fmt($('prev').duration):'')+' · '+mb+' MB'+(note||'')+'. Preview it, then publish below.';},{once:true});
+  useRec(blob);}
+/* the teleprompter hands the finished video straight over (no storage needed) */
+window.bkTake=function(blob,at){_pending={blob,at:at||Date.now()};if(_epsReady){showTake(_pending.blob,_pending.at);_pending=null;}};
+if($('embBack'))$('embBack').onclick=()=>{try{parent.document.getElementById('revf').remove();}catch(e){history.back();}};
 async function loadTake(){
-  const I=$('takeinfo');I.innerHTML='Opening your latest take… this can take a few seconds for a long video.';
+  _epsReady=true;
+  if(_pending){showTake(_pending.blob,_pending.at);_pending=null;return;}
+  if(EMBED){$('takeinfo').textContent='Waiting for your recording…';return;}
+  const I=$('takeinfo');I.innerHTML='Opening your latest take… this can take a few seconds.';
   try{
-    const r=await Promise.race([idbTake(),new Promise(res=>setTimeout(()=>res('timeout'),25000))]);
-    if(r==='timeout'){I.innerHTML='This browser is slow to open the saved take. <button type="button" id="takeRetry" style="margin-left:6px;padding:8px 12px">Try again</button>';$('takeRetry').onclick=loadTake;return;}
+    const r=await Promise.race([idbTake(),new Promise(res=>setTimeout(()=>res('timeout'),12000))]);
+    if(r==='timeout'){I.innerHTML='Your phone would not open the saved take. Go back to the teleprompter and tap <b>Review, publish…</b> straight after recording, or choose the file you saved under <b>Use a different recording file</b>.';return;}
     if(!r||!r.meta||!r.chunks.length){I.innerHTML='No recent take on this phone. Record one in the teleprompter, or open <b>Use a different recording file</b> below.';$('takeSave').style.display='none';$('takeDel').style.display='none';return;}
     if(Date.now()-r.meta.at>2*864e5){await idbClear();I.textContent='Your last take was more than 2 days old, so it was deleted. Record a new one, or choose a file below.';$('takeSave').style.display='none';$('takeDel').style.display='none';return;}
-    const blob=new Blob(r.chunks,{type:r.meta.mime||r.chunks[0].type||'video/mp4'});takeBlob=blob;lastBlob=blob;
-    const mins=Math.max(1,Math.round((Date.now()-r.meta.at)/60000)),ago=mins<90?mins+' min ago':Math.round(mins/60)+' h ago',mb=(blob.size/1048576).toFixed(0);
-    $('takeSave').style.display='';$('takeDel').style.display='';
-    I.textContent='Recorded '+ago+' · '+mb+' MB · loading the preview…';
-    $('prev').addEventListener('loadedmetadata',()=>{I.textContent='Recorded '+ago+(isFinite($('prev').duration)?' · '+fmt($('prev').duration):'')+' · '+mb+' MB · kept on this phone for 2 days. Preview it, then publish below.';},{once:true});
-    useRec(blob);
-  }catch(e){I.innerHTML='<span class="err">Could not open the saved take ('+(e&&e.message?e.message:e)+').</span> <button type="button" id="takeRetry" style="margin-left:6px;padding:8px 12px">Try again</button> Or open <b>Use a different recording file</b> below.';const b=$('takeRetry');if(b)b.onclick=loadTake;}
+    showTake(new Blob(r.chunks,{type:r.meta.mime||r.chunks[0].type||'video/mp4'}),r.meta.at,' · kept on this phone for 2 days');
+  }catch(e){I.innerHTML='<span class="err">Could not open the saved take ('+(e&&e.message?e.message:e)+').</span> Use <b>Use a different recording file</b> below.';}
 }
 $('takeSave').onclick=()=>{if(!takeBlob)return;const u=URL.createObjectURL(takeBlob),ext=/mp4/.test(takeBlob.type)?'mp4':'webm';$('takeOut').innerHTML='<a class="btn dl" href="'+u+'" download="trade-with-bk-'+(ep?ep.j.asOf:'take')+'.'+ext+'">Tap to save the file</a>';};
 $('takeDel').onclick=async()=>{if(!confirm('Discard this take? It is deleted from this phone and cannot be recovered.'))return;await idbClear();takeBlob=null;lastBlob=null;recUrl=null;recDur=0;$('prev').removeAttribute('src');$('prev').style.display='none';$('rv').removeAttribute('src');$('takeOut').innerHTML='';$('takeSave').style.display='none';$('takeDel').style.display='none';$('takeinfo').textContent='Take discarded.';ready();};
