@@ -19,7 +19,7 @@
    "target": 380.55,
    "stop": 306.87,
    "ocoOrderId": "a4623c45-8dd5-41cb-8127-8a22c3fc3ec6",
-   "now": 339.1
+   "now": 345.08
   },
   "VLO": {
    "strategy": "dip",
@@ -34,22 +34,7 @@
    "target": 346.53,
    "stop": 283.07,
    "ocoOrderId": "c341d9ed-a5af-491c-8ba2-17249336811d",
-   "now": 314.84
-  },
-  "FISV": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "sp500",
-   "signalDate": "2026-11-20",
-   "signalClose": 55.88,
-   "entryDate": "2026-11-23",
-   "entry": 56.93,
-   "shares": 90,
-   "target": 59.2,
-   "stop": 48.71,
-   "ocoOrderId": "d79d6943-e428-4a61-8561-2eca0a87a1bc",
-   "now": 58.53
+   "now": 320.47
   },
   "PBF": {
    "strategy": "dip",
@@ -64,7 +49,7 @@
    "target": 60.63,
    "stop": 46,
    "ocoOrderId": "d7b2ba9c-0295-4406-a6b1-ff6939a9d77d",
-   "now": 56.01
+   "now": 56.48
   },
   "VEEV": {
    "strategy": "dip",
@@ -79,7 +64,7 @@
    "target": 281.29,
    "stop": 239.9,
    "ocoOrderId": "3f3408af-1bf8-4f78-8777-f04398ac5d9a",
-   "now": 267.77
+   "now": 271.71
   },
   "W": {
    "strategy": "dip",
@@ -94,7 +79,7 @@
    "target": 98.81,
    "stop": 73.32,
    "ocoOrderId": "9301e4d1-e5a4-48b6-a87c-e55cf99b354f",
-   "now": 92.86
+   "now": 95.43
   }
  },
  "pendingEntries": {},
@@ -1322,6 +1307,23 @@
    "how": "target",
    "usd": 197.08,
    "pct": 4
+  },
+  {
+   "ticker": "FISV",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "sp500",
+   "signalDate": "2026-11-20",
+   "signalClose": 55.88,
+   "entryDate": "2026-11-23",
+   "exitDate": "2026-11-25",
+   "entry": 56.93,
+   "exit": 59.2,
+   "shares": 90,
+   "how": "target",
+   "usd": 204.3,
+   "pct": 3.99
   }
  ],
  "equity": [
@@ -1627,9 +1629,9 @@
   },
   {
    "d": "2026-11-25",
-   "value": 95469,
-   "pct": -4.53,
-   "spy": -8.75
+   "value": 95936,
+   "pct": -4.06,
+   "spy": -7.27
   }
  ],
  "lastOrders": {
