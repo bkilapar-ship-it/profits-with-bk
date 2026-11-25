@@ -27,6 +27,11 @@ const { teleprompterHtml, animOf } = require('./lib/teleprompter');
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > -1 ? (process.argv[i + 1] && !process.argv[i + 1].startsWith('--') ? process.argv[i + 1] : true) : d; };
 
 async function main() {
+  // Pause switch: refuse to build while studio/PAUSED exists (delete the file to resume). --force overrides, for local testing only.
+  if (fs.existsSync(path.join(__dirname, 'PAUSED')) && !arg('force', false)) {
+    console.log('Studio is PAUSED (studio/PAUSED exists), so no episode was built. Delete that file to resume.');
+    return;
+  }
   const mode = arg('mode', 'daily');
   DRAFT = !!arg('draft', false);
   if (DRAFT) console.log('DRAFT MODE: today\'s unfinished bar is included, every figure is intraday and will change by the close.');

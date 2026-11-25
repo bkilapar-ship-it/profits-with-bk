@@ -27,7 +27,21 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Pause switch: while the file studio/PAUSED exists, no episode is built or published.
+  # To resume, delete studio/PAUSED (see studio/PAUSED for why it was added).
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      paused: ${{ steps.p.outputs.paused }}
+    steps:
+      - uses: actions/checkout@v6
+      - id: p
+        run: |
+          if [ -f studio/PAUSED ]; then echo "paused=true" >> "$GITHUB_OUTPUT"; echo "Studio is paused (studio/PAUSED exists). No episode will be built."; else echo "paused=false" >> "$GITHUB_OUTPUT"; fi
+
   build:
+    needs: check
+    if: needs.check.outputs.paused != 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
