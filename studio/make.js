@@ -22,7 +22,7 @@ function dropUnfinishedToday(arr) {
   const last = String(arr[arr.length - 1].t).slice(0, 10);
   return last === today && mins < 16 * 60 + 30 ? arr.slice(0, -1) : arr;
 }
-const { teleprompterHtml } = require('./lib/teleprompter');
+const { teleprompterHtml, animOf } = require('./lib/teleprompter');
 
 const arg = (k, d) => { const i = process.argv.indexOf('--' + k); return i > -1 ? (process.argv[i + 1] && !process.argv[i + 1].startsWith('--') ? process.argv[i + 1] : true) : d; };
 
@@ -139,6 +139,7 @@ async function main() {
   const tickers = ep.scenes.filter(s => s.type === 'setup').map(s => s.data.setup.ticker);
   if (!barsFile && tickers.length) bars = { ...bars, ...(await fetchBars(tickers, { keyId: process.env.ALPACA_KEY_ID, secret: process.env.ALPACA_SECRET_KEY })) };
   prepareCharts(ep, bars);
+  { const sj = JSON.parse(fs.readFileSync(path.join(out, 'scenes.json'), 'utf8')), an = animOf(ep); sj.scenes.forEach((x, i) => { if (an[i]) x.an = an[i]; }); fs.writeFileSync(path.join(out, 'scenes.json'), JSON.stringify(sj, null, 2)); } // real numbers for the beta animated visuals (Shorts)
   fs.writeFileSync(path.join(out, 'teleprompter.html'), teleprompterHtml(ep)); // again, now that the charts' real closes are known (for the beta animated visuals)
   let chromium; try { ({ chromium } = require('playwright')); } catch (e) { throw new Error('playwright is not installed (run: npm install && npx playwright install chromium)'); }
   await renderStills(ep, out, { chromium });

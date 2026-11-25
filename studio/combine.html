@@ -64,6 +64,7 @@ button.go{border-radius:14px;box-shadow:0 6px 20px rgba(37,99,235,.35)}
   <label class="mrow" style="display:flex;gap:10px;align-items:center;margin:6px 0"><input type="checkbox" id="addFull"><span>End with the clip: <i>for the full list of today's signals, watch the full video</i></span></label>
   <label class="mrow" style="display:flex;gap:10px;align-items:center;margin:6px 0"><input type="checkbox" id="addSub"><span>End with the clip: <i>if the calls are useful, please like and subscribe</i></span></label>
   <div id="shList"></div><div id="shTot" class="mut" style="margin:8px 0"></div>
+  <label class="mrow" style="display:flex;gap:10px;align-items:center;margin:6px 0"><input type="checkbox" id="shAnim"><span>Animated visuals (beta): charts draw in, numbers count up, result chips pop. Off by default.</span></label>
   <div class="row"><button id="shGo" class="go">Create the Short</button></div>
   <p class="warn">Like the full video, it plays that part of your recording in real time. Keep the page open.</p>
   <div id="shBar" style="display:none"><i></i></div><div id="shSt" class="mut" style="margin-top:8px"></div>
@@ -142,6 +143,8 @@ function pick(){
   const a=store.get('bkstudio-marks2-'+mkey());$('auto').style.display=(a&&a.t)?'':'none';
   rebuild();if(a&&a.t)$('auto').onclick();
 }
+try{const sa=store.get('bkstudio-anim-shorts');if(sa==='on')$('shAnim').checked=true;}catch(e){}
+$('shAnim').onchange=()=>{store.set('bkstudio-anim-shorts',$('shAnim').checked?'on':'off');};
 function savePlan(){const p=store.get(planKey())||{};p.order=planOrder;p.skip=[...skipSet];store.set(planKey(),p);}
 function rebuild(){ // plan order -> scenes/starts/marks
   scenes=planOrder.filter(id=>!skipSet.has(id)).map(id=>all.find(s=>s.id===id));starts=scenes.map(s=>s.start);
@@ -486,6 +489,9 @@ $('shGo').onclick=async()=>{
     const handle='The 4% Swing Trades';let raf=0,running=true,cur=0,base=0;
     const CH=segs.map(sg=>{const c=shChunks(scenes[sg.i].narration),tot=c.reduce((a,b)=>a+b.split(' ').length,0)||1,cs=[];let acc=0;c.forEach(x=>{cs.push(acc/tot);acc+=x.split(' ').length;});return {c,cs};});
     const bg=g.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#08101F');bg.addColorStop(1,'#02050A');
+    let shAnOff=false,shAnSlow=0;const shRs=[];
+    const shAnim=(x,y,w,h,el,sg)=>{if(!$('shAnim').checked||shAnOff||!window.bkAnim)return;const an=scenes[sg.i]&&scenes[sg.i].an;if(!an)return;const t0=performance.now();let rs=null;if(an.k==='c'){rs=shRs;for(let j=0;j<an.rows.length;j++){const q=el-an.rows[j].f*sg.full;rs[j]=q>=0?q:-1;}}
+      try{bkAnim(g,x,y,w,h,an,el,rs);}catch(e){shAnOff=true;return;}if(performance.now()-t0>20&&++shAnSlow>=25)shAnOff=true;};
     const vframe=(x,y,w,h,el,sg)=>{const d=SD[sg.i];if(!d.ok){g.drawImage(vis,x,y,w,h);return;}const fr=Math.min(1,el/sg.full);let k=0;d.th.forEach(t=>{if(fr>=t)k++;});k=Math.min(d.B,k);const c=d.im[k]||d.still||d.im[0],bs=k>0?d.im[k-1]:null;
       const tb=k===0?el:Math.max(0,el-d.th[k-1]*sg.full),q0=Math.min(1,tb/0.6),q=q0*q0*(3-2*q0);if(!c)return;
       if(bs){g.drawImage(bs,x,y,w,h);g.globalAlpha=q;g.drawImage(c,x,y,w,h);g.globalAlpha=1;}else g.drawImage(c,x,y,w,h);};
@@ -510,7 +516,7 @@ $('shGo').onclick=async()=>{
       g.textAlign='center';g.fillStyle='#fff';g.shadowColor='#26D0FF';g.shadowBlur=18;g.font='800 40px Poppins,Arial,sans-serif';g.fillText('THE 4% SWING TRADES',W/2,90);g.shadowBlur=0;
       g.fillStyle='#FFC21A';g.font='700 24px Poppins,Arial,sans-serif';g.fillText(sc.heading.slice(0,34),W/2,134);stamp();
       g.save();g.shadowColor='rgba(38,208,255,.45)';g.shadowBlur=26;g.fillStyle='#000';g.fillRect(vx,vy,vw,vh);g.restore();
-      g.save();g.beginPath();g.rect(vx,vy,vw,vh);g.clip();vframe(vx,vy,vw,vh,se,sg);if(window.bkPop){if(sc.type==='outro'||sc.pop)bkPop(g,vx,vy,vw,vh,se-(sc.pop&&sc.popAt!=null?sc.popAt:bkPopAt(sc.narration))*sg.full);else if(!AD.length&&cur===segs.length-1&&tot>D-5)bkPop(g,vx,vy,vw,vh,tot-(D-5));}g.restore();
+      g.save();g.beginPath();g.rect(vx,vy,vw,vh);g.clip();vframe(vx,vy,vw,vh,se,sg);shAnim(vx,vy,vw,vh,se,sg);if(window.bkPop){if(sc.type==='outro'||sc.pop)bkPop(g,vx,vy,vw,vh,se-(sc.pop&&sc.popAt!=null?sc.popAt:bkPopAt(sc.narration))*sg.full);else if(!AD.length&&cur===segs.length-1&&tot>D-5)bkPop(g,vx,vy,vw,vh,tot-(D-5));}g.restore();
       const fy=vy+vh,fh=60;
       let k=0;CH[cur].cs.forEach((c,j)=>{if(fr>=c)k=j;});const cap=CH[cur].c[k]||'';
       g.font='800 50px Poppins,Arial,sans-serif';const L=shWrap(g,cap,W-70),cy=fy+fh+70;
