@@ -27,7 +27,7 @@ const CSS = `
 html,body{width:${W}px;height:${H}px;overflow:hidden;background:#000;color:var(--text);font-family:'Poppins',system-ui,sans-serif;font-variant-numeric:tabular-nums}
 body{position:relative;background:radial-gradient(900px 600px at 92% -5%,rgba(38,208,255,.11),transparent 60%),radial-gradient(800px 500px at -5% 105%,rgba(255,59,107,.08),transparent 60%),#000}
 .grid{display:none}
-.top{position:absolute;left:80px;right:80px;top:36px;display:flex;justify-content:space-between;align-items:center;font-weight:700;letter-spacing:.16em;font-size:21px;color:var(--mut)}
+.top{position:absolute;left:80px;right:80px;top:22px;display:flex;justify-content:space-between;align-items:center;font-weight:700;letter-spacing:.16em;font-size:21px;color:var(--mut)}
 .brand{display:flex;align-items:center;gap:14px;color:var(--text);font-weight:800}
 .foot{position:absolute;left:80px;right:80px;bottom:68px;font-size:17px;color:#6F8499;display:flex;justify-content:space-between}
 .tape{position:absolute;left:0;right:0;bottom:0;height:54px;border-top:2px solid rgba(38,208,255,.55);background:linear-gradient(90deg,rgba(38,208,255,.14),rgba(38,208,255,.03));display:flex;align-items:center;padding:0 40px;font-size:22px;font-weight:700;letter-spacing:.06em;color:#7FE3FF;text-shadow:0 0 14px rgba(38,208,255,.55);white-space:nowrap;overflow:hidden;text-transform:uppercase}
@@ -187,7 +187,7 @@ function miniCandles(view, cw, ch) {
 function niceStep(x) { const p = Math.pow(10, Math.floor(Math.log10(x))), f = x / p; return (f < 1.5 ? 1 : f < 3.5 ? 2 : f < 7.5 ? 5 : 10) * p; }
 
 /* ----------------------------------------------------------------- scenes */
-const frame = (inner, date) => `${bgCandles(W, H)}<div class="top"><div class="brand">${logoSvg(46, { glow: false, id: 'tp' })}<span>THE 4% SWING TRADES</span></div><div>${esc(date || '')}</div></div>${inner}<div class="foot"><span>Educational only. Not financial advice or a personal recommendation.</span><span>Backtested results are not a guide to future performance.</span></div><div class="tape"><span>${esc(TAPE)}</span></div>`;
+const frame = (inner, date) => `${bgCandles(W, H)}<div class="top"><div class="brand">${logoSvg(88, { glow: false, id: 'tp' })}<span style="font-size:30px;letter-spacing:.14em">THE 4% SWING TRADES</span></div><div>${esc(date || '')}</div></div>${inner}<div class="foot"><span>Educational only. Not financial advice or a personal recommendation.</span><span>Backtested results are not a guide to future performance.</span></div><div class="tape"><span>${esc(TAPE)}</span></div>`;
 const stat = (label, valueHtml, sub, x, y, w, a) => `<div class="card abs" data-a="${a}" style="left:${x}px;top:${y}px;width:${w}px;height:148px;padding:22px 26px"><div class="lab" style="white-space:nowrap">${label}</div><div class="num" style="font-size:56px;margin-top:6px;white-space:nowrap">${valueHtml}</div>${sub ? `<div class="mut" style="font-size:20px;margin-top:-2px">${sub}</div>` : ''}</div>`;
 const cnt = (to, d, pre, suf, s, e, c = '') => `<span class="${c}" data-count="0|${to}|${d}|${pre}|${suf}|${s}|${e}">${pre}${to.toFixed(d)}${suf}</span>`;
 
@@ -355,6 +355,13 @@ const SCENES = {
   },
   outro: (s, ep) => frame(`<div class="abs" data-a="0,0.3" style="left:80px;top:230px"><div class="kick">THANKS FOR WATCHING</div><div class="h1" style="font-size:96px;margin-top:16px">${esc(ep.cfg.channelName)}</div></div>
       <div class="card abs" data-a="0.2,0.55" style="left:80px;top:520px;width:1760px;padding:44px 50px;font-size:34px;line-height:1.45;color:#C9D6EE">${esc(s.data.disclaimer || '')}</div>`, ep.date),
+  logo: (s, ep) => frame(`
+      ${embers(1920, 1080, 17, 30)}
+      <div class="abs" style="left:610px;top:100px;width:700px;height:700px;border-radius:50%;background:radial-gradient(closest-side,rgba(38,208,255,.45),rgba(31,229,90,.12) 60%,transparent 72%);filter:blur(8px)"></div>
+      <div class="abs ring" style="left:660px;top:150px;width:600px;height:600px;border-radius:50%;border:4px solid rgba(38,208,255,.55)"></div>
+      <div class="abs" data-a="0,0.4" style="left:710px;top:200px;filter:drop-shadow(0 0 50px rgba(38,208,255,.8))">${logoSvg(500)}</div>
+      <div class="abs" data-a="0.3,0.7" style="left:0;right:0;top:800px;text-align:center"><div class="h2" style="font-size:60px;letter-spacing:.06em;text-shadow:0 0 30px rgba(38,208,255,.7)">THE 4% SWING <span style="color:var(--acc)">TRADES</span></div></div>
+      <div class="abs" data-a="0.5,0.9" style="left:0;right:0;top:886px;text-align:center"><span class="chip g" style="font-size:28px;padding:8px 26px">THANK YOU FOR BEING HERE</span></div>`, ep.date),
   bullets: (s, ep) => {
     const d = s.data, items = d.items || [];
     return frame(`<div class="abs" data-a="0,0.3" style="left:80px;top:140px"><div class="kick">${esc(d.kick || '')}</div><div class="h2" style="margin-top:12px">${esc(d.title || s.heading)}</div></div>
@@ -531,14 +538,14 @@ function thumbHtml(ep, dir, art) {
     const words = String(ep.thumbHead).toUpperCase().split(/\s+/), lines = []; let cur = '';
     words.forEach(w => { if ((cur + ' ' + w).trim().length > 12 && cur) { lines.push(cur); cur = w; } else cur = (cur + ' ' + w).trim(); }); if (cur) lines.push(cur);
     const nl = lines.length, fz = nl <= 2 ? 120 : nl === 3 ? 100 : 82, wdn = String(ep.nxd || '').split(' ')[0].toUpperCase();
-    const up = !ep.proud && typeof ep.chg1d === 'number' && ep.chg1d >= 1, down = !ep.proud && typeof ep.chg1d === 'number' && ep.chg1d <= -0.5, top0 = 118, ty = top0 + nl * fz * 1.02 + 24;
+    const up = !ep.proud && typeof ep.chg1d === 'number' && ep.chg1d >= 1, down = !ep.proud && typeof ep.chg1d === 'number' && ep.chg1d <= -0.5, top0 = 142, ty = top0 + nl * fz * 1.02 + 24;
     return `<!doctype html><html><head><meta charset="utf-8"><style>${fontCss(dir)}${CSS.replace(/html,body\{width:1920px;height:1080px/, 'html,body{width:1280px;height:720px')}</style></head><body>
     ${bgCandles(1280, 720, 9)}${priceNums(1280, 720, 7)}
     <div class="abs" style="inset:0;background:radial-gradient(ellipse at 85% 80%,rgba(31,229,90,.38),transparent 55%),radial-gradient(ellipse at 10% 75%,rgba(255,90,20,.22),transparent 50%),linear-gradient(90deg,rgba(0,0,0,.5) 0%,rgba(0,0,0,.15) 55%,transparent 75%)"></div>
     ${embers(1280, 720, 21, 38)}
     <svg class="abs" style="left:620px;top:210px" width="660" height="500" viewBox="0 0 660 500"><path d="M20 460 L170 330 L250 380 L420 190 L520 240 L620 90" fill="none" stroke="#1FE55A" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 18px #1FE55A)" opacity=".9"/><path d="M540 80 L632 78 L624 172" fill="none" stroke="#1FE55A" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 18px #1FE55A)" opacity=".9"/></svg>
     ${art ? (() => { const src = path.join(__dirname, '..', 'assets', 'bk.png'); if (!fs.existsSync(src)) return ''; fs.copyFileSync(src, path.join(dir, 'bk.png')); return `<div class="abs" style="left:790px;top:70px;width:440px;height:440px;border-radius:50%;box-shadow:0 0 0 9px #1FE55A,0 0 60px 14px rgba(31,229,90,.7),0 0 150px rgba(31,229,90,.35);overflow:hidden"><img src="bk.png" style="width:440px;height:440px;object-fit:cover"></div>`; })() : ''}
-    <div class="abs" style="left:56px;top:34px;display:flex;align-items:center;gap:14px">${logoSvg(56, { id: 'th' })}<span style="font-weight:800;letter-spacing:.14em;font-size:22px">THE 4% SWING TRADES</span></div>
+    <div class="abs" style="left:48px;top:22px;display:flex;align-items:center;gap:18px">${logoSvg(104, { id: 'th' })}<span style="font-weight:800;letter-spacing:.12em;font-size:28px">THE 4% SWING TRADES</span></div>
     <div class="abs" style="left:56px;top:${top0}px;width:760px">${lines.map((l, i) => `<div class="h1" style="font-size:${fz}px;line-height:1.02;${i === nl - 1 ? 'color:#3CD8FF;text-shadow:0 0 18px rgba(38,208,255,.95),0 0 48px rgba(38,208,255,.7)' : 'color:#fff;text-shadow:0 0 14px rgba(255,255,255,.55),0 0 40px rgba(120,180,255,.45),0 5px 0 rgba(0,0,0,.6)'}">${esc(l)}</div>`).join('')}</div>
     ${up ? `<div class="abs" style="left:56px;top:${ty}px"><span class="chip g" style="font-size:34px;padding:10px 24px;border-width:3px;box-shadow:0 0 28px rgba(31,229,165,.55)">S&amp;P 500 +${ep.chg1d.toFixed(1)}% TODAY</span></div>` : (down ? `<div class="abs" style="left:56px;top:${ty}px"><span class="chip r" style="font-size:34px;padding:10px 24px;border-width:3px">S&amp;P 500 −${Math.abs(ep.chg1d).toFixed(1)}% TODAY</span></div>` : '')}
     ${ep.proud ? `<div class="abs" style="left:56px;top:${ty + 74}px"><span class="chip g" style="font-size:34px;padding:12px 30px;border-width:3px;border-radius:999px;background:rgba(10,40,24,.8);box-shadow:0 0 34px rgba(31,229,90,.7)">${esc(ep.proud)}</span></div>` : ''}
@@ -620,7 +627,7 @@ function sceneThumbHtml(ep, i, dir, stillFile, vertical) {
     ${bgCandles(1080, 1920, 31 + i)}
     <div class="abs" style="inset:0;background:radial-gradient(ellipse at 50% 42%,rgba(${accRgb},.30),transparent 60%),linear-gradient(180deg,rgba(0,0,0,.55),rgba(0,0,0,.1) 40%,rgba(0,0,0,.6))"></div>
     <div class="abs" style="left:-200px;top:1500px;width:1700px;height:30px;transform:rotate(-8deg);background:linear-gradient(90deg,transparent,${acc} 30%,${acc} 70%,transparent);opacity:.85;box-shadow:0 0 34px ${acc}"></div>
-    <div class="abs" style="left:60px;top:46px;display:flex;align-items:center;gap:16px">${logoSvg(70, { id: 'sthv' })}<span style="font-weight:800;letter-spacing:.14em;font-size:30px">THE 4% SWING TRADES</span></div>
+    <div class="abs" style="left:60px;top:46px;display:flex;align-items:center;gap:16px">${logoSvg(130, { id: 'sthv' })}<span style="font-weight:800;letter-spacing:.12em;font-size:34px">THE 4% SWING TRADES</span></div>
     ${vimg}
     <div class="abs" style="left:0;right:0;top:684px;text-align:center"><span style="display:inline-block;font-weight:800;font-size:28px;letter-spacing:.2em;color:#000;background:${acc};padding:8px 22px;border-radius:10px;box-shadow:0 0 28px rgba(${accRgb},.7)">${esc(kick)}</span></div>
     <div class="abs" style="left:70px;right:70px;top:750px;text-align:center"><div class="h1" style="font-size:${hf}px;line-height:1;text-align:center;background:linear-gradient(180deg,#fff 30%,${acc});-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 5px 0 rgba(0,0,0,.55)) drop-shadow(0 0 26px rgba(${accRgb},.5))">${esc(first)}${last ? ` ${esc(last)}` : ''}</div></div>
@@ -634,7 +641,7 @@ function sceneThumbHtml(ep, i, dir, stillFile, vertical) {
     <div class="abs" style="inset:0;background:radial-gradient(ellipse at 78% 38%,rgba(${accRgb},.30),transparent 55%),linear-gradient(90deg,rgba(0,0,0,.72) 0%,rgba(0,0,0,.25) 58%,transparent 80%)"></div>
     <div class="abs" style="left:-120px;top:560px;width:1600px;height:26px;transform:rotate(-8deg);background:linear-gradient(90deg,transparent,${acc} 30%,${acc} 70%,transparent);opacity:.85;box-shadow:0 0 30px ${acc}"></div>
     <div class="abs" style="left:-120px;top:600px;width:1600px;height:8px;transform:rotate(-8deg);background:linear-gradient(90deg,transparent,#fff 40%,#fff 60%,transparent);opacity:.5"></div>
-    <div class="abs" style="left:56px;top:38px;display:flex;align-items:center;gap:14px">${logoSvg(60, { id: 'sth' })}<span style="font-weight:800;letter-spacing:.14em;font-size:24px">THE 4% SWING TRADES</span></div>
+    <div class="abs" style="left:56px;top:38px;display:flex;align-items:center;gap:14px">${logoSvg(104, { id: 'sth' })}<span style="font-weight:800;letter-spacing:.12em;font-size:28px">THE 4% SWING TRADES</span></div>
     <div class="abs" style="left:56px;top:122px"><span style="display:inline-block;font-weight:800;font-size:23px;letter-spacing:.2em;color:#000;background:${acc};padding:6px 18px;border-radius:8px;box-shadow:0 0 24px rgba(${accRgb},.7)">${esc(kick)}</span></div>
     <div class="abs" style="left:56px;top:178px;width:620px"><div class="h1" style="font-size:${fs0}px;line-height:1;${h1c}">${esc(first)}${last ? ` ${esc(last)}` : ''}</div></div>
     ${tick}${img}${badge}

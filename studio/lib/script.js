@@ -332,7 +332,7 @@ function buildEpisodeInner({ mode, setups, config }) {
   // 2b) a small-channel ask, right BEFORE tonight's calls (the like / subscribe popover fires while it is spoken)
   { const ask = `Before I reveal tonight's calls, a quick word. We're a small channel, and every like and subscribe really helps more people find these videos. So if these calls are genuinely helping you, please tap like and subscribe. It's free, and it keeps the daily briefings coming.`;
     const aw = ask.split(/\s+/), ai = aw.findIndex(x => /^(like|subscribe)/i.test(x.replace(/[^a-z]/gi, '')));
-    add('ask', 'bullets', "BEFORE TONIGHT'S CALLS", ask, { kick: 'A SMALL ASK', title: "We're a small channel", items: ['Are these calls helping you?', 'Tap LIKE and SUBSCRIBE: it is free', 'It helps more people find the channel'] });
+    add('ask', 'logo', "BEFORE TONIGHT'S CALLS", ask, { kick: 'A SMALL ASK', title: "We're a small channel", items: ['Are these calls helping you?', 'Tap LIKE and SUBSCRIBE: it is free', 'It helps more people find the channel'] });
     const sc = scenes[scenes.length - 1]; sc.pop = true; sc.popAt = ai < 0 ? 0.5 : Math.max(0, Math.min(0.95, ai / aw.length)); }
 
   if (nAll) {
