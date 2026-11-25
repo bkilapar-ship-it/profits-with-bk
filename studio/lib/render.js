@@ -191,6 +191,13 @@ const frame = (inner, date) => `${bgCandles(W, H)}<div class="top"><div class="b
 const stat = (label, valueHtml, sub, x, y, w, a) => `<div class="card abs" data-a="${a}" style="left:${x}px;top:${y}px;width:${w}px;height:148px;padding:22px 26px"><div class="lab" style="white-space:nowrap">${label}</div><div class="num" style="font-size:56px;margin-top:6px;white-space:nowrap">${valueHtml}</div>${sub ? `<div class="mut" style="font-size:20px;margin-top:-2px">${sub}</div>` : ''}</div>`;
 const cnt = (to, d, pre, suf, s, e, c = '') => `<span class="${c}" data-count="0|${to}|${d}|${pre}|${suf}|${s}|${e}">${pre}${to.toFixed(d)}${suf}</span>`;
 
+
+const _bkUri = (() => { try { const f = path.join(__dirname, '..', 'assets', 'bk.png'); return fs.existsSync(f) ? 'data:image/png;base64,' + fs.readFileSync(f).toString('base64') : ''; } catch (e) { return ''; } })();
+/** Ember sparks, deterministic, for thumbnails and the opener. */
+function embers(w, h, seed, n) { let a = seed || 5; const r = () => (a = (a * 16807) % 2147483647) / 2147483647; let o = ''; for (let i = 0; i < n; i++) { const x = r() * w, y = h * (0.1 + r() * 0.85), z = 1.8 + r() * 4.2, c = r() < .6 ? '#FF8A1F' : r() < .5 ? '#FFC21A' : '#FF4D2E'; o += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${z.toFixed(1)}" fill="${c}" opacity="${(0.35 + r() * 0.6).toFixed(2)}" style="filter:drop-shadow(0 0 ${(z * 2.5).toFixed(0)}px ${c})"/>`; } return `<svg class="abs" style="left:0;top:0" width="${w}" height="${h}">${o}</svg>`; }
+/** Faded price numbers like a trading screen. */
+function priceNums(w, h, seed) { let a = seed || 3; const r = () => (a = (a * 16807) % 2147483647) / 2147483647; let o = ''; for (let i = 0; i < 16; i++) { const v = (r() < .5 ? '+' : '') + (r() * 900 + 10).toFixed(2); o += `<div class="abs" style="left:${(w * 0.55 + r() * w * 0.43).toFixed(0)}px;top:${(r() * h * 0.95).toFixed(0)}px;font-weight:700;font-size:${22 + Math.round(r() * 18)}px;color:rgba(160,200,255,${(0.08 + r() * 0.12).toFixed(2)})">${v}</div>`; } return o; }
+
 const SCENES = {
   intro: (s, ep) => {
     const d = s.data, m = d.market, k = d.counts || {};
@@ -201,7 +208,10 @@ const SCENES = {
       <div class="abs" data-a="0.45,0.85" style="left:80px;top:760px;display:flex;gap:18px">
         ${d.chips ? d.chips.map((c, i) => `<span class="chip ${['g', 'b', ''][i % 3]}">${esc(c)}</span>`).join('') : `<span class="chip g">${k.dip || 0} S&amp;P long setups</span><span class="chip r">${k.rip || 0} short</span><span class="chip">${k.other || 0} outside the index</span>
         ${m && isNum(m.chg20d) ? `<span class="chip ${m.chg20d <= 0 ? 'a' : 'b'}">S&amp;P 500 20-day ${sgn(m.chg20d)}</span>` : ''}`}</div>
-      ${s.spy ? `<div class="card abs" data-a="0.2,0.6" style="left:1000px;top:230px;width:840px;height:520px;padding:34px 40px"><div class="lab">S&amp;P 500, LAST 60 SESSIONS</div><div class="abs" style="left:40px;top:96px">${s.spy}</div></div>` : ''}`, d.date);
+      ${embers(1920, 1080, 11, 26)}
+      <div class="abs" data-a="0.15,0.55" style="left:1040px;top:120px;width:640px;height:640px;border-radius:50%;box-shadow:0 0 0 12px #1FE55A,0 0 90px 18px rgba(31,229,90,.55),0 0 180px rgba(38,208,255,.3);overflow:hidden;background:#0B1624">${_bkUri ? `<img src="${_bkUri}" style="width:640px;height:640px;object-fit:cover">` : ''}</div>
+      <svg class="abs" data-a="0.3,0.7" style="left:960px;top:420px" width="900" height="560" viewBox="0 0 900 560"><path d="M30 520 L230 380 L330 440 L560 220 L680 290 L840 90" fill="none" stroke="#1FE55A" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 22px #1FE55A)"/><path d="M730 80 L846 76 L838 192" fill="none" stroke="#1FE55A" stroke-width="26" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 22px #1FE55A)"/></svg>
+      ${m && isNum(m.chg1d) ? `<div class="card abs" data-a="0.45,0.85" style="left:1230px;top:800px;width:560px;height:170px;padding:22px 30px;border-color:${m.chg1d >= 0 ? 'var(--up)' : 'var(--down)'}"><div class="lab">S&amp;P 500 TODAY</div><div class="num ${m.chg1d >= 0 ? 'up' : 'down'}" style="font-size:88px;margin-top:4px;white-space:nowrap">${sgn(m.chg1d)}</div></div>` : ''}`, d.date);
   },
   rules: (s, ep) => {
     const item = (i, t, sub, a) => `<div class="card abs" data-a="${a}" style="left:${80 + i * 580}px;top:330px;width:540px;height:520px;padding:44px"><div class="num" style="font-size:120px;color:var(--acc)">${i + 1}</div><div style="font-size:46px;font-weight:800;margin-top:6px">${t}</div><div class="mut" style="font-size:30px;line-height:1.35;margin-top:18px">${sub}</div></div>`;
@@ -521,18 +531,19 @@ function thumbHtml(ep, dir, art) {
     const words = String(ep.thumbHead).toUpperCase().split(/\s+/), lines = []; let cur = '';
     words.forEach(w => { if ((cur + ' ' + w).trim().length > 12 && cur) { lines.push(cur); cur = w; } else cur = (cur + ' ' + w).trim(); }); if (cur) lines.push(cur);
     const nl = lines.length, fz = nl <= 2 ? 120 : nl === 3 ? 100 : 82, wdn = String(ep.nxd || '').split(' ')[0].toUpperCase();
-    const up = typeof ep.chg1d === 'number' && ep.chg1d >= 1, down = typeof ep.chg1d === 'number' && ep.chg1d <= -0.5, top0 = 118, ty = top0 + nl * fz * 1.02 + 24;
+    const up = !ep.proud && typeof ep.chg1d === 'number' && ep.chg1d >= 1, down = !ep.proud && typeof ep.chg1d === 'number' && ep.chg1d <= -0.5, top0 = 118, ty = top0 + nl * fz * 1.02 + 24;
     return `<!doctype html><html><head><meta charset="utf-8"><style>${fontCss(dir)}${CSS.replace(/html,body\{width:1920px;height:1080px/, 'html,body{width:1280px;height:720px')}</style></head><body>
-    ${bgCandles(1280, 720, 9)}
-    <div class="abs" style="inset:0;background:radial-gradient(ellipse at 85% 80%,rgba(31,229,90,.38),transparent 55%),linear-gradient(90deg,rgba(0,0,0,.55) 0%,rgba(0,0,0,.2) 55%,transparent 75%)"></div>
+    ${bgCandles(1280, 720, 9)}${priceNums(1280, 720, 7)}
+    <div class="abs" style="inset:0;background:radial-gradient(ellipse at 85% 80%,rgba(31,229,90,.38),transparent 55%),radial-gradient(ellipse at 10% 75%,rgba(255,90,20,.22),transparent 50%),linear-gradient(90deg,rgba(0,0,0,.5) 0%,rgba(0,0,0,.15) 55%,transparent 75%)"></div>
+    ${embers(1280, 720, 21, 38)}
     <svg class="abs" style="left:620px;top:210px" width="660" height="500" viewBox="0 0 660 500"><path d="M20 460 L170 330 L250 380 L420 190 L520 240 L620 90" fill="none" stroke="#1FE55A" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 18px #1FE55A)" opacity=".9"/><path d="M540 80 L632 78 L624 172" fill="none" stroke="#1FE55A" stroke-width="22" stroke-linecap="round" stroke-linejoin="round" style="filter:drop-shadow(0 0 18px #1FE55A)" opacity=".9"/></svg>
-    ${art ? (() => { const src = path.join(__dirname, '..', 'assets', 'bk.png'); if (!fs.existsSync(src)) return ''; fs.copyFileSync(src, path.join(dir, 'bk.png')); return `<div class="abs" style="left:790px;top:70px;width:440px;height:440px;border-radius:50%;box-shadow:0 0 0 8px #1FE55A,0 0 70px 12px rgba(31,229,90,.55),0 0 140px rgba(38,208,255,.3);overflow:hidden"><img src="bk.png" style="width:440px;height:440px;object-fit:cover"></div>`; })() : ''}
+    ${art ? (() => { const src = path.join(__dirname, '..', 'assets', 'bk.png'); if (!fs.existsSync(src)) return ''; fs.copyFileSync(src, path.join(dir, 'bk.png')); return `<div class="abs" style="left:790px;top:70px;width:440px;height:440px;border-radius:50%;box-shadow:0 0 0 9px #1FE55A,0 0 60px 14px rgba(31,229,90,.7),0 0 150px rgba(31,229,90,.35);overflow:hidden"><img src="bk.png" style="width:440px;height:440px;object-fit:cover"></div>`; })() : ''}
     <div class="abs" style="left:56px;top:34px;display:flex;align-items:center;gap:14px">${logoSvg(56, { id: 'th' })}<span style="font-weight:800;letter-spacing:.14em;font-size:22px">THE 4% SWING TRADES</span></div>
-    <div class="abs" style="left:56px;top:${top0}px;width:760px">${lines.map((l, i) => `<div class="h1" style="font-size:${fz}px;line-height:1.02;${i === nl - 1 ? 'color:var(--acc);text-shadow:0 0 36px rgba(38,208,255,.7)' : 'text-shadow:0 5px 0 #000,0 0 24px rgba(0,0,0,.8)'}">${esc(l)}</div>`).join('')}</div>
+    <div class="abs" style="left:56px;top:${top0}px;width:760px">${lines.map((l, i) => `<div class="h1" style="font-size:${fz}px;line-height:1.02;${i === nl - 1 ? 'color:#3CD8FF;text-shadow:0 0 18px rgba(38,208,255,.95),0 0 48px rgba(38,208,255,.7)' : 'color:#fff;text-shadow:0 0 14px rgba(255,255,255,.55),0 0 40px rgba(120,180,255,.45),0 5px 0 rgba(0,0,0,.6)'}">${esc(l)}</div>`).join('')}</div>
     ${up ? `<div class="abs" style="left:56px;top:${ty}px"><span class="chip g" style="font-size:34px;padding:10px 24px;border-width:3px;box-shadow:0 0 28px rgba(31,229,165,.55)">S&amp;P 500 +${ep.chg1d.toFixed(1)}% TODAY</span></div>` : (down ? `<div class="abs" style="left:56px;top:${ty}px"><span class="chip r" style="font-size:34px;padding:10px 24px;border-width:3px">S&amp;P 500 −${Math.abs(ep.chg1d).toFixed(1)}% TODAY</span></div>` : '')}
-    ${ep.proud ? `<div class="abs" style="left:56px;top:${ty + 74}px"><span class="chip g" style="font-size:34px;padding:10px 24px;border-width:3px;box-shadow:0 0 28px rgba(31,229,165,.55)">${esc(ep.proud)}</span></div>` : ''}
-    ${n ? `<div class="abs" style="left:56px;top:${ty + (up || down ? 74 : 0) + (ep.proud ? 74 : 0)}px"><div class="kick" style="font-size:30px;letter-spacing:.06em;color:var(--amb);text-shadow:0 0 18px rgba(255,194,26,.6)">TOP ${n} STOCKS FOR ${esc(wdn)}</div></div>` : ''}
-    ${t.length ? `<div class="abs" style="left:56px;top:650px;display:flex;gap:10px">${t.map(x => `<span class="chip" style="font-size:22px;padding:5px 14px;opacity:.9">${esc(x)}</span>`).join('')}</div>` : ''}
+    ${ep.proud ? `<div class="abs" style="left:56px;top:${ty + 74}px"><span class="chip g" style="font-size:34px;padding:12px 30px;border-width:3px;border-radius:999px;background:rgba(10,40,24,.8);box-shadow:0 0 34px rgba(31,229,90,.7)">${esc(ep.proud)}</span></div>` : ''}
+    ${n && !ep.proud ? `<div class="abs" style="left:56px;top:${ty + (up || down ? 74 : 0) + (ep.proud ? 74 : 0)}px"><div class="kick" style="font-size:30px;letter-spacing:.06em;color:var(--amb);text-shadow:0 0 18px rgba(255,194,26,.6)">TOP ${n} STOCKS FOR ${esc(wdn)}</div></div>` : ''}
+    ${t.length && !ep.proud ? `<div class="abs" style="left:56px;top:650px;display:flex;gap:10px">${t.map(x => `<span class="chip" style="font-size:22px;padding:5px 14px;opacity:.9">${esc(x)}</span>`).join('')}</div>` : ''}
     </body></html>`;
   }
   const weekly = ep.mode === 'weekly', surv = typeof ep.chg5d === 'number' && ep.chg5d <= -3 && n > 0;
