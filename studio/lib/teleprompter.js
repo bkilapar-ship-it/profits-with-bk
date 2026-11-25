@@ -5,6 +5,35 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;',
 
 const { pointsOf, metaParts } = require('./script');
 const { FRAME_N } = require('./render');
+/* Real numbers for the BETA animated visuals (studio/anim.js): market moves, the pick's recent closes, each call's result. Nothing is invented: a scene without the data gets no animation. */
+const nz = v => typeof v === 'number' && isFinite(v);
+const r2 = v => Math.round(v * 100) / 100;
+function animOf(ep) {
+  const out = {};
+  ep.scenes.forEach((s, i) => {
+    const d = s.data || {};
+    if (s.type === 'market' && d.market) {
+      const m = d.market, bars = [];
+      if (nz(m.chg1d)) bars.push(['TODAY', r2(m.chg1d)]);
+      if (nz(m.chg5d)) bars.push(['5 DAYS', r2(m.chg5d)]);
+      if (nz(m.chg20d)) bars.push(['20 DAYS', r2(m.chg20d)]);
+      const line = Array.isArray(ep.spyCloses) && ep.spyCloses.length > 5 ? ep.spyCloses.map(r2) : null;
+      if (bars.length) out[i] = { k: 'm', bars, line };
+    } else if (s.type === 'setup' && d.setup && Array.isArray(s.view) && s.view.length > 20) {
+      const st = d.setup;
+      out[i] = { k: 's', tk: st.ticker, kind: st.kind === 'rip' ? 'rip' : 'dip', c: s.view.map(b => r2(b.c)), ma: s.view.map(b => (nz(b.sma) ? r2(b.sma) : null)), d5: nz(st.chg5d) ? r2(st.chg5d) : null, v200: nz(st.vs200) ? r2(st.vs200) : null };
+    } else if (s.type === 'calls' && Array.isArray(d.rows) && d.rows.length) {
+      const txt = String(s.narration || ''), tot = Math.max(1, txt.split(/\s+/).filter(Boolean).length), n = d.rows.length;
+      const rows = d.rows.slice(0, 8).map((r, j) => {
+        let at = -1; for (const key of [r.name, r.ticker]) { if (!key) continue; const m = new RegExp('(^|[^A-Za-z])' + String(key).replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '([^A-Za-z]|$)', 'i').exec(txt); if (m) { at = m.index + m[1].length; break; } }
+        const f = at < 0 ? Math.min(0.9, 0.1 + 0.8 * j / n) : Math.max(0, Math.min(0.97, txt.slice(0, at).split(/\s+/).filter(Boolean).length / tot));
+        return { tk: r.ticker, nm: r.name || '', e: nz(r.entry) ? r2(r.entry) : null, cl: nz(r.close) ? r2(r.close) : 0, p: nz(r.pct) ? r2(r.pct) : null, st: r.state || 'open', d: r.day || 1, f: r2(f) };
+      });
+      out[i] = { k: 'c', rows };
+    }
+  });
+  return out;
+}
 function teleprompterHtml(ep) {
   const total = ep.scenes.reduce((s, x) => s + x.dur, 0);
   const blocks = ep.scenes.map((s, i) => `<section class="blk" data-id="${esc(s.id)}" data-i="${i}"><img class="thumb" src="stills/scene-${i}.jpg" alt="" loading="lazy" onerror="this.style.display='none'"><div class="rvc"><button data-a="up">▲ Up</button><button data-a="down">▼ Down</button><button data-a="skip" class="skipbtn">Skip this scene</button></div><div class="cue"></div><ul class="pts">${pointsOf(s).map(x => `<li>${esc(x)}</li>`).join('')}</ul><p class="full">${esc(s.narration)}</p></section>`).join('');
@@ -61,9 +90,10 @@ label{font-size:11px;color:#8FA3C7;display:flex;flex-direction:column;gap:4px;fo
   <div id="row2"><button id="mode">Full script ✓</button><button id="mir">Mirror</button><button id="gear">Settings</button></div>
   <div id="row3" style="margin-top:8px"><button id="review" style="width:100%">Review scenes and edit</button></div>
   <div id="rvbar"><button id="rvdone" class="go">▶ Done: back to the teleprompter</button><button id="rvreset">Reset</button></div>
-  <div id="set"><label>SPEED <b id="wpmv">150</b> words/min<input id="spd" type="range" min="50" max="200" step="5" value="150"></label><label>TEXT SIZE<input id="fs" type="range" min="20" max="60" value="26"></label><label>LIVE VIDEO<select id="lv"><option value="side">Combine live: side by side</option><option value="pip">Combine live: face in a corner</option><option value="off">Camera only (combine later)</option></select></label><label>BACKUP COPY<select id="lb"><option value="off">No backup (default)</option><option value="on">Also save a plain camera file</option></select></label><label>QUALITY<select id="lq"><option value="720">720p</option><option value="1080">1080p</option></select></label></div>
+  <div id="set"><label>SPEED <b id="wpmv">150</b> words/min<input id="spd" type="range" min="50" max="200" step="5" value="150"></label><label>TEXT SIZE<input id="fs" type="range" min="20" max="60" value="26"></label><label>LIVE VIDEO<select id="lv"><option value="side">Combine live: side by side</option><option value="pip">Combine live: face in a corner</option><option value="off">Camera only (combine later)</option></select></label><label>BACKUP COPY<select id="lb"><option value="off">No backup (default)</option><option value="on">Also save a plain camera file</option></select></label><label>ANIMATED VISUALS (BETA)<select id="an"><option value="off">Off (default)</option><option value="on">On: charts, numbers and chips animate (live mode)</option></select></label><label>QUALITY<select id="lq"><option value="720">720p</option><option value="1080">1080p</option></select></label></div>
 </div>
 <script src="../popover.js"></script>
+<script src="../anim.js"></script>
 <script>
 const MD=${JSON.stringify(metaParts(ep)).replace(/</g, '\\u003c')},HEADS=${heads},KEY='${ep.mode}-${ep.asOf}-${sigOf(ep.scenes)}';
 const $=id=>document.getElementById(id);let rt={},lastMark=0,cuts=[],pendCut=false;let y=0,run=false,last=0,stream=null,mr=null,chunks=[],t0=0,mime='';
@@ -149,12 +179,18 @@ const lvis=$('lvis'),lcv=$('lcv');
 function lvMode(){return ($('lv')&&$('lv').value)||'side';}
 function lvPrefetch(){if(lvMode()==='off'||lvPre)return lvPre;$('msg').textContent='Loading the visuals for live recording…';
   lvPre=Promise.all(HEADS.map((h,i)=>new Promise((res,rej)=>{const im=new Image();im.onload=()=>{(window.createImageBitmap?createImageBitmap(im).catch(()=>im):Promise.resolve(im)).then(res);};im.onerror=()=>rej(new Error('img'));im.src='stills/scene-'+i+'.jpg';})).concat([fetch('frames/beats.json').then(r=>r.ok?r.json():{}).catch(()=>({})),fetch('frames/cues.json').then(r=>r.ok?r.json():{}).catch(()=>({}))])).then(a=>{lvCue=a.pop();lvB=a.pop();lvImgs=a;$('msg').textContent='Visuals ready. Live recording is on.';return true;}).catch(()=>{lvPre=null;$('msg').textContent='Could not load the visuals, so this take will be camera only.';return false;});return lvPre;}
-const FN=${FRAME_N},ANIMMS=600;let lvImgs=[],lvB={},lvIdx=-1,lvBs=-1,lvAnimK=-1,lvAnimT=0,lvTgt=0,lvFr={},lvLast=null,lvPrevScene=null,lvSceneT=0,lvBase=null,lvCue={};
+const ANIMS=${JSON.stringify(animOf(ep))};const FN=${FRAME_N},ANIMMS=600;let lvImgs=[],lvB={},lvIdx=-1,lvBs=-1,lvAnimK=-1,lvAnimT=0,lvTgt=0,lvFr={},lvLast=null,lvPrevScene=null,lvSceneT=0,lvBase=null,lvCue={};
 function frLoad(i,k){if(i<0||i>=HEADS.length||k<0||k>(lvB[i]||0))return;lvFr[i]=lvFr[i]||{};if(lvFr[i][k])return;const a=new Array(FN).fill(null);lvFr[i][k]=a;const im=new Image();im.onload=()=>{a[FN-1]=im;if(window.createImageBitmap)createImageBitmap(im).then(bm=>{a[FN-1]=bm;}).catch(()=>{});};im.src='frames/s'+i+'/'+k+'-'+(FN-1)+'.jpg';}
 function frDrop(i,below){const o=lvFr[i];if(!o)return;Object.keys(o).forEach(k=>{if(+k<below)delete o[k];});}
 function frOk(a){return !!(a&&a[FN-1]);}
+let anOn=false,anOff=false,anSlow=0,anFr=0,anSlow0=0,anUsed=false,anOffAt=0,anT0=0,anMarks=[],anRs=[];
+function animLive(ctx,x,y,w,h){if(!anOn||anOff||lvIdx<0||!window.bkAnim)return;const an=ANIMS[lvIdx];if(!an)return;const now=performance.now();let rs=null;if(an.k==='c'){rs=anRs;for(let j=0;j<an.rows.length;j++)rs[j]=anMarks[j]?(now-anMarks[j])/1000:-1;}
+  try{bkAnim(ctx,x,y,w,h,an,(now-anT0)/1000,rs);}catch(e){anOff=true;anOffAt=Math.round((now-(window._anStart||now))/1000);return;}
+  const d=performance.now()-now;anFr++;if(d>20)anSlow++;
+  if(anSlow>=25||(dgSlow-anSlow0)>=4){anOff=true;anOffAt=Math.round((now-(window._anStart||now))/1000);try{$('msg').textContent='Animations switched themselves off for the rest of this take to keep the recording smooth.';}catch(e){}}}
+function anReport(){return anOff?'switched itself off about '+anOffAt+' s into the take because the phone was struggling (slow animation frames '+anSlow+', slow draws '+Math.max(0,dgSlow-anSlow0)+'), so the rest of the take used the normal visuals.':'on for the whole take ('+anFr+' frames, slow animation frames '+anSlow+', slow draws '+Math.max(0,dgSlow-anSlow0)+').';}
 let popT0=0;function popLive(ctx,x,y,w,h){if(popT0&&window.bkPop)bkPop(ctx,x,y,w,h,(performance.now()-popT0)/1000);}
-function showScene(id){popT0=0;liveId=id;const i=HEADS.findIndex(x=>x.id===id);if(i<0||!lvImgs[i])return;lvPrevScene=lvLast;lvSceneT=performance.now();lvIdx=i;lvBase=null;lvBs=-1;lvAnimK=0;lvAnimT=lvSceneT;lvTgt=0;Object.keys(lvFr).forEach(k=>{if(+k!==i)delete lvFr[k];});frLoad(i,0);frLoad(i,1);}
+function showScene(id){popT0=0;anT0=performance.now();anMarks=[];liveId=id;const i=HEADS.findIndex(x=>x.id===id);if(i<0||!lvImgs[i])return;lvPrevScene=lvLast;lvSceneT=performance.now();lvIdx=i;lvBase=null;lvBs=-1;lvAnimK=0;lvAnimT=lvSceneT;lvTgt=0;Object.keys(lvFr).forEach(k=>{if(+k!==i)delete lvFr[k];});frLoad(i,0);frLoad(i,1);}
 function drawVis(ctx,x,y,w,h){const now=performance.now(),i=lvIdx;if(i<0){return;}
   const B=lvB[i];
   if(B===undefined){const k=Math.min(1,(now-lvSceneT)/300);if(lvPrevScene&&k<1){ctx.drawImage(lvPrevScene,x,y,w,h);ctx.globalAlpha=k;ctx.drawImage(lvImgs[i],x,y,w,h);ctx.globalAlpha=1;}else ctx.drawImage(lvImgs[i],x,y,w,h);lvLast=lvImgs[i];return;}
@@ -171,7 +207,7 @@ function drawVis(ctx,x,y,w,h){const now=performance.now(),i=lvIdx;if(i<0){return
 function beatThr(text,B){const t=String(text||'').replace(/\s+/g,' ').trim();if(!t||B<1)return Array.from({length:B},(_,k)=>(k+1)/(B+1));
   const ss=t.split(/(?<=[.!?])\s+(?=[A-Z0-9'"“$])/).filter(Boolean),w=ss.map(x=>x.split(' ').length),tot=w.reduce((a,b)=>a+b,0),st=[];let c=0;w.forEach(x=>{st.push(c/tot);c+=x;});
   const cu=[];ss.forEach((x,j)=>{if(/^(One|Two|Three|Four|Five|Six|Seven|Eight):/.test(x))cu.push(st[j]);});if(cu.length&&cu.length===B)return cu.map(x=>Math.min(0.97,x));const S=ss.length;return Array.from({length:B},(_,k)=>{const u=(k+1)*S/(B+1),j=Math.min(S-1,Math.floor(u));return Math.min(0.97,st[j]+(u-j)*(w[j]/tot));});}
-function setTarget(cur,v,mid){if(!live||lvIdx<0)return;const b=v[cur];if(!b||b.dataset.id!==liveId)return;const r=b.getBoundingClientRect(),f=Math.max(0,Math.min(1,(mid-r.top)/Math.max(1,r.height))),B=lvB[lvIdx]||0;const fe=b.querySelector('p.full'),txt=fe?fe.textContent:b.textContent;const cc=lvCue&&lvCue[lvIdx],th=(cc&&cc.length===B)?cc:beatThr(txt,B);let t=0;th.forEach(x=>{if(f>=x)t++;});t=Math.min(B,t);if(t>lvTgt)lvTgt=t;
+function setTarget(cur,v,mid){if(!live||lvIdx<0)return;const b=v[cur];if(!b||b.dataset.id!==liveId)return;const r=b.getBoundingClientRect(),f=Math.max(0,Math.min(1,(mid-r.top)/Math.max(1,r.height))),B=lvB[lvIdx]||0;const fe=b.querySelector('p.full'),txt=fe?fe.textContent:b.textContent;const cc=lvCue&&lvCue[lvIdx],th=(cc&&cc.length===B)?cc:beatThr(txt,B);let t=0;th.forEach(x=>{if(f>=x)t++;});t=Math.min(B,t);if(t>lvTgt)lvTgt=t;{const an=ANIMS[lvIdx];if(anOn&&an&&an.k==='c'){const nw=performance.now();an.rows.forEach((r,j)=>{if(!anMarks[j]&&f>=r.f)anMarks[j]=nw;});}}
   if(HEADS[lvIdx]&&(HEADS[lvIdx].ty==='outro'||HEADS[lvIdx].pop)&&window.bkPopAt&&!popT0&&f>=(HEADS[lvIdx].pop&&HEADS[lvIdx].pa!=null?HEADS[lvIdx].pa:bkPopAt(txt)))popT0=performance.now();}
 function rr(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
 function cover(c,v,x,y,w,h){const vw=v.videoWidth,vh=v.videoHeight;if(!vw)return;const k=Math.max(w/vw,h/vh),sw=w/k,sh=h/k;c.drawImage(v,(vw-sw)/2,(vh-sh)/2,sw,sh,x,y,w,h);}
@@ -182,13 +218,13 @@ function liveDraw(W,H2,ctx,mode){
     if(studioImg&&studioImg.complete&&studioImg.naturalWidth)ctx.drawImage(studioImg,0,0,W,H2);else{const q=ctx.createLinearGradient(0,0,W,H2);q.addColorStop(0,'#0A1426');q.addColorStop(1,'#02050A');ctx.fillStyle=q;ctx.fillRect(0,0,W,H2);}
     const m=Math.round(W*.012),vw=Math.round(W*.72),vh=Math.round(vw*9/16),vy=Math.round((H2-vh)/2),vx=W-vw-m;
     ctx.save();ctx.shadowColor='rgba(38,208,255,.35)';ctx.shadowBlur=H2*.02;rr(ctx,vx,vy,vw,vh,H2*.012);ctx.fillStyle='#000';ctx.fill();ctx.restore();
-    ctx.save();rr(ctx,vx,vy,vw,vh,H2*.012);ctx.clip();drawVis(ctx,vx,vy,vw,vh);popLive(ctx,vx,vy,vw,vh);ctx.restore();
+    ctx.save();rr(ctx,vx,vy,vw,vh,H2*.012);ctx.clip();drawVis(ctx,vx,vy,vw,vh);animLive(ctx,vx,vy,vw,vh);popLive(ctx,vx,vy,vw,vh);ctx.restore();
     const fx=m,fw=vx-m*2,fh=Math.min(Math.round(fw*1.25),vh),fy=Math.round((H2-fh)/2);
     ctx.save();ctx.shadowColor='rgba(38,208,255,.55)';ctx.shadowBlur=H2*.025;rr(ctx,fx,fy,fw,fh,H2*.02);ctx.fillStyle='#000';ctx.fill();ctx.restore();
     ctx.save();rr(ctx,fx,fy,fw,fh,H2*.02);ctx.clip();cover(ctx,cam,fx,fy,fw,fh);ctx.restore();
     ctx.strokeStyle='#26D0FF';ctx.lineWidth=Math.max(2,H2*.003);rr(ctx,fx,fy,fw,fh,H2*.02);ctx.stroke();
   }else{
-    drawVis(ctx,0,0,W,H2);popLive(ctx,0,0,W,H2);
+    drawVis(ctx,0,0,W,H2);animLive(ctx,0,0,W,H2);popLive(ctx,0,0,W,H2);
     const d=Math.round(H2*.30),m=Math.round(H2*.05),x=W-d-m,y=H2-d-Math.round(H2*.1);
     ctx.save();ctx.beginPath();ctx.arc(x+d/2,y+d/2,d/2,0,Math.PI*2);ctx.clip();cover(ctx,cam,x,y,d,d);ctx.restore();
     ctx.strokeStyle='#5B8CFF';ctx.lineWidth=Math.max(3,H2*.006);ctx.beginPath();ctx.arc(x+d/2,y+d/2,d/2,0,Math.PI*2);ctx.stroke();
@@ -202,10 +238,12 @@ function watch(cam){const now=performance.now();pfBind(cam);if(dgLast){const g=n
   const f=camFrames(cam);if(f!==wCt){wCt=f;wAt=now;}else{
   if(now-wAt>1000&&now-wFix>1000){wFix=now;cam.play().catch(()=>{});}
   if(now-wAt>1800){hiccups++;dgRe++;$('msg').textContent='Camera froze for a moment, recovering…';try{const ts=stream.getVideoTracks()[0];cam.srcObject=null;cam.srcObject=stream;pfBound=null;cam.play().catch(()=>{});}catch(e){}wAt=now;}}
-  if(now-dgMsg>3000&&mr&&mr.state==='recording'){dgMsg=now;window._diag='slowest draw '+Math.round(dgMax)+' ms, slow draws '+dgSlow+', camera restarts '+dgRe+', camera frames '+f;try{$('clock').title=window._diag;}catch(e){}}}
+  if(now-dgMsg>3000&&mr&&mr.state==='recording'){dgMsg=now;window._diag='slowest draw '+Math.round(dgMax)+' ms, slow draws '+dgSlow+', camera restarts '+dgRe+', camera frames '+f+(anUsed?', animations '+(anOff?'auto-off':'on')+', slow animation frames '+anSlow:'');try{$('clock').title=window._diag;}catch(e){}}}
 async function getWake(){try{if(navigator.wakeLock)wl=await navigator.wakeLock.request('screen');}catch(e){}}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&mr&&mr.state==='recording')getWake();});
 function stopLive(){try{if(wl){wl.release();wl=null;}}catch(e){}live=false;cancelAnimationFrame(liveRaf);try{lvis.pause();}catch(e){}}
+try{const sa=store.get('bkstudio-anim');if(sa==='on')$('an').value='on';}catch(e){}
+$('an').onchange=()=>{store.set('bkstudio-anim',$('an').value);};
 try{const sv=store.get('bkstudio-live');if(sv){if(sv.m)$('lv').value=sv.m;if(sv.q)$('lq').value=sv.q;if(sv.b)$('lb').value=sv.b;}}catch(e){}
 $('lv').onchange=$('lq').onchange=$('lb').onchange=()=>{store.set('bkstudio-live',{m:$('lv').value,q:$('lq').value,b:$('lb').value});if(lvMode()!=='off')lvPrefetch();else $('msg').textContent='Camera only: you will combine the video later on the Combine page.';};
 function syncM(){const off=lvMode()==='off';$('mCam').classList.toggle('on',off);$('mLive').classList.toggle('on',!off);}
@@ -232,7 +270,7 @@ $('rec').onclick=async()=>{
   mr.ondataavailable=e=>{if(e.data&&e.data.size){chunks.push(e.data);idbPut(takeId,ci++,e.data);}};
   bmr=null;bchunks=[];if(useLive&&$('lb').value==='on'){try{bmr=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:3e6,audioBitsPerSecond:96e3}:undefined);bmr.ondataavailable=e=>{if(e.data&&e.data.size)bchunks.push(e.data);};}catch(e){bmr=null;}}
   let rawBlob=null;const finCore=()=>{t0=0;document.body.classList.remove('recon');store.set('bkstudio-marks2-'+KEY,{order:vis().map(b=>b.dataset.id),t:rt});$('rec').textContent='● Record';$('rec').classList.remove('on');const type=mr.mimeType||mime||'video/mp4';const blob=new Blob(chunks,{type});const ext=/mp4/.test(type)?'mp4':'webm';const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=(window._lg&&window._lg.used?'4pct-swing-trades-':'recording-')+'${esc(ep.asOf)}.'+ext;const mainUrl=a.href,mainName=a.download;let bkUrl='',bkName='';
-  const showRes=()=>{idbFinal(blob);$('res').innerHTML='<h2>Your take is ready</h2><p>Quick check of the preview, then carry on. '+(window._lg&&window._lg.used?'The charts should be on the right and you on the left.':'This one is camera only.')+(hiccups?' The camera stalled '+hiccups+' time(s), so watch the whole preview.':'')+'</p>'+(blob.size<120e6?'<video src="'+mainUrl+'" controls playsinline></video>':'<p>This video is large, so it is not previewed here.</p>')+'<a class="btn" href="../combine.html?eps=${esc(ep.mode)}&take=1" id="goRev">Review, publish to YouTube and make Shorts &rarr;</a><a class="btn alt" href="'+mainUrl+'" download="'+mainName+'" id="phsave">Save a copy to this phone</a>'+(rawBlob?'<a class="btn alt" href="'+URL.createObjectURL(rawBlob)+'" download="uncut-take-${esc(ep.asOf)}.'+ext+'">Save the uncut original (with the retakes)</a>':'')+(bkUrl?'<a class="btn alt" href="'+bkUrl+'" download="'+bkName+'">Save the camera-only backup (no visuals)</a>':'')+'<a class="btn alt" href="#" id="discard" style="color:#FF8FA3;border-color:#5a2733">Discard this take</a><a class="btn alt" href="#" id="resx">Close (Publish and Shorts stays one tap away)</a><p class="mut" style="font-size:13px">Keep this page open while you publish and make Shorts: the video lives in this page. Closing the tab loses it, so save a copy to your phone first if you want a backup.</p>';$('res').classList.add('on');wireRes();window._openRev=()=>{let f=document.getElementById('revf');if(!f){f=document.createElement('iframe');f.id='revf';f.setAttribute('allow','autoplay; microphone; camera');f.style.cssText='position:fixed;left:0;top:0;width:100%;height:100%;border:0;background:#0A0F1C;z-index:99';f.onload=()=>{try{f.contentWindow.bkTake(blob,Date.now());}catch(x){}};f.src='../combine.html?eps=${esc(ep.mode)}&embed=1';document.body.appendChild(f);}f.style.display='block';const fb=document.getElementById('pubfab');if(fb)fb.style.display='none';};
+  const showRes=()=>{idbFinal(blob);$('res').innerHTML='<h2>Your take is ready</h2><p>Quick check of the preview, then carry on. '+(window._lg&&window._lg.used?'The charts should be on the right and you on the left.':'This one is camera only.')+(hiccups?' The camera stalled '+hiccups+' time(s), so watch the whole preview.':'')+'</p>'+(anUsed?'<p class="mut" style="font-size:13px">Animated visuals (beta): '+anReport()+'</p>':'')+(blob.size<120e6?'<video src="'+mainUrl+'" controls playsinline></video>':'<p>This video is large, so it is not previewed here.</p>')+'<a class="btn" href="../combine.html?eps=${esc(ep.mode)}&take=1" id="goRev">Review, publish to YouTube and make Shorts &rarr;</a><a class="btn alt" href="'+mainUrl+'" download="'+mainName+'" id="phsave">Save a copy to this phone</a>'+(rawBlob?'<a class="btn alt" href="'+URL.createObjectURL(rawBlob)+'" download="uncut-take-${esc(ep.asOf)}.'+ext+'">Save the uncut original (with the retakes)</a>':'')+(bkUrl?'<a class="btn alt" href="'+bkUrl+'" download="'+bkName+'">Save the camera-only backup (no visuals)</a>':'')+'<a class="btn alt" href="#" id="discard" style="color:#FF8FA3;border-color:#5a2733">Discard this take</a><a class="btn alt" href="#" id="resx">Close (Publish and Shorts stays one tap away)</a><p class="mut" style="font-size:13px">Keep this page open while you publish and make Shorts: the video lives in this page. Closing the tab loses it, so save a copy to your phone first if you want a backup.</p>';$('res').classList.add('on');wireRes();window._openRev=()=>{let f=document.getElementById('revf');if(!f){f=document.createElement('iframe');f.id='revf';f.setAttribute('allow','autoplay; microphone; camera');f.style.cssText='position:fixed;left:0;top:0;width:100%;height:100%;border:0;background:#0A0F1C;z-index:99';f.onload=()=>{try{f.contentWindow.bkTake(blob,Date.now());}catch(x){}};f.src='../combine.html?eps=${esc(ep.mode)}&embed=1';document.body.appendChild(f);}f.style.display='block';const fb=document.getElementById('pubfab');if(fb)fb.style.display='none';};
   let fb=document.getElementById('pubfab');if(!fb){fb=document.createElement('button');fb.id='pubfab';fb.textContent='Publish and Shorts ▸';fb.style.cssText='display:none;position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:98;padding:14px 18px;border-radius:999px;border:0;background:#2563EB;color:#fff;font:inherit;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,.5)';fb.onclick=()=>window._openRev();document.body.appendChild(fb);}
   const gr=$('goRev');if(gr)gr.onclick=e=>{e.preventDefault();window._openRev();};
   const rx=$('resx');if(rx)rx.onclick=e=>{e.preventDefault();$('res').classList.remove('on');const f=document.getElementById('revf');if(f&&f.style.display==='none')fb.style.display='block';else if(!f)fb.style.display='block';};};
@@ -250,7 +288,7 @@ $('rec').onclick=async()=>{
     }catch(e){$('msg').textContent='Could not cut the retakes automatically ('+(e&&e.message?e.message:e)+'). Saving the uncut take; the retakes are at '+cuts.map(c=>mm(c[0])+' to '+mm(c[1])).join(', ')+'. Chapter times in the details below are for the uncut take.';}
     finCore();};
   window._fin=fin;mr.onstop=fin;
-  rt={};{const v0=vis();if(v0[0])rt[v0[0].dataset.id]=0;}lastMark=0;mr.start(1000);if(bmr)try{bmr.start(2000);}catch(e){}cuts=[];pendCut=false;['revf','pubfab'].forEach(id=>{const n=document.getElementById(id);if(n)n.remove();});document.body.classList.add('recon');t0=Date.now();hiccups=0;getWake();wCt=-1;wAt=performance.now();if(useLive){live=true;liveId=null;const v1=vis();if(v1[0])showScene(v1[0].dataset.id);liveDraw(window._lg.W,window._lg.H,window._lg.c,lvMode());}$('rec').textContent='■ Stop and save';$('rec').classList.add('on');y=0;apply();
+  rt={};{const v0=vis();if(v0[0])rt[v0[0].dataset.id]=0;}lastMark=0;mr.start(1000);if(bmr)try{bmr.start(2000);}catch(e){}cuts=[];pendCut=false;['revf','pubfab'].forEach(id=>{const n=document.getElementById(id);if(n)n.remove();});document.body.classList.add('recon');t0=Date.now();hiccups=0;getWake();wCt=-1;wAt=performance.now();anOn=!!(useLive&&$('an')&&$('an').value==='on'&&window.bkAnim);anUsed=anOn;anOff=false;anSlow=0;anFr=0;anSlow0=dgSlow;anOffAt=0;window._anStart=performance.now();if(useLive){live=true;liveId=null;const v1=vis();if(v1[0])showScene(v1[0].dataset.id);liveDraw(window._lg.W,window._lg.H,window._lg.c,lvMode());}$('rec').textContent='■ Stop and save';$('rec').classList.add('on');y=0;apply();
 };
 
 function wireRes(){const d=$('discard');if(d)d.onclick=e=>{e.preventDefault();if(!confirm('Discard this take? It is deleted from this phone and cannot be recovered.'))return;try{idbStart(0);}catch(x){}['revf','pubfab'].forEach(id=>{const n=document.getElementById(id);if(n)n.remove();});$('res').classList.remove('on');$('res').innerHTML='';$('msg').textContent='Take discarded.';};}
@@ -295,4 +333,4 @@ $('wpmv').textContent=$('spd').value;$('spd').addEventListener('input',()=>{$('w
 loadPlan();calcPpw();requestAnimationFrame(tick);fit();if(location.hash==='#review')$('review').click();
 </script></body></html>`;
 }
-module.exports = { teleprompterHtml };
+module.exports = { teleprompterHtml, animOf };

@@ -91,6 +91,7 @@ jobs:
           [ -d studio-out/$m/thumbs ] && cp -r studio-out/$m/thumbs "/tmp/pub/$m/thumbs"
           cp studio/combine.html /tmp/pub/combine.html
           cp studio/popover.js /tmp/pub/popover.js
+          cp studio/anim.js /tmp/pub/anim.js
           node studio/publish-index.js /tmp/pub
           cd /tmp/pub
           rm -rf .git; git init -q -b studio-latest

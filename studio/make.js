@@ -139,6 +139,7 @@ async function main() {
   const tickers = ep.scenes.filter(s => s.type === 'setup').map(s => s.data.setup.ticker);
   if (!barsFile && tickers.length) bars = { ...bars, ...(await fetchBars(tickers, { keyId: process.env.ALPACA_KEY_ID, secret: process.env.ALPACA_SECRET_KEY })) };
   prepareCharts(ep, bars);
+  fs.writeFileSync(path.join(out, 'teleprompter.html'), teleprompterHtml(ep)); // again, now that the charts' real closes are known (for the beta animated visuals)
   let chromium; try { ({ chromium } = require('playwright')); } catch (e) { throw new Error('playwright is not installed (run: npm install && npx playwright install chromium)'); }
   await renderStills(ep, out, { chromium });
   await renderBrandAssets(ep, out, { chromium });
