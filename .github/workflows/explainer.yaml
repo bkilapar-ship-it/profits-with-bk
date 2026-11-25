@@ -1,0 +1,82 @@
+name: Explainer videos
+
+# Builds the "Oh, I Get It" explainer videos (one per language) whenever an episode file changes,
+# for example after "Save to GitHub" in the episode editor. Nothing is published: download the
+# videos from this run's "explainer-videos" download (kept for 14 days).
+# Also refreshes the website so the editor shows the latest episodes.
+
+on:
+  push:
+    branches: [main]
+    paths: ['explainer/**']
+  workflow_dispatch:
+    inputs:
+      episode:
+        description: 'Episode name to build, for example inflation (leave blank to build all)'
+        type: string
+        default: ''
+
+permissions:
+  contents: read
+  actions: write
+
+concurrency:
+  group: explainer-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Work out which episodes to build
+        id: eps
+        run: |
+          all=$(ls explainer/episodes/*.json | grep -v '/index.json$' || true)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ -n "${{ inputs.episode }}" ]; then list="explainer/episodes/${{ inputs.episode }}.json"; else list="$all"; fi
+          else
+            before="${{ github.event.before }}"
+            if [ -z "$before" ] || ! git cat-file -e "$before" 2>/dev/null; then changed=$(git diff --name-only HEAD~1 HEAD); else changed=$(git diff --name-only "$before" "${{ github.sha }}"); fi
+            if echo "$changed" | grep -qE '^explainer/(engine\.js|channel\.json|player\.html|render\.js|fonts\.css|fonts/)'; then list="$all"
+            else list=$(echo "$changed" | grep -E '^explainer/episodes/.+\.json$' | grep -v '/index.json$' || true); fi
+          fi
+          list=$(for f in $list; do [ -f "$f" ] && echo "$f"; done | tr '\n' ' ')
+          echo "list=$list" >> "$GITHUB_OUTPUT"
+          echo "Episodes to build: ${list:-none}"
+
+      - name: Set up Node.js
+        if: steps.eps.outputs.list != ''
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install the video tools
+        if: steps.eps.outputs.list != ''
+        working-directory: explainer
+        run: |
+          npm install --no-audit --no-fund
+          npx playwright install --with-deps chromium
+          sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
+
+      - name: Build the videos
+        if: steps.eps.outputs.list != ''
+        run: for f in ${{ steps.eps.outputs.list }}; do node explainer/render.js "$f" --out explainer-out; done
+
+      - name: Keep the videos for 14 days
+        if: steps.eps.outputs.list != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: explainer-videos
+          path: explainer-out/
+          retention-days: 14
+
+      - name: Refresh the editor on the website
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh workflow run scan.yaml --ref "${{ github.event.repository.default_branch }}" -f skip_scan=true || echo "Could not start the site deploy; the editor updates on the next scan run."

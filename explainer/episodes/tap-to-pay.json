@@ -1,0 +1,137 @@
+{
+ "id": "tap-to-pay",
+ "title": {
+  "en": "What happens when you tap to pay?",
+  "te": "Tap చేసి pay చేసినప్పుడు ఏం జరుగుతుంది?"
+ },
+ "languages": {
+  "en": {
+   "name": "English",
+   "currency": "£",
+   "locale": "en-GB",
+   "decimals": 2
+  },
+  "te": {
+   "name": "Telugu",
+   "currency": "₹",
+   "locale": "en-IN",
+   "decimals": 0
+  }
+ },
+ "scenes": [
+  {
+   "type": "walkToShop",
+   "duration": 6,
+   "data": {},
+   "lang": {
+    "en": {
+     "shopName": "CORNER SHOP",
+     "lines": [
+      "You pop into the corner shop for a coffee."
+     ]
+    },
+    "te": {
+     "shopName": "CORNER SHOP",
+     "lines": [
+      "మీరు coffee కోసం దగ్గర్లోని shop కి వెళ్ళారు."
+     ]
+    }
+   }
+  },
+  {
+   "type": "tapToPay",
+   "duration": 4.8,
+   "data": {
+    "zoom": "yes"
+   },
+   "lang": {
+    "en": {
+     "amount": 4.5,
+     "paid": "✓ Paid",
+     "lines": [
+      "You tap your phone. Beep. Done."
+     ]
+    },
+    "te": {
+     "amount": 150,
+     "paid": "✓ Paid",
+     "lines": [
+      "Phone తో tap చేశారు. Beep. అయిపోయింది."
+     ]
+    }
+   }
+  },
+  {
+   "type": "paymentJourney",
+   "duration": 6,
+   "data": {
+    "seconds": 2
+   },
+   "lang": {
+    "en": {
+     "heading": "What happens in those 2 seconds",
+     "stops": [
+      "Card terminal",
+      "Shop's bank",
+      "Card network",
+      "Your bank"
+     ],
+     "notes": [
+      "reads your card",
+      "passes the request on",
+      "routes it to your bank",
+      "checks money & fraud"
+     ],
+     "approved": "✓ Approved",
+     "lines": [
+      "But your payment just went on a journey.",
+      "Your bank checks it's really you, and says yes."
+     ]
+    },
+    "te": {
+     "heading": "ఆ 2 seconds లో ఏం జరుగుతుంది?",
+     "stops": [
+      "Card terminal",
+      "Shop వాళ్ళ bank",
+      "Card network",
+      "మీ bank"
+     ],
+     "notes": [
+      "మీ card ని చదువుతుంది",
+      "request ని ముందుకు పంపుతుంది",
+      "మీ bank కి చేరుస్తుంది",
+      "డబ్బు, fraud check చేస్తుంది"
+     ],
+     "approved": "✓ Approved",
+     "lines": [
+      "కానీ ఆ క్షణంలో, మీ payment ఒక ప్రయాణం చేసింది.",
+      "మీ bank ఇది నిజంగా మీరేనా అని check చేసి, yes చెబుతుంది."
+     ]
+    }
+   }
+  },
+  {
+   "type": "endCard",
+   "duration": 3.5,
+   "data": {},
+   "lang": {
+    "en": {
+     "kicker": "TAP TO PAY",
+     "main": "Four stops. About two seconds.",
+     "small": "Simplified illustration. Real payments can involve more steps.",
+     "lines": [
+      "Four stops. About two seconds."
+     ]
+    },
+    "te": {
+     "kicker": "TAP TO PAY",
+     "main": "నాలుగు stops. దాదాపు రెండు seconds.",
+     "small": "సులభంగా అర్థం కావడానికి ఇచ్చిన ఉదాహరణ. నిజమైన payments లో ఇంకా steps ఉండొచ్చు.",
+     "lines": [
+      "నాలుగు stops. దాదాపు రెండు seconds."
+     ]
+    }
+   }
+  }
+ ]
+}

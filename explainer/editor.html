@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Episode Editor</title>
+<link rel="stylesheet" href="fonts.css">
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--ink:#1d2a36;--mut:#6b7785;--line:#e3e0d8;--acc:#e09f3e;--acc2:#264653;--bad:#c0392b;--good:#2a9d8f}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1720;--card:#17222e;--ink:#e8edf2;--mut:#93a1b0;--line:#26333f;--acc:#ffd166;--acc2:#8ecae6}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--ex-font,system-ui,sans-serif)}
+header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+header h1{font-size:17px;margin:0 8px 0 0;display:flex;align-items:center;gap:8px}
+select,input,textarea,button{font:inherit;color:inherit}
+select,input,textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 9px;width:100%}
+textarea{min-height:64px;resize:vertical}
+button{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer}
+button.pri{background:var(--acc2);color:#fff;border-color:var(--acc2)}
+button.sm{padding:4px 8px;font-size:13px}
+button:disabled{opacity:.5;cursor:default}
+main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.1fr);gap:16px;padding:16px;max-width:1500px;margin:0 auto}
+@media (max-width:900px){main{grid-template-columns:minmax(0,1fr);padding:12px}.pv{position:static!important;order:-1}}
+html,body{overflow-x:hidden}
+.pv{position:sticky;top:70px;align-self:start}
+.box{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+.stage{width:100%;aspect-ratio:16/9;background:#0d1b2a;border-radius:8px;overflow:hidden}
+.stage svg{width:100%;height:100%;display:block}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row>*{flex:0 0 auto}
+.grow{flex:1 1 auto!important}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.tab{border-radius:999px;padding:5px 12px}
+.tab.on{background:var(--acc);color:#1d2a36;border-color:var(--acc);font-weight:700}
+.scene{border:1px solid var(--line);border-radius:10px;margin-bottom:10px;background:var(--card)}
+.scene>.hd{display:flex;gap:6px;align-items:center;padding:8px 10px;cursor:pointer;flex-wrap:wrap}
+.scene>.hd b{flex:1 1 auto;min-width:0}
+.scene .bd{padding:4px 12px 12px;display:none}
+.scene.open .bd{display:block}
+.fld{margin:10px 0}
+.fld label{display:block;font-size:13px;color:var(--mut);margin-bottom:3px}
+.ref{font-size:12px;color:var(--mut);margin-top:3px;white-space:pre-wrap}
+.pill{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--bg);border:1px solid var(--line);color:var(--mut)}
+.msg{font-size:13px;color:var(--mut);min-height:18px}
+.msg.bad{color:var(--bad)}.msg.good{color:var(--good)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{padding:4px 10px;border-radius:999px;font-size:13px}
+.chip.on{background:var(--acc2);color:#fff;border-color:var(--acc2)}
+details summary{cursor:pointer;font-weight:700}
+.muted{color:var(--mut);font-size:13px}
+.money{display:flex;align-items:center;gap:6px}.money span{font-weight:700}
+</style></head>
+<body>
+<header>
+  <h1>💡 Episode Editor</h1>
+  <select id="epSel" style="width:auto"></select>
+  <button id="newEp" class="sm">New episode</button>
+  <span class="grow"></span>
+  <button id="dl" class="sm">Download file</button>
+  <button id="save" class="pri sm">Save to GitHub</button>
+</header>
+<main>
+  <section>
+    <div class="box">
+      <div class="tabs" id="langTabs"></div>
+      <div class="row"><div class="grow"><label class="muted">Episode title (this language)</label><input id="epTitle"></div></div>
+      <details style="margin-top:10px"><summary>Language settings</summary>
+        <div class="row" style="margin-top:8px">
+          <div class="grow"><label class="muted">Language name</label><input id="lName"></div>
+          <div style="width:90px"><label class="muted">Currency</label><input id="lCur"></div>
+          <div style="width:110px"><label class="muted">Number style</label><select id="lLoc"><option value="en-GB">UK 1,234.50</option><option value="en-IN">India 1,23,456</option><option value="en-US">US 1,234.50</option><option value="de-DE">Europe 1.234,50</option></select></div>
+          <div style="width:90px"><label class="muted">Decimals</label><select id="lDec"><option>0</option><option>2</option></select></div>
+        </div>
+        <div class="row" style="margin-top:8px"><button id="delLang" class="sm">Remove this language</button></div>
+      </details>
+    </div>
+    <div id="scenes"></div>
+    <div class="box row">
+      <select id="addType" class="grow" style="width:auto"></select>
+      <button id="addScene" class="sm">Add scene</button>
+    </div>
+    <details class="box"><summary>Channel names and taglines</summary>
+      <div id="chanBox"></div>
+      <p class="muted">These appear on the presenter background and the end card. Saved to channel.json.</p>
+    </details>
+    <details class="box"><summary>GitHub connection</summary>
+      <p class="muted">To save from this page, paste a GitHub fine-grained token with "Contents: read and write" access to your repository only. It is kept in this browser, never in the repository.</p>
+      <div class="fld"><label>Repository</label><input id="ghRepo" placeholder="owner/repo"></div>
+      <div class="fld"><label>Token</label><input id="ghTok" type="password" placeholder="github_pat_…"></div>
+      <div class="row"><button id="ghSaveCfg" class="sm">Remember on this device</button><button id="ghLoad" class="sm">Load latest from GitHub</button></div>
+    </details>
+  </section>
+  <section class="pv">
+    <div class="box">
+      <div class="stage"><svg id="stage" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="row" style="margin-top:8px">
+        <button id="play" class="sm">▶ Play</button>
+        <input id="scrub" type="range" min="0" max="1000" value="0" class="grow" style="width:auto">
+        <span id="time" class="pill">0.0 / 0.0s</span>
+      </div>
+      <div class="row" style="margin-top:8px"><span class="muted grow" id="sceneAt"></span><button id="copyScript" class="sm">Copy script (this language)</button></div>
+      <div id="msg" class="msg"></div>
+    </div>
+    <div class="box muted">
+      <b>How this works.</b> Change any words, prices or timings in the scene cards and the preview updates. Each language has its own words and prices; the animation is shared. "Save to GitHub" updates the episode file, and the video build then makes one video per language. Lines in the "voiceover" boxes become the captions and your teleprompter script.
+    </div>
+  </section>
+</main>
+<script src="engine.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = id => document.getElementById(id);
+const E = window.Explainer;
+const store = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
+let ep = null, channel = { names: {}, taglines: {} }, lang = 'en', index = [], app = null, playing = false, t0 = 0, tNow = 1.2, raf = 0, openScene = 0, dirty = false;
+const msg = (s, cls) => { const m = $('msg'); m.textContent = s || ''; m.className = 'msg ' + (cls || ''); };
+const clone = o => JSON.parse(JSON.stringify(o));
+
+// ---------- loading ----------
+async function getJSON(url) { const r = await fetch(url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now()); if (!r.ok) throw new Error(url + ': ' + r.status); return r.json(); }
+async function boot() {
+  try { index = (await getJSON('episodes/index.json')).episodes || []; } catch (e) { index = []; }
+  try { channel = await getJSON('channel.json'); } catch (e) {}
+  const gh = store.get('ex.gh', {}); $('ghRepo').value = gh.repo || 'bkilapar-ship-it/profits-with-bk'; $('ghTok').value = gh.tok || '';
+  const last = store.get('ex.last', index[0]);
+  fillEpSel(last);
+  await loadEpisode(last || index[0]);
+}
+function fillEpSel(sel) {
+  $('epSel').innerHTML = index.map(id => `<option value="${id}"${id === sel ? ' selected' : ''}>${id}</option>`).join('');
+}
+async function loadEpisode(id) {
+  if (!id) { ep = blankEpisode('my-first-episode'); }
+  else {
+    const draft = store.get('ex.draft.' + id, null);
+    try { ep = await getJSON('episodes/' + id + '.json'); } catch (e) { ep = null; }
+    if (draft && draft.ep && confirm('You have unsaved changes to "' + id + '" on this device. Keep them?')) ep = draft.ep;
+    if (!ep) ep = blankEpisode(id);
+  }
+  store.set('ex.last', ep.id);
+  lang = Object.keys(ep.languages || { en: 1 })[0];
+  dirty = false; openScene = 0; tNow = 1.2;
+  renderAll();
+}
+function blankEpisode(id) {
+  const langs = { en: { name: 'English', currency: '£', locale: 'en-GB', decimals: 2 }, te: { name: 'Telugu', currency: '₹', locale: 'en-IN', decimals: 0 } };
+  return { id, title: { en: 'New episode', te: 'కొత్త episode' }, languages: langs, scenes: [E.newScene('presenter', Object.keys(langs)), E.newScene('endCard', Object.keys(langs))] };
+}
+
+// ---------- UI ----------
+function renderAll() { renderLangTabs(); renderLangSettings(); renderScenes(); renderChannel(); remount(); }
+function renderLangTabs() {
+  const L = ep.languages;
+  $('langTabs').innerHTML = Object.keys(L).map(k => `<button class="tab${k === lang ? ' on' : ''}" data-l="${k}">${L[k].name || k}</button>`).join('') + `<button class="tab" id="addLang">+ Add language</button>`;
+  $('langTabs').querySelectorAll('[data-l]').forEach(b => b.onclick = () => { lang = b.dataset.l; renderAll(); });
+  $('addLang').onclick = addLanguage;
+  $('epTitle').value = (ep.title || {})[lang] || '';
+}
+function renderLangSettings() {
+  const L = ep.languages[lang];
+  $('lName').value = L.name || ''; $('lCur').value = L.currency || ''; $('lLoc').value = L.locale || 'en-GB'; $('lDec').value = String(L.decimals ?? 2);
+}
+function addLanguage() {
+  const code = (prompt('Short code for the new language (for example hi for Hindi, ta for Tamil):') || '').trim().toLowerCase();
+  if (!code) return;
+  if (ep.languages[code]) { lang = code; return renderAll(); }
+  const name = prompt('Language name (shown on the tab):', code) || code;
+  const india = confirm('Use Indian rupees (₹) for prices in this language?\nOK = ₹ rupees, Cancel = £ pounds');
+  ep.languages[code] = india ? { name, currency: '₹', locale: 'en-IN', decimals: 0 } : { name, currency: '£', locale: 'en-GB', decimals: 2 };
+  const from = ep.languages.en ? 'en' : Object.keys(ep.languages)[0];
+  ep.title = ep.title || {}; ep.title[code] = (ep.title[from] || '');
+  ep.scenes.forEach(s => { s.lang = s.lang || {}; s.lang[code] = clone(s.lang[from] || {}); });
+  channel.names = channel.names || {}; if (!channel.names[code]) channel.names[code] = (channel.names.en || 'Oh, I Get It') + ' - ' + name;
+  lang = code; changed(); renderAll();
+  msg(`Added ${name}. Every scene starts with a copy of the ${ep.languages[from].name} words and prices: translate them and set the prices.`, 'good');
+}
+
+function fieldHTML(f, si) {
+  const s = ep.scenes[si], T = E.SCENES[s.type];
+  const isLang = f.per === 'lang';
+  const def = isLang ? (T.defaults.lang || {})[f.k] : (T.defaults.data || {})[f.k];
+  const src = isLang ? ((s.lang || {})[lang] || {}) : (s.data || {});
+  let v = src[f.k]; if (v === undefined) v = def;
+  const id = `f_${si}_${f.k}`;
+  const refL = lang !== 'en' && isLang && s.lang && s.lang.en ? s.lang.en[f.k] : undefined;
+  const ref = refL !== undefined ? `<div class="ref">English: ${esc(Array.isArray(refL) ? refL.join('\n') : String(refL))}</div>` : '';
+  let input = '';
+  if (f.kind === 'text') input = `<input id="${id}" value="${esc(v ?? '')}">`;
+  else if (f.kind === 'lines') input = `<textarea id="${id}" rows="${Math.max(2, (v || []).length + 1)}">${esc((v || []).join('\n'))}</textarea>`;
+  else if (f.kind === 'number') input = `<input id="${id}" type="number" step="any" value="${v ?? ''}">`;
+  else if (f.kind === 'money') input = `<div class="money"><span>${esc(ep.languages[lang].currency || '')}</span><input id="${id}" type="number" step="any" value="${v ?? ''}"></div>`;
+  else if (f.kind === 'select') input = `<select id="${id}">${f.options.map(o => `<option${o === v ? ' selected' : ''}>${o}</option>`).join('')}</select>`;
+  else if (f.kind === 'item') input = `<select id="${id}">${E.ITEM_KINDS.map(o => `<option${o === v ? ' selected' : ''}>${o}</option>`).join('')}</select>`;
+  else if (f.kind === 'items') input = `<div class="chips" id="${id}">${(v || []).map((k, i) => `<button class="chip on" data-i="${i}" title="Tap to remove">${k} ✕</button>`).join('')}<select data-add style="width:auto"><option value="">+ add item</option>${E.ITEM_KINDS.map(o => `<option>${o}</option>`).join('')}</select></div>`;
+  return `<div class="fld"><label for="${id}">${esc(f.label)}${isLang ? ` <span class="pill">${esc(ep.languages[lang].name || lang)}</span>` : ' <span class="pill">all languages</span>'}</label>${input}${ref}</div>`;
+}
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+function renderScenes() {
+  const tl = E.timeline(ep, lang);
+  $('scenes').innerHTML = ep.scenes.map((s, i) => {
+    const T = E.SCENES[s.type]; if (!T) return `<div class="scene"><div class="hd"><b>Unknown scene type: ${esc(s.type)}</b><button class="sm" data-del="${i}">Delete</button></div></div>`;
+    const o = tl.scenes.find(x => x.i === i);
+    return `<div class="scene${i === openScene ? ' open' : ''}" data-i="${i}">
+      <div class="hd" data-toggle="${i}"><span class="pill">${i + 1}</span><b>${esc(T.label)}</b><span class="pill">${o ? o.start.toFixed(1) + 's' : ''}</span>
+        <button class="sm" data-up="${i}" title="Move up">↑</button><button class="sm" data-down="${i}" title="Move down">↓</button><button class="sm" data-dup="${i}" title="Duplicate">⧉</button><button class="sm" data-del="${i}" title="Delete">✕</button></div>
+      <div class="bd">
+        <div class="fld"><label for="dur_${i}">Length in seconds <span class="pill">all languages</span></label><input id="dur_${i}" type="number" step="0.1" min="0.5" value="${s.duration ?? T.base}"><div class="ref">Designed for ${T.base}s. The animation stretches to fit. When you record, this will follow your voice.</div></div>
+        <div class="fld"><label><input type="checkbox" id="cap_${i}" style="width:auto"${s.captions === false ? '' : ' checked'}> Show captions on screen</label></div>
+        ${T.fields.map(f => fieldHTML(f, i)).join('')}
+      </div></div>`;
+  }).join('');
+  const box = $('scenes');
+  box.querySelectorAll('[data-toggle]').forEach(h => h.onclick = e => { if (e.target.closest('button')) return; const i = +h.dataset.toggle; openScene = openScene === i ? -1 : i; renderScenes(); seekScene(i); });
+  const act = (sel, fn) => box.querySelectorAll(sel).forEach(b => b.onclick = e => { e.stopPropagation(); fn(+Object.values(b.dataset)[0]); changed(); renderScenes(); remount(); });
+  act('[data-up]', i => { if (i > 0) { [ep.scenes[i - 1], ep.scenes[i]] = [ep.scenes[i], ep.scenes[i - 1]]; openScene = i - 1; } });
+  act('[data-down]', i => { if (i < ep.scenes.length - 1) { [ep.scenes[i + 1], ep.scenes[i]] = [ep.scenes[i], ep.scenes[i + 1]]; openScene = i + 1; } });
+  act('[data-dup]', i => { ep.scenes.splice(i + 1, 0, clone(ep.scenes[i])); openScene = i + 1; });
+  act('[data-del]', i => { if (confirm('Delete this scene in every language?')) ep.scenes.splice(i, 1); });
+  ep.scenes.forEach((s, i) => {
+    const T = E.SCENES[s.type]; if (!T) return;
+    const d = $('dur_' + i); if (d) d.oninput = () => { s.duration = Math.max(.5, +d.value || T.base); changed(); remountSoon(); };
+    const c = $('cap_' + i); if (c) c.onchange = () => { if (c.checked) delete s.captions; else s.captions = false; changed(); remountSoon(); };
+    T.fields.forEach(f => {
+      const id = `f_${i}_${f.k}`, n = $(id); if (!n) return;
+      const put = v => { if (f.per === 'lang') { s.lang = s.lang || {}; s.lang[lang] = s.lang[lang] || {}; s.lang[lang][f.k] = v; } else { s.data = s.data || {}; s.data[f.k] = v; } changed(); remountSoon(); };
+      if (f.kind === 'items') {
+        n.querySelectorAll('.chip').forEach(b => b.onclick = () => { const cur = (s.data[f.k] || T.defaults.data[f.k] || []).slice(); cur.splice(+b.dataset.i, 1); put(cur); renderScenes(); });
+        const a = n.querySelector('[data-add]'); a.onchange = () => { if (!a.value) return; const cur = (s.data[f.k] || T.defaults.data[f.k] || []).slice(); if (cur.length >= 7) return msg('A basket holds up to 7 items.', 'bad'); cur.push(a.value); put(cur); renderScenes(); };
+        return;
+      }
+      const ev = n.tagName === 'SELECT' ? 'onchange' : 'oninput';
+      n[ev] = () => {
+        let v = n.value;
+        if (f.kind === 'lines') v = v.split('\n').map(x => x.trim()).filter(Boolean);
+        if (f.kind === 'number' || f.kind === 'money') v = v === '' ? 0 : +v;
+        put(v);
+      };
+    });
+  });
+}
+function renderChannel() {
+  channel.names = channel.names || {}; channel.taglines = channel.taglines || {};
+  $('chanBox').innerHTML = Object.keys(ep.languages).map(k => `<div class="fld"><label>${esc(ep.languages[k].name || k)}: channel name</label><input data-cn="${k}" value="${esc(channel.names[k] || '')}"></div><div class="fld"><label>${esc(ep.languages[k].name || k)}: tagline</label><input data-ct="${k}" value="${esc(channel.taglines[k] || '')}"></div>`).join('');
+  $('chanBox').querySelectorAll('[data-cn]').forEach(n => n.oninput = () => { channel.names[n.dataset.cn] = n.value; channel.__dirty = true; remountSoon(); });
+  $('chanBox').querySelectorAll('[data-ct]').forEach(n => n.oninput = () => { channel.taglines[n.dataset.ct] = n.value; channel.__dirty = true; remountSoon(); });
+}
+
+// ---------- preview ----------
+let remountT = 0;
+function remountSoon() { clearTimeout(remountT); remountT = setTimeout(remount, 250); }
+function remount() {
+  app = E.mount($('stage'), ep, lang, { channel, preview: true });
+  document.fonts.ready.then(() => { if (app) { app.refit(); app.render(tNow); } });
+  tNow = Math.min(tNow, app.duration); draw();
+  const tl = app.timeline; $('scenes').querySelectorAll('.scene').forEach(n => { const o = tl.scenes.find(x => x.i === +n.dataset.i); const p = n.querySelector('.hd .pill:nth-of-type(2)'); if (p && o) p.textContent = o.start.toFixed(1) + 's'; });
+}
+function draw() {
+  if (!app) return;
+  app.render(tNow);
+  $('scrub').value = app.duration ? Math.round(1000 * tNow / app.duration) : 0;
+  $('time').textContent = `${tNow.toFixed(1)} / ${app.duration.toFixed(1)}s`;
+  const o = app.timeline.scenes.find(x => tNow >= x.start && tNow < x.end) || app.timeline.scenes[app.timeline.scenes.length - 1];
+  $('sceneAt').textContent = o ? `Scene ${o.i + 1}: ${E.SCENES[o.scene.type].label}` : '';
+}
+function seekScene(i) { const o = app && app.timeline.scenes.find(x => x.i === i); if (o) { tNow = o.start + .01; draw(); } }
+function loop(ts) { if (!playing) return; tNow = (ts - t0) / 1000; if (tNow >= app.duration) { tNow = app.duration; stop(); } draw(); raf = requestAnimationFrame(loop); }
+function play() { if (tNow >= app.duration - .05) tNow = 0; playing = true; t0 = performance.now() - tNow * 1000; $('play').textContent = '❚❚ Pause'; raf = requestAnimationFrame(loop); }
+function stop() { playing = false; cancelAnimationFrame(raf); $('play').textContent = '▶ Play'; }
+$('play').onclick = () => (playing ? stop() : play());
+$('scrub').oninput = () => { stop(); tNow = app.duration * $('scrub').value / 1000; draw(); };
+
+// ---------- edits ----------
+function changed() { dirty = true; store.set('ex.draft.' + ep.id, { ep, __saved: null }); }
+$('epTitle').oninput = () => { ep.title = ep.title || {}; ep.title[lang] = $('epTitle').value; changed(); };
+$('lName').oninput = () => { ep.languages[lang].name = $('lName').value; changed(); renderLangTabs(); };
+$('lCur').oninput = () => { ep.languages[lang].currency = $('lCur').value; changed(); remountSoon(); };
+$('lLoc').onchange = () => { ep.languages[lang].locale = $('lLoc').value; changed(); remountSoon(); };
+$('lDec').onchange = () => { ep.languages[lang].decimals = +$('lDec').value; changed(); remountSoon(); };
+$('delLang').onclick = () => {
+  if (Object.keys(ep.languages).length < 2) return msg('An episode needs at least one language.', 'bad');
+  if (!confirm(`Remove ${ep.languages[lang].name} from this episode? Its words and prices will be deleted.`)) return;
+  delete ep.languages[lang]; ep.scenes.forEach(s => { if (s.lang) delete s.lang[lang]; }); if (ep.title) delete ep.title[lang];
+  lang = Object.keys(ep.languages)[0]; changed(); renderAll();
+};
+$('addType').innerHTML = Object.entries(E.SCENES).map(([k, T]) => `<option value="${k}">${esc(T.label)}</option>`).join('');
+$('addScene').onclick = () => {
+  const s = E.newScene($('addType').value, Object.keys(ep.languages));
+  const at = ep.scenes.length && ep.scenes[ep.scenes.length - 1].type === 'endCard' ? ep.scenes.length - 1 : ep.scenes.length;
+  ep.scenes.splice(at, 0, s); openScene = at; changed(); renderScenes(); remount(); seekScene(at);
+  msg('Scene added with sample words in every language. Change them in each language tab.', 'good');
+};
+$('epSel').onchange = async () => { if (dirty && !confirm('Switch episode? Unsaved changes stay on this device as a draft.')) { $('epSel').value = ep.id; return; } await loadEpisode($('epSel').value); };
+$('newEp').onclick = () => {
+  const name = (prompt('Short name for the new episode (letters, numbers and dashes, for example "how-ai-learns"):') || '').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
+  if (!name) return;
+  if (index.includes(name)) return msg('An episode with that name already exists.', 'bad');
+  ep = blankEpisode(name); index.push(name); fillEpSel(name); lang = 'en'; openScene = 0; tNow = 0; changed(); renderAll();
+};
+$('copyScript').onclick = async () => { const s = E.script(ep, lang); try { await navigator.clipboard.writeText(s); msg('Script copied.', 'good'); } catch (e) { prompt('Copy the script:', s); } };
+$('dl').onclick = () => {
+  const b = new Blob([JSON.stringify(ep, null, 1)], { type: 'application/json' }), a = document.createElement('a');
+  a.href = URL.createObjectURL(b); a.download = ep.id + '.json'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+};
+
+// ---------- GitHub ----------
+$('ghSaveCfg').onclick = () => { store.set('ex.gh', { repo: $('ghRepo').value.trim(), tok: $('ghTok').value.trim() }); msg('Saved on this device.', 'good'); };
+const b64 = s => btoa(unescape(encodeURIComponent(s)));
+const unb64 = s => decodeURIComponent(escape(atob(s.replace(/\n/g, ''))));
+async function gh(path, method = 'GET', body) {
+  const repo = $('ghRepo').value.trim(), tok = $('ghTok').value.trim();
+  if (!repo || !tok) throw new Error('Open "GitHub connection" and add your repository and token first.');
+  const r = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, { method, headers: { Authorization: 'Bearer ' + tok, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  if (r.status === 404 && method === 'GET') return null;
+  if (!r.ok) throw new Error(`GitHub said ${r.status}: ${(await r.text()).slice(0, 160)}`);
+  return r.json();
+}
+async function putFile(path, text, message) {
+  const cur = await gh(path + '?ref=main');
+  return gh(path, 'PUT', { message, content: b64(text), branch: 'main', sha: cur ? cur.sha : undefined });
+}
+$('save').onclick = async () => {
+  const problems = check(); if (problems.length && !confirm('Please check:\n\n' + problems.join('\n') + '\n\nSave anyway?')) return;
+  $('save').disabled = true; msg('Saving…');
+  try {
+    await putFile(`explainer/episodes/${ep.id}.json`, JSON.stringify(ep, null, 1) + '\n', `Episode ${ep.id}: edited in the episode editor`);
+    { const cur = await gh('explainer/episodes/index.json?ref=main'); const list = cur ? (JSON.parse(unb64(cur.content)).episodes || []) : []; if (!list.includes(ep.id)) { list.push(ep.id); await putFile('explainer/episodes/index.json', JSON.stringify({ episodes: list }, null, 1) + '\n', `Episode list: add ${ep.id}`); } }
+    if (channel.__dirty) { const c = clone(channel); delete c.__dirty; await putFile('explainer/channel.json', JSON.stringify(c, null, 1) + '\n', 'Channel names edited in the episode editor'); delete channel.__dirty; }
+    dirty = false; store.set('ex.draft.' + ep.id, null);
+    msg('Saved. The videos will be built in a few minutes: open your repository on GitHub, then Actions → "Explainer videos" to download them.', 'good');
+  } catch (e) { msg(e.message, 'bad'); }
+  $('save').disabled = false;
+};
+$('ghLoad').onclick = async () => {
+  try {
+    const f = await gh(`explainer/episodes/${ep.id}.json?ref=main`); if (!f) return msg('This episode is not on GitHub yet.', 'bad');
+    ep = JSON.parse(unb64(f.content)); dirty = false; renderAll(); msg('Loaded the latest saved version from GitHub.', 'good');
+  } catch (e) { msg(e.message, 'bad'); }
+};
+function check() {
+  const out = [];
+  Object.keys(ep.languages).forEach(l => ep.scenes.forEach((s, i) => { const L = (s.lang || {})[l]; if (!L || !(L.lines || []).length) out.push(`• Scene ${i + 1} has no voiceover lines in ${ep.languages[l].name}.`); }));
+  return out.slice(0, 8);
+}
+window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+boot().catch(e => msg('Could not start: ' + e.message, 'bad'));
+})();
+</script>
+</body></html>

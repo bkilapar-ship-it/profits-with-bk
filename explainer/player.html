@@ -1,0 +1,22 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Explainer player</title>
+<link rel="stylesheet" href="fonts.css">
+<style>html,body{margin:0;background:#0d1b2a;overflow:hidden}svg{display:block;width:1920px;height:1080px;font-family:var(--ex-font)}</style>
+</head><body>
+<svg id="v" xmlns="http://www.w3.org/2000/svg" width="1920" height="1080"></svg>
+<script src="engine.js"></script>
+<script>
+/* Used by render.js to make the video: player.html?ep=episodes/inflation.json&lang=te */
+(async () => {
+  const q = new URLSearchParams(location.search), lang = q.get('lang') || 'en';
+  const [ep, channel] = await Promise.all([fetch(q.get('ep')).then(r => r.json()), fetch('channel.json').then(r => r.json()).catch(() => ({}))]);
+  const sample = JSON.stringify(ep) + JSON.stringify(channel) + '0123456789£₹$€';
+  await Promise.all(['400', '700', '800'].map(w => document.fonts.load(`${w} 40px ${getComputedStyle(document.documentElement).getPropertyValue('--ex-font')}`, sample).catch(() => {})));
+  await document.fonts.ready;
+  const app = Explainer.mount(document.getElementById('v'), ep, lang, { channel });
+  window.DUR = app.duration; window.render = app.render; window.CUES = app.timeline.cues;
+  window.SRT = Explainer.srt(ep, lang); window.SCRIPT = Explainer.script(ep, lang);
+  window.READY = true;
+})().catch(e => { window.ERROR = String(e && e.stack || e); });
+</script>
+</body></html>

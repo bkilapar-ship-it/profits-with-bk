@@ -1,0 +1,166 @@
+{
+ "id": "inflation",
+ "title": {
+  "en": "Why does money buy less every year?",
+  "te": "ప్రతి ఏడాది డబ్బుతో తక్కువ ఎందుకు వస్తుంది?"
+ },
+ "languages": {
+  "en": {
+   "name": "English",
+   "currency": "£",
+   "locale": "en-GB",
+   "decimals": 2
+  },
+  "te": {
+   "name": "Telugu",
+   "currency": "₹",
+   "locale": "en-IN",
+   "decimals": 0
+  }
+ },
+ "scenes": [
+  {
+   "type": "presenter",
+   "duration": 5,
+   "data": {
+    "side": "right"
+   },
+   "lang": {
+    "en": {
+     "title": "Why does money buy less every year?",
+     "lines": [
+      "Your money hasn't changed. So why does it buy less every year?"
+     ]
+    },
+    "te": {
+     "title": "ప్రతి ఏడాది డబ్బుతో తక్కువ ఎందుకు వస్తుంది?",
+     "lines": [
+      "మీ దగ్గర ఉన్న డబ్బు అలానే ఉంది. మరి ప్రతి ఏడాది దానితో తక్కువ ఎందుకు వస్తుంది?"
+     ]
+    }
+   }
+  },
+  {
+   "type": "basket",
+   "duration": 11,
+   "data": {
+    "items": [
+     "bread",
+     "milk",
+     "eggs",
+     "apple",
+     "cheese"
+    ],
+    "yearStart": 1,
+    "yearEnd": 5
+   },
+   "lang": {
+    "en": {
+     "priceStart": 2,
+     "priceEnd": 2.5,
+     "yearLabel": "YEAR {n}",
+     "totalLabel": "Basket total",
+     "note": "Illustrative prices",
+     "lines": [
+      "Imagine £10 buys you this basket.",
+      "A few years later, the same £10 buys less.",
+      "That's inflation."
+     ]
+    },
+    "te": {
+     "priceStart": 100,
+     "priceEnd": 125,
+     "yearLabel": "{n}వ ఏడాది",
+     "totalLabel": "Basket మొత్తం",
+     "note": "ఉదాహరణ ధరలు",
+     "lines": [
+      "ఇప్పుడు ₹500 తో ఈ basket మొత్తం వస్తుంది అనుకోండి.",
+      "కొన్ని సంవత్సరాల తర్వాత, అదే ₹500 తో తక్కువ వస్తుంది.",
+      "దీన్నే inflation అంటారు."
+     ]
+    }
+   }
+  },
+  {
+   "type": "moreMoney",
+   "duration": 5.5,
+   "data": {
+    "product": "bread"
+   },
+   "lang": {
+    "en": {
+     "heading": "Cause 1: more money, same stuff",
+     "unit": "per loaf",
+     "priceFrom": 1,
+     "priceTo": 2,
+     "lines": [
+      "Why does it happen?",
+      "More money chasing the same bread pushes prices up."
+     ]
+    },
+    "te": {
+     "heading": "కారణం 1: డబ్బు ఎక్కువ, వస్తువులు అంతే",
+     "unit": "ఒక్క loaf కి",
+     "priceFrom": 40,
+     "priceTo": 80,
+     "lines": [
+      "ఎందుకు ఇలా జరుగుతుంది?",
+      "అందరి దగ్గర డబ్బు పెరిగింది, కానీ bread అంతే ఉంది. అందుకే price పెరుగుతుంది."
+     ]
+    }
+   }
+  },
+  {
+   "type": "costPush",
+   "duration": 4.6,
+   "data": {
+    "product": "bread"
+   },
+   "lang": {
+    "en": {
+     "heading": "Cause 2: making it costs more",
+     "meter": "⚡ Energy & ingredients cost",
+     "unit": "per loaf",
+     "priceFrom": 2,
+     "priceTo": 2.4,
+     "lines": [
+      "And when making things costs more, prices rise too."
+     ]
+    },
+    "te": {
+     "heading": "కారణం 2: తయారీ cost పెరిగింది",
+     "meter": "⚡ Energy & ingredients ఖర్చు",
+     "unit": "ఒక్క loaf కి",
+     "priceFrom": 80,
+     "priceTo": 96,
+     "lines": [
+      "ఇంకా, తయారు చేయడానికి cost పెరిగినా, prices పెరుగుతాయి."
+     ]
+    }
+   }
+  },
+  {
+   "type": "endCard",
+   "duration": 3.5,
+   "data": {},
+   "lang": {
+    "en": {
+     "kicker": "INFLATION",
+     "main": "Your money slowly buys less.",
+     "small": "Simplified illustration. Real-world inflation has several causes.",
+     "lines": [
+      "Inflation. Your money slowly buys less."
+     ]
+    },
+    "te": {
+     "kicker": "INFLATION",
+     "main": "మీ డబ్బుతో కొనేది మెల్లగా తగ్గుతుంది.",
+     "small": "సులభంగా అర్థం కావడానికి ఇచ్చిన ఉదాహరణ. నిజమైన inflation కి చాలా కారణాలు ఉంటాయి.",
+     "lines": [
+      "Inflation. మీ డబ్బుతో కొనేది మెల్లగా తగ్గుతుంది."
+     ]
+    }
+   }
+  }
+ ]
+}

@@ -1,0 +1,8 @@
+{
+  "name": "oh-i-get-it-explainer",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Episode engine, editor and video renderer for the Oh, I Get It channels. Free: no paid services.",
+  "scripts": { "render": "node render.js" },
+  "dependencies": { "playwright": "1.49.1" }
+}

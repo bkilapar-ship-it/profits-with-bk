@@ -15,6 +15,8 @@ on:
     branches: [main]
     paths-ignore:                # studio-only changes don't need a new market scan
       - 'studio/**'
+      - 'explainer/**'
+      - '.github/workflows/explainer.yaml'
       - 'research-trigger/**'
       - '.github/workflows/studio.yaml'
       - 'RESEARCH.md'
@@ -111,6 +113,7 @@ jobs:
           mkdir -p _site
           cp index.html style.css app.js logo.png favicon.png apple-touch-icon.png _site/
           if [ -d studio-latest ]; then mkdir -p _site/studio && cp -r studio-latest/. _site/studio/ && rm -rf _site/studio/.git; fi
+          if [ -d explainer ]; then mkdir -p _site/explainer && cp -r explainer/. _site/explainer/ && rm -rf _site/explainer/node_modules _site/explainer/render.js _site/explainer/package.json _site/explainer/package-lock.json; fi   # episode editor: /explainer/editor.html
           touch _site/.nojekyll
 
       - name: Upload site

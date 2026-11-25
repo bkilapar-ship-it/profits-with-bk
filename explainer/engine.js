@@ -1,0 +1,599 @@
+/*
+ * "Oh, I Get It" explainer engine.
+ * Turns an episode file (episodes/*.json) into an animated 1920x1080 SVG for one language.
+ * Used by the editor (live preview), player.html (rendering) and render.js (video files).
+ *
+ * Episode shape (see episodes/inflation.json):
+ *   { id, title:{lang:..}, languages:{ en:{name,currency,locale,decimals}, te:{...} },
+ *     scenes:[ { type, duration, data:{...same in every language}, lang:{ en:{lines:[..], ...}, te:{...} } } ] }
+ *
+ * Each scene type below lists its editable fields, so the editor can build its form automatically.
+ * Adding a new kind of scene = adding one entry to SCENES. Changing words, prices, order or timing = editing the episode file only.
+ */
+(function (root) {
+  'use strict';
+  const NS = 'http://www.w3.org/2000/svg', W = 1920, H = 1080, FADE = 0.45;
+  const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+  const lerp = (a, b, u) => a + (b - a) * u;
+  const ease = u => (u < .5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2);
+  const bounce = u => { const n = 7.5625, d = 2.75; if (u < 1 / d) return n * u * u; if (u < 2 / d) return n * (u -= 1.5 / d) * u + .75; if (u < 2.5 / d) return n * (u -= 2.25 / d) * u + .9375; return n * (u -= 2.625 / d) * u + .984375; };
+  const prog = (t, a, b) => clamp((t - a) / (b - a));
+  function el(tag, attrs, parent, text) {
+    const e = document.createElementNS(NS, tag);
+    for (const k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    if (parent) parent.appendChild(e);
+    return e;
+  }
+  /** Shrinks a text element's font until it fits maxW pixels. */
+  function fit(e, maxW) {
+    if (!e.dataset.fs) e.dataset.fs = e.getAttribute('font-size');
+    let f = +e.dataset.fs; e.setAttribute('font-size', f);
+    try { while (e.getComputedTextLength() > maxW && f > 12) { f -= 1; e.setAttribute('font-size', f); } } catch (err) { /* not in the DOM yet */ }
+  }
+  function txt(parent, x, y, s, size, weight, fill, opts = {}) {
+    const e = el('text', Object.assign({ x, y, 'font-size': size, 'font-weight': weight, fill, 'text-anchor': opts.anchor || 'middle' }, opts.attrs || {}), parent, s);
+    if (opts.max) { e.dataset.max = opts.max; }
+    return e;
+  }
+  const fitAll = g => g.querySelectorAll('text[data-max]').forEach(e => fit(e, +e.dataset.max));
+  const fill = (s, vars) => String(s == null ? '' : s).replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? vars[k] : m));
+
+  // ---------------------------------------------------------------- characters
+  function makePerson(parent, c = {}) {
+    const C = Object.assign({ shirt: '#f4a261', shirtB: '#e09f3e', pants: '#264d7a', pantsB: '#1d3557', skin: '#b5835a', hair: '#2b2118' }, c);
+    const root = el('g', {}, parent), P = { root };
+    el('ellipse', { cx: 0, cy: 0, rx: 60, ry: 10, fill: '#000', opacity: .15 }, root);
+    P.body = el('g', {}, root);
+    const limb = (color, len, w) => { const g = el('g', {}, P.body); el('rect', { x: -w / 2, y: 0, width: w, height: len, rx: w / 2, fill: color }, g); return g; };
+    P.legB = limb(C.pantsB, 145, 30); P.armB = limb(C.shirtB, 118, 24);
+    el('rect', { x: -40, y: -270, width: 80, height: 140, rx: 28, fill: C.shirt }, P.body);
+    P.legF = limb(C.pants, 145, 30);
+    P.head = el('g', {}, P.body);
+    el('circle', { cx: 0, cy: -312, r: 38, fill: C.skin }, P.head);
+    el('path', { d: 'M-38 -318 a38 38 0 0 1 76 -6 q-30 -18 -76 6z', fill: C.hair }, P.head);
+    el('circle', { cx: 18, cy: -314, r: 4.5, fill: '#2b2118' }, P.head);
+    P.mouth = el('path', { d: 'M14 -296 q8 6 16 0', stroke: '#2b2118', 'stroke-width': 3.5, fill: 'none', 'stroke-linecap': 'round' }, P.head);
+    P.armF = el('g', {}, P.body);
+    el('rect', { x: -12, y: 0, width: 24, height: 118, rx: 12, fill: C.shirt }, P.armF);
+    P.hold = el('g', {}, P.armF);
+    el('circle', { cx: 0, cy: 118, r: 14, fill: C.skin }, P.armF);
+    P.set = (x, y, s, o = {}) => {
+      root.setAttribute('transform', `translate(${x},${y}) scale(${s})`);
+      root.setAttribute('opacity', o.op == null ? 1 : o.op);
+      P.body.setAttribute('transform', `translate(0,${-(o.bob || 0)})`);
+      P.legB.setAttribute('transform', `translate(0,-140) rotate(${o.legB || 0})`);
+      P.legF.setAttribute('transform', `translate(0,-140) rotate(${o.legF || 0})`);
+      P.armB.setAttribute('transform', `translate(0,-250) rotate(${o.armB || 0})`);
+      P.armF.setAttribute('transform', `translate(0,-250) rotate(${o.armF || 0})`);
+      const m = o.mood == null ? 1 : o.mood;
+      P.mouth.setAttribute('d', `M14 ${-296 - (m < 0 ? 3 : 0)} q8 ${6 * m} 16 0`);
+      P.head.setAttribute('transform', `rotate(${o.tilt || 0} 0 -300)`);
+    };
+    return P;
+  }
+  const walk = (t, speed = 1.7) => { const ph = t * 2 * Math.PI * speed, s = Math.sin(ph); return { legF: 26 * s, legB: -26 * s, armF: -22 * s, armB: 22 * s, bob: Math.abs(Math.cos(ph)) * 7 }; };
+
+  // ---------------------------------------------------------------- props
+  const ITEM_KINDS = ['bread', 'milk', 'eggs', 'apple', 'cheese', 'rice', 'tea', 'banana'];
+  function item(kind, parent) {
+    const g = el('g', {}, parent);
+    switch (kind) {
+      case 'bread': el('rect', { x: -55, y: -62, width: 110, height: 62, rx: 30, fill: '#d4a373' }, g); [-25, 0, 25].forEach(x => el('path', { d: `M${x - 8} -48 l14 26`, stroke: '#a9743f', 'stroke-width': 5, 'stroke-linecap': 'round' }, g)); break;
+      case 'milk': el('rect', { x: -34, y: -120, width: 68, height: 120, rx: 6, fill: '#fff', stroke: '#8ecae6', 'stroke-width': 4 }, g); el('path', { d: 'M-34 -120 L0 -150 L34 -120 Z', fill: '#e9f5fb', stroke: '#8ecae6', 'stroke-width': 4 }, g); el('rect', { x: -34, y: -80, width: 68, height: 34, fill: '#219ebc' }, g); break;
+      case 'eggs': [-30, 0, 30].forEach(x => el('ellipse', { cx: x, cy: -50, rx: 18, ry: 24, fill: '#fff6e5', stroke: '#e0c9a6', 'stroke-width': 3 }, g)); el('rect', { x: -56, y: -44, width: 112, height: 44, rx: 8, fill: '#c9ada7' }, g); break;
+      case 'apple': el('circle', { cx: 0, cy: -44, r: 44, fill: '#e63946' }, g); el('path', { d: 'M0 -88 q4 -18 18 -22', stroke: '#6b4226', 'stroke-width': 6, fill: 'none' }, g); el('ellipse', { cx: 16, cy: -100, rx: 14, ry: 7, fill: '#2a9d8f', transform: 'rotate(-30 16 -100)' }, g); break;
+      case 'cheese': el('path', { d: 'M-60 0 L60 0 L60 -70 Z', fill: '#ffd166' }, g); el('path', { d: 'M-60 0 L60 -70 L60 -82 L-60 -6 Z', fill: '#f4b400' }, g); [[20, -20, 8], [40, -40, 6], [0, -8, 5]].forEach(([x, y, r]) => el('circle', { cx: x, cy: y, r, fill: '#f4b400' }, g)); break;
+      case 'rice': el('path', { d: 'M-46 0 L-52 -96 Q0 -116 52 -96 L46 0 Z', fill: '#f1e3c6', stroke: '#c9a77a', 'stroke-width': 4 }, g); el('rect', { x: -40, y: -66, width: 80, height: 34, rx: 6, fill: '#2a9d8f' }, g); break;
+      case 'tea': el('rect', { x: -44, y: -100, width: 88, height: 100, rx: 8, fill: '#9c2f2f' }, g); el('rect', { x: -44, y: -70, width: 88, height: 30, fill: '#ffd166' }, g); el('path', { d: 'M-10 -90 q10 -16 20 0', stroke: '#ffd166', 'stroke-width': 5, fill: 'none' }, g); break;
+      case 'banana': el('path', { d: 'M-58 -30 Q0 30 58 -60 Q40 -10 -50 -14 Z', fill: '#ffd166', stroke: '#e9b200', 'stroke-width': 4 }, g); break;
+      default: el('rect', { x: -45, y: -90, width: 90, height: 90, rx: 12, fill: '#8ecae6' }, g);
+    }
+    return g;
+  }
+  function coin(parent, x, y, s) { const g = el('g', { transform: `translate(${x},${y}) scale(${s})` }, parent); el('ellipse', { rx: 34, ry: 12, cy: 6, fill: '#c99700' }, g); el('ellipse', { rx: 34, ry: 12, fill: '#ffd166', stroke: '#c99700', 'stroke-width': 3 }, g); return g; }
+  function priceCard(parent, x, y, label, stroke) {
+    const g = el('g', { transform: `translate(${x},${y})` }, parent);
+    el('rect', { x: -160, y: -74, width: 320, height: 148, rx: 22, fill: '#fff', stroke, 'stroke-width': 6 }, g);
+    txt(g, 0, -20, label, 30, 700, '#6b7f8e', { max: 290 });
+    return { g, v: txt(g, 0, 46, '', 64, 800, stroke) };
+  }
+  function bulb(parent, x, y, s, glow) {
+    const g = el('g', { transform: `translate(${x},${y}) scale(${s})` }, parent);
+    if (glow) el('circle', { cx: 0, cy: -10, r: 70, fill: '#ffd166', opacity: .25 }, g);
+    el('path', { d: 'M-34 -14 a40 40 0 1 1 68 0 q-12 14 -14 30 h-40 q-2 -16 -14 -30z', fill: '#ffd166' }, g);
+    el('rect', { x: -20, y: 20, width: 40, height: 10, rx: 4, fill: '#adb5bd' }, g);
+    el('rect', { x: -16, y: 33, width: 32, height: 9, rx: 4, fill: '#8d99ae' }, g);
+    el('path', { d: 'M-10 6 l6 -18 l8 12 l6 -16', stroke: '#e09f3e', 'stroke-width': 4, fill: 'none', 'stroke-linejoin': 'round' }, g);
+    return g;
+  }
+
+  // ---------------------------------------------------------------- scene library
+  // base: the length the scene was designed for (seconds). The animation stretches to whatever duration the episode gives it.
+  // cues: where each voiceover line starts, in base seconds (used when the number of lines matches).
+  // fields: what the editor shows. per:'lang' = different in each language, per:'data' = same for every language.
+  const SCENES = {};
+
+  SCENES.presenter = {
+    label: 'Presenter (you on camera, branded background)', base: 5, captions: true,
+    fields: [
+      { k: 'title', per: 'lang', kind: 'text', label: 'Title shown at the bottom' },
+      { k: 'lines', per: 'lang', kind: 'lines', label: 'What you say (one line per caption)' },
+      { k: 'side', per: 'data', kind: 'select', options: ['left', 'right', 'center'], label: 'Where you stand' },
+    ],
+    defaults: { data: { side: 'right' }, lang: { title: 'Topic title', lines: ['Say hello and introduce the topic.'] } },
+    build(g, S, ctx) {
+      const bg = el('g', {}, g);
+      const grd = el('linearGradient', { id: 'pg' + ctx.uid, x1: 0, y1: 0, x2: 1, y2: 1 }, ctx.defs);
+      el('stop', { offset: 0, 'stop-color': '#0d1b2a' }, grd); el('stop', { offset: 1, 'stop-color': '#1b3a5c' }, grd);
+      el('rect', { width: W, height: H, fill: `url(#pg${ctx.uid})` }, bg);
+      const dots = el('g', { opacity: .18 }, bg);
+      for (let i = 0; i < 26; i++) { const x = (i * 337) % W, y = (i * 211) % H; el('circle', { cx: x, cy: y, r: 3 + (i % 4) * 2, fill: '#ffd166' }, dots); }
+      const big = bulb(bg, S.data.side === 'left' ? 1500 : 420, 560, 6.5, false); big.setAttribute('opacity', .07);
+      const brand = el('g', { transform: 'translate(70,70)' }, g);
+      bulb(brand, 40, 46, .9, true);
+      txt(brand, 100, 70, ctx.channelName, 44, 800, '#fff', { anchor: 'start', max: 900 });
+      const third = el('g', {}, g);
+      const tx = S.data.side === 'left' ? 1800 : 120, anchor = S.data.side === 'left' ? 'end' : 'start';
+      const bar = el('rect', { x: S.data.side === 'left' ? 1810 : 110, y: 790, width: 10, height: 90, rx: 5, fill: '#ffd166' }, third);
+      const tt = txt(third, S.data.side === 'left' ? 1785 : 145, 856, S.L.title || '', 60, 800, '#fff', { anchor, max: 1150 });
+      let ph = null;
+      if (ctx.preview) { // where your camera picture goes (preview only, never rendered into the video)
+        const cx = S.data.side === 'left' ? 520 : S.data.side === 'center' ? 960 : 1400;
+        ph = el('g', { opacity: .35 }, g);
+        el('circle', { cx, cy: 380, r: 120, fill: 'none', stroke: '#fff', 'stroke-width': 4, 'stroke-dasharray': '14 10' }, ph);
+        el('path', { d: `M${cx - 230} 1080 q0 -330 230 -330 q230 0 230 330`, fill: 'none', stroke: '#fff', 'stroke-width': 4, 'stroke-dasharray': '14 10' }, ph);
+        txt(ph, cx, 670, 'YOUR CAMERA', 30, 700, '#fff');
+      }
+      return u => {
+        const ts = u * this.base;
+        const a = ease(prog(ts, .2, .9));
+        third.setAttribute('transform', `translate(${(S.data.side === 'left' ? 1 : -1) * (1 - a) * 60},0)`); third.setAttribute('opacity', a);
+        brand.setAttribute('opacity', ease(prog(ts, 0, .5)));
+        dots.setAttribute('transform', `translate(0,${-ts * 6})`);
+      };
+    },
+  };
+
+  SCENES.walkToShop = {
+    label: 'Person walks into a shop', base: 6, captions: true,
+    fields: [
+      { k: 'shopName', per: 'lang', kind: 'text', label: 'Shop sign' },
+      { k: 'lines', per: 'lang', kind: 'lines', label: 'Voiceover lines' },
+    ],
+    defaults: { data: {}, lang: { shopName: 'CORNER SHOP', lines: ['You pop into the shop.'] } },
+    build(g, S, ctx) {
+      const sky = el('linearGradient', { id: 'sky' + ctx.uid, x1: 0, y1: 0, x2: 0, y2: 1 }, ctx.defs);
+      el('stop', { offset: 0, 'stop-color': '#8ecae6' }, sky); el('stop', { offset: 1, 'stop-color': '#d6f0fa' }, sky);
+      el('rect', { width: W, height: H, fill: `url(#sky${ctx.uid})` }, g);
+      el('circle', { cx: 300, cy: 170, r: 70, fill: '#ffe8a3' }, g);
+      const cl = el('g', { fill: '#fff', opacity: .9 }, g);
+      el('ellipse', { cx: 700, cy: 160, rx: 110, ry: 34 }, cl); el('ellipse', { cx: 770, cy: 135, rx: 70, ry: 40 }, cl); el('ellipse', { cx: 1500, cy: 120, rx: 120, ry: 30 }, cl);
+      [[40, 420, 260, 440], [330, 350, 200, 510], [560, 460, 300, 400], [890, 390, 210, 470]].forEach(([x, y, w, h]) => {
+        el('rect', { x, y, width: w, height: h, fill: '#a9c6d9' }, g);
+        for (let yy = y + 40; yy < y + h - 60; yy += 80) for (let xx = x + 30; xx < x + w - 40; xx += 70) el('rect', { x: xx, y: yy, width: 36, height: 46, fill: '#d8e8f2' }, g);
+      });
+      el('rect', { x: 1150, y: 360, width: 640, height: 500, fill: '#e76f51' }, g);
+      el('rect', { x: 1150, y: 340, width: 640, height: 40, fill: '#c0563b' }, g);
+      el('rect', { x: 1230, y: 370, width: 480, height: 80, rx: 10, fill: '#264653' }, g);
+      txt(g, 1470, 425, S.L.shopName || '', 46, 800, '#ffd166', { max: 440, attrs: { 'letter-spacing': 3 } });
+      for (let i = 0; i < 8; i++) el('path', { d: `M${1150 + i * 80} 470 h80 v60 q-40 30 -80 0 z`, fill: i % 2 ? '#fff' : '#2a9d8f' }, g);
+      el('rect', { x: 1520, y: 560, width: 230, height: 200, fill: '#bde0fe', stroke: '#264653', 'stroke-width': 8 }, g);
+      [['#2a9d8f', 1545, 690, 60], ['#f4a261', 1595, 670, 80], ['#e9c46a', 1645, 700, 50], ['#2a9d8f', 1695, 680, 70]].forEach(([c, x, y, h]) => el('rect', { x, y, width: 40, height: h, fill: c }, g));
+      el('rect', { x: 1290, y: 560, width: 160, height: 300, fill: '#264653' }, g);
+      const doorIn = el('rect', { x: 1290, y: 560, width: 160, height: 300, fill: '#ffd9a0', opacity: 0 }, g);
+      el('circle', { cx: 1430, cy: 715, r: 8, fill: '#ffd166' }, g);
+      el('rect', { y: 860, width: W, height: 220, fill: '#adb5bd' }, g);
+      el('rect', { y: 860, width: W, height: 14, fill: '#8d959c' }, g);
+      for (let x = 0; x < W; x += 160) el('rect', { x, y: 874, width: 4, height: 206, fill: '#9aa2a9' }, g);
+      const P = makePerson(el('g', {}, g));
+      return u => {
+        const ts = u * this.base, k = prog(ts, 0, 5.0), x = lerp(-120, 1370, k), enter = prog(ts, 5.0, 5.5);
+        doorIn.setAttribute('opacity', prog(ts, 4.4, 4.9));
+        const wk = ts < 5.0 ? walk(ts) : {};
+        P.set(x + enter * 30, 860, 1 - enter * .15, Object.assign({}, wk, { op: 1 - enter }));
+      };
+    },
+  };
+
+  SCENES.tapToPay = {
+    label: 'Tap to pay at the till', base: 4.8, captions: true,
+    fields: [
+      { k: 'amount', per: 'lang', kind: 'money', label: 'Amount on the card machine' },
+      { k: 'paid', per: 'lang', kind: 'text', label: 'Screen text after paying' },
+      { k: 'lines', per: 'lang', kind: 'lines', label: 'Voiceover lines' },
+      { k: 'zoom', per: 'data', kind: 'select', options: ['yes', 'no'], label: 'Zoom into the machine at the end' },
+    ],
+    defaults: { data: { zoom: 'yes' }, lang: { amount: 4.5, paid: '✓ Paid', lines: ['You tap your phone. Beep. Done.'] } },
+    cues: [{ at: 3.2, sound: 'beep' }],
+    build(g, S, ctx) {
+      const z = el('g', {}, g);
+      const wall = el('linearGradient', { id: 'wl' + ctx.uid, x1: 0, y1: 0, x2: 0, y2: 1 }, ctx.defs);
+      el('stop', { offset: 0, 'stop-color': '#fdf0d5' }, wall); el('stop', { offset: 1, 'stop-color': '#f6dfb4' }, wall);
+      el('rect', { width: W, height: H, fill: `url(#wl${ctx.uid})` }, z);
+      [260, 470, 680].forEach(y => { el('rect', { x: 60, y: y + 120, width: 880, height: 18, fill: '#a86f4a' }, z); for (let i = 0, x = 80; x < 900; i++) { const w = 50 + ((i * 37) % 40), h = 70 + ((i * 53) % 50); el('rect', { x, y: y + 120 - h, width: w, height: h, rx: 6, fill: ['#e76f51', '#2a9d8f', '#e9c46a', '#f4a261', '#264653', '#8ecae6'][i % 6] }, z); x += w + 14; } });
+      [300, 500].forEach(y => { el('rect', { x: 1300, y: y + 120, width: 560, height: 18, fill: '#a86f4a' }, z); for (let i = 0, x = 1320; x < 1840; i++) { const w = 46 + ((i * 29) % 30), h = 60 + ((i * 41) % 50); el('rect', { x, y: y + 120 - h, width: w, height: h, rx: 6, fill: ['#bde0fe', '#ffafcc', '#cdb4db', '#a2d2ff'][i % 4] }, z); x += w + 12; } });
+      el('rect', { y: 1000, width: W, height: 80, fill: '#c9a77a' }, z);
+      const P = makePerson(el('g', {}, z));
+      const phone = el('rect', { x: -9, y: 110, width: 32, height: 52, rx: 6, fill: '#0d1b2a', stroke: '#adb5bd', 'stroke-width': 3 }, P.hold);
+      el('rect', { x: 1000, y: 790, width: 920, height: 290, fill: '#8d5a3b' }, z);
+      el('rect', { x: 980, y: 770, width: 960, height: 34, rx: 6, fill: '#a86f4a' }, z);
+      const term = el('g', { transform: 'translate(1035,560)' }, z);
+      el('rect', { width: 150, height: 215, rx: 20, fill: '#2b2d42' }, term);
+      const scr = el('rect', { x: 16, y: 18, width: 118, height: 86, rx: 8, fill: '#8ecae6' }, term);
+      const st = txt(term, 75, 72, '', 26, 800, '#0d1b2a', { max: 108 });
+      for (let r = 0; r < 2; r++) for (let c = 0; c < 3; c++) el('rect', { x: 22 + c * 38, y: 122 + r * 28, width: 30, height: 20, rx: 4, fill: r && c === 2 ? '#2a9d8f' : '#555b6e' }, term);
+      el('path', { d: 'M58 188 q17 -12 34 0 M64 196 q11 -7 22 0', stroke: '#8d99ae', 'stroke-width': 4, fill: 'none' }, term);
+      const rp = el('g', { fill: 'none', stroke: '#2a9d8f', 'stroke-width': 6 }, z);
+      const glow = el('radialGradient', { id: 'gl' + ctx.uid }, ctx.defs); el('stop', { offset: 0, 'stop-color': '#ffd166' }, glow); el('stop', { offset: 1, 'stop-color': '#ffd166', 'stop-opacity': 0 }, glow);
+      const flash = el('circle', { cx: 1110, cy: 620, r: 160, fill: `url(#gl${ctx.uid})`, opacity: 0 }, z);
+      const amount = ctx.money(S.L.amount, true);
+      return u => {
+        const ts = u * this.base, reach = ease(prog(ts, .8, 1.8)), armF = lerp(8, -78, reach);
+        phone.setAttribute('opacity', prog(ts, .3, .7));
+        P.set(820, 1010, 1.45, { armF, armB: 4 + Math.sin(ts * 2.2) * 1.2, legF: 2, legB: -2 });
+        rp.innerHTML = '';
+        const hx = 820 + Math.sin(-armF * Math.PI / 180) * 1.45 * 125, hy = 1010 - 1.45 * 250 + Math.cos(armF * Math.PI / 180) * 1.45 * 125;
+        for (let k = 0; k < 3; k++) { const v = prog(ts, 1.8 + k * .22, 2.7 + k * .22); if (v > 0 && v < 1) el('circle', { cx: hx + 20, cy: hy, r: 20 + v * 90, opacity: 1 - v }, rp); }
+        if (ts < 2.0) { scr.setAttribute('fill', '#8ecae6'); st.textContent = amount; }
+        else if (ts < 3.0) { scr.setAttribute('fill', '#ffd166'); st.textContent = '•'.repeat((Math.floor((ts - 2) * 4) % 4) + 1); }
+        else { scr.setAttribute('fill', '#06d6a0'); st.textContent = S.L.paid || '✓'; }
+        fit(st, 108);
+        flash.setAttribute('opacity', (1 - prog(ts, 3.0, 3.7)) * prog(ts, 2.95, 3.05));
+        const zz = S.data.zoom === 'no' ? 0 : ease(prog(ts, 3.8, 4.8)), s = lerp(1, 5, zz);
+        z.setAttribute('transform', `translate(1110,640) scale(${s}) translate(-1110,-640)`);
+      };
+    },
+  };
+
+  SCENES.paymentJourney = {
+    label: 'Payment journey (4 stops and back)', base: 6, captions: true,
+    fields: [
+      { k: 'heading', per: 'lang', kind: 'text', label: 'Heading' },
+      { k: 'stops', per: 'lang', kind: 'lines', label: 'The 4 stops (one per line)' },
+      { k: 'notes', per: 'lang', kind: 'lines', label: 'Small text under each stop (one per line)' },
+      { k: 'approved', per: 'lang', kind: 'text', label: 'Final word' },
+      { k: 'seconds', per: 'data', kind: 'number', label: 'Timer counts up to (seconds)' },
+      { k: 'lines', per: 'lang', kind: 'lines', label: 'Voiceover lines' },
+    ],
+    defaults: { data: { seconds: 2 }, lang: { heading: 'What happens in those 2 seconds', stops: ['Card terminal', "Shop's bank", 'Card network', 'Your bank'], notes: ['reads your card', 'passes the request on', 'routes it to your bank', 'checks money & fraud'], approved: '✓ Approved', lines: ['But your payment just went on a journey.', "Your bank checks it's really you, and says yes."] } },
+    cues: [{ line: 0, at: 0 }, { line: 1, at: 3.0 }],
+    build(g, S, ctx) {
+      el('rect', { width: W, height: H, fill: '#0d1b2a' }, g);
+      const grid = el('g', { stroke: '#1b2f45', 'stroke-width': 2 }, g);
+      for (let x = 0; x <= W; x += 80) el('line', { x1: x, y1: 0, x2: x, y2: H }, grid);
+      for (let y = 0; y <= H; y += 80) el('line', { x1: 0, y1: y, x2: W, y2: y }, grid);
+      txt(g, 960, 130, S.L.heading || '', 58, 800, '#fff', { max: 1450 });
+      const timer = txt(g, 1800, 130, '0.0s', 52, 800, '#ffd166', { anchor: 'end' });
+      const fp = 'M260 470 L1660 470', bp = 'M1660 600 C1400 880 520 880 260 600';
+      el('path', { d: fp, stroke: '#2c4a6b', 'stroke-width': 10, fill: 'none', 'stroke-linecap': 'round' }, g);
+      el('path', { d: bp, stroke: '#2c4a6b', 'stroke-width': 10, fill: 'none', 'stroke-dasharray': '4 22', 'stroke-linecap': 'round' }, g);
+      const fl = el('path', { d: fp, stroke: '#ffd166', 'stroke-width': 10, fill: 'none', 'stroke-linecap': 'round' }, g);
+      const bl = el('path', { d: bp, stroke: '#06d6a0', 'stroke-width': 10, fill: 'none', 'stroke-linecap': 'round' }, g);
+      const stops = (S.L.stops || []).slice(0, 4), notes = S.L.notes || [];
+      const N = [260, 727, 1193, 1660].map((x, i) => {
+        const ng = el('g', { transform: `translate(${x},515)` }, g);
+        const ring = el('circle', { r: 78, fill: '#13263b', stroke: '#2c4a6b', 'stroke-width': 8 }, ng);
+        txt(ng, 0, 20, ['💳', '🏛️', '🌐', '🏛️'][i], 56, 400, '#fff');
+        const lab = txt(ng, 0, -150, stops[i] || '', 36, 800, '#fff', { max: 440 });
+        const sub = txt(ng, 0, -106, notes[i] || '', 28, 400, '#8ecae6', { max: 440 });
+        return { x, ng, ring, lab, sub };
+      });
+      const glow = el('radialGradient', { id: 'pj' + ctx.uid }, ctx.defs); el('stop', { offset: 0, 'stop-color': '#ffd166' }, glow); el('stop', { offset: 1, 'stop-color': '#ffd166', 'stop-opacity': 0 }, glow);
+      const dg = el('circle', { r: 40, fill: `url(#pj${ctx.uid})` }, g), dot = el('circle', { r: 16, fill: '#fff' }, g);
+      const ap = txt(g, 960, 740, S.L.approved || '', 64, 800, '#06d6a0', { max: 900 });
+      const secs = +S.data.seconds || 2;
+      return u => {
+        const ts = u * this.base, A = .7, B = 3.2, C = 3.5, D = 5.4;
+        const flen = fl.getTotalLength(), blen = bl.getTotalLength(), uf = ease(prog(ts, A, B)), ub = ease(prog(ts, C, D));
+        fl.setAttribute('stroke-dasharray', `${flen} ${flen}`); fl.setAttribute('stroke-dashoffset', flen * (1 - uf));
+        bl.setAttribute('stroke-dasharray', `${blen} ${blen}`); bl.setAttribute('stroke-dashoffset', blen * (1 - ub));
+        const pt = ts < C ? fl.getPointAtLength(flen * uf) : bl.getPointAtLength(blen * ub), on = ts >= A - .1 && ts < D + .3;
+        [dot, dg].forEach(d => { d.setAttribute('cx', pt.x); d.setAttribute('cy', pt.y); d.setAttribute('opacity', on ? 1 : 0); });
+        N.forEach((n, i) => {
+          const at = A + (B - A) * (i / 3) * .98, lit = ts >= at - .05, pulse = lit ? Math.max(0, 1 - (ts - at) / .5) : 0;
+          const decide = i === 3 && ts >= B && ts < C + .6;
+          n.ring.setAttribute('stroke', (i === 0 && ts >= D) || decide ? '#06d6a0' : lit ? '#ffd166' : '#2c4a6b');
+          n.ring.setAttribute('fill', lit ? '#1d3a57' : '#13263b');
+          n.ng.setAttribute('transform', `translate(${n.x},515) scale(${1 + pulse * .18})`);
+          n.sub.setAttribute('opacity', lit ? 1 : .25); n.lab.setAttribute('opacity', lit ? 1 : .4);
+        });
+        timer.textContent = (ts < A ? 0 : ts < D ? secs * prog(ts, A, D) : secs).toFixed(1) + 's';
+        ap.setAttribute('opacity', prog(ts, D, D + .3));
+      };
+    },
+  };
+
+  SCENES.basket = {
+    label: 'Shopping basket: same money buys less', base: 11, captions: true,
+    fields: [
+      { k: 'items', per: 'data', kind: 'items', label: 'Items in the basket' },
+      { k: 'priceStart', per: 'lang', kind: 'money', label: 'Price of each item at the start' },
+      { k: 'priceEnd', per: 'lang', kind: 'money', label: 'Price of each item later' },
+      { k: 'yearStart', per: 'data', kind: 'number', label: 'Start year number' },
+      { k: 'yearEnd', per: 'data', kind: 'number', label: 'Later year number' },
+      { k: 'yearLabel', per: 'lang', kind: 'text', label: 'Year label ({n} = the number)' },
+      { k: 'totalLabel', per: 'lang', kind: 'text', label: 'Total label' },
+      { k: 'note', per: 'lang', kind: 'text', label: 'Small note (top right)' },
+      { k: 'lines', per: 'lang', kind: 'lines', label: 'Voiceover lines (1: basket fills, 2: prices rise, 3: item removed)' },
+    ],
+    defaults: { data: { items: ['bread', 'milk', 'eggs', 'apple', 'cheese'], yearStart: 1, yearEnd: 5 }, lang: { priceStart: 2, priceEnd: 2.5, yearLabel: 'YEAR {n}', totalLabel: 'Basket total', note: 'Illustrative prices', lines: ['Imagine this money buys you this basket.', 'A few years later, the same money buys less.', "That's inflation."] } },
+    cues: [{ line: 0, at: 0 }, { line: 1, at: 6.0 }, { line: 2, at: 8.9 }],
+    build(g, S, ctx) {
+      const wall = el('linearGradient', { id: 'bw' + ctx.uid, x1: 0, y1: 0, x2: 0, y2: 1 }, ctx.defs);
+      el('stop', { offset: 0, 'stop-color': '#fdf0d5' }, wall); el('stop', { offset: 1, 'stop-color': '#f6dfb4' }, wall);
+      el('rect', { width: W, height: H, fill: `url(#bw${ctx.uid})` }, g);
+      [220, 440].forEach(y => { el('rect', { x: 40, y: y + 120, width: 640, height: 18, fill: '#a86f4a' }, g); for (let i = 0, x = 60; x < 640; i++) { const w = 50 + ((i * 37) % 40), h = 70 + ((i * 53) % 50); el('rect', { x, y: y + 120 - h, width: w, height: h, rx: 6, fill: ['#e76f51', '#2a9d8f', '#e9c46a', '#f4a261', '#264653', '#8ecae6'][i % 6] }, g); x += w + 14; } });
+      el('rect', { y: 1000, width: W, height: 80, fill: '#c9a77a' }, g);
+      const P = makePerson(el('g', {}, g));
+      const budgetV = (S.data.items || []).length * (+S.L.priceStart || 0);
+      const note = el('g', {}, P.hold);
+      el('rect', { x: -6, y: 112, width: 120, height: 56, rx: 6, fill: '#52b788', stroke: '#2d6a4f', 'stroke-width': 3 }, note);
+      const nt = txt(note, 54, 149, ctx.money(budgetV, false), 26, 800, '#1b4332', { max: 108 });
+      el('rect', { x: 760, y: 800, width: 1160, height: 280, fill: '#8d5a3b' }, g);
+      el('rect', { x: 740, y: 780, width: 1200, height: 34, rx: 6, fill: '#a86f4a' }, g);
+      const items = (S.data.items || []).slice(0, 7), n = items.length || 1, span = Math.min(110, 500 / Math.max(1, n - 1 || 1));
+      const xs = items.map((_, i) => 1250 + (i - (n - 1) / 2) * (n > 1 ? span : 0));
+      const ig = el('g', {}, g), IT = items.map(k => item(k, ig));
+      el('path', { d: 'M960 660 L1540 660 L1500 785 L1000 785 Z', fill: '#bc6c25' }, g);
+      el('line', { x1: 980, y1: 700, x2: 1520, y2: 700, stroke: '#9c5418', 'stroke-width': 6 }, g);
+      el('line', { x1: 992, y1: 740, x2: 1510, y2: 740, stroke: '#9c5418', 'stroke-width': 6 }, g);
+      el('rect', { x: 945, y: 648, width: 610, height: 22, rx: 11, fill: '#9c5418' }, g);
+      const TG = xs.map(x => { const t = el('g', {}, g); el('rect', { x: -52, y: -30, width: 104, height: 52, rx: 12, fill: '#fff', stroke: '#264653', 'stroke-width': 4 }, t); return { g: t, v: txt(t, 0, 8, '', 26, 800, '#264653', { max: 96 }), x }; });
+      const yp = el('g', {}, g); el('rect', { x: 60, y: 50, width: 270, height: 78, rx: 39, fill: '#264653' }, yp);
+      const yt = txt(yp, 195, 104, '', 40, 800, '#ffd166', { max: 240 });
+      txt(g, 1250, 340, S.L.totalLabel || '', 34, 700, '#6b4f3a', { max: 600 });
+      const tot = txt(g, 1250, 408, '', 64, 800, '#264653');
+      txt(g, 1880, 60, S.L.note || '', 24, 400, '#8a6f5a', { anchor: 'end', max: 520 });
+      const p0 = +S.L.priceStart || 0, p1 = +S.L.priceEnd || 0;
+      const keep = p1 > 0 ? Math.min(n, Math.floor(budgetV / p1 + 1e-9)) : n; // how many items the same money still buys
+      let lastYear = null;
+      return u => {
+        const ts = u * this.base, rise = ease(prog(ts, 6.6, 7.4)), price = lerp(p0, p1, rise);
+        let total = 0;
+        IT.forEach((g2, i) => {
+          const d = prog(ts, 1 + i * (3 / n), 1.6 + i * (3 / n)), y = lerp(-700, 0, bounce(d));
+          const leaveIdx = n - 1 - i, leaving = i >= keep, out = leaving ? ease(prog(ts, 7.9 + (n - 1 - i) * .25, 8.8 + (n - 1 - i) * .25)) : 0;
+          let x = xs[i], yy = 672 + y, op = d > 0 ? 1 : 0, rot = 0;
+          if (out > 0) { yy = 672 - out * 260; x = xs[i] + out * 140; op = 1 - prog(out, .5, 1); rot = out * 25; }
+          g2.setAttribute('transform', `translate(${x},${yy}) rotate(${rot})`); g2.setAttribute('opacity', op);
+          const tg = TG[i], on = prog(ts, 1.4 + i * (3 / n), 1.7 + i * (3 / n)) * (leaving ? 1 - prog(ts, 7.9, 8.3) : 1);
+          const pulse = ts > 6.6 && ts < 7.6 ? 1 + .12 * Math.sin(prog(ts, 6.6, 7.6) * Math.PI) : 1;
+          tg.g.setAttribute('transform', `translate(${tg.x},492) scale(${pulse})`); tg.g.setAttribute('opacity', on);
+          tg.v.textContent = ctx.money(price, false); tg.v.setAttribute('fill', rise > .05 ? '#d62828' : '#264653'); fit(tg.v, 96);
+          if (d >= 1 && !(leaving && out >= .5)) total += price;
+          void leaveIdx;
+        });
+        tot.textContent = ctx.money(total, true); tot.setAttribute('fill', total > budgetV + 1e-6 ? '#d62828' : '#264653');
+        const yr = ts < 6 ? S.data.yearStart : S.data.yearEnd;
+        if (yr !== lastYear) { yt.textContent = fill(S.L.yearLabel || '{n}', { n: yr }); fit(yt, 240); lastYear = yr; }
+        const flip = ts >= 6 && ts < 6.4 ? Math.sin(prog(ts, 6, 6.4) * Math.PI) * .15 : 0;
+        yp.setAttribute('transform', `translate(195,89) scale(${1 + flip}) translate(-195,-89)`);
+        const mood = ts < 7 ? 1 : lerp(1, -1, ease(prog(ts, 7, 7.6)));
+        P.set(470, 1040, 1.4, { armF: -58 + Math.sin(ts * 2.2) * 1.2, armB: 6, legF: 2, legB: -2, mood, tilt: ts > 8 && ts < 9.5 ? Math.sin((ts - 8) * 6) * 3 : 0 });
+        void nt;
+      };
+    },
+  };
+
+  SCENES.moreMoney = {
+    label: 'More money chasing the same goods', base: 5.3, captions: true,
+    fields: [
+      { k: 'heading', per: 'lang', kind: 'text', label: 'Heading' },
+      { k: 'unit', per: 'lang', kind: 'text', label: 'Price card label' },
+      { k: 'priceFrom', per: 'lang', kind: 'money', label: 'Price before' },
+      { k: 'priceTo', per: 'lang', kind: 'money', label: 'Price after' },
+      { k: 'product', per: 'data', kind: 'item', label: 'What is on the stall' },
+      { k: 'lines', per: 'lang', kind: 'lines', label: 'Voiceover lines' },
+    ],
+    defaults: { data: { product: 'bread' }, lang: { heading: 'Cause 1: more money, same stuff', unit: 'per loaf', priceFrom: 1, priceTo: 2, lines: ['More money chasing the same bread pushes prices up.'] } },
+    build(g, S, ctx) {
+      const wall = el('linearGradient', { id: 'mw' + ctx.uid, x1: 0, y1: 0, x2: 0, y2: 1 }, ctx.defs);
+      el('stop', { offset: 0, 'stop-color': '#e0f1f7' }, wall); el('stop', { offset: 1, 'stop-color': '#c6e4ef' }, wall);
+      el('rect', { width: W, height: H, fill: `url(#mw${ctx.uid})` }, g);
+      txt(g, 960, 110, S.L.heading || '', 54, 800, '#264653', { max: 1750 });
+      for (let i = 0; i < 10; i++) el('path', { d: `M${560 + i * 80} 180 h80 v70 q-40 34 -80 0 z`, fill: i % 2 ? '#fff' : '#e76f51' }, g);
+      el('rect', { x: 550, y: 160, width: 820, height: 26, rx: 8, fill: '#c0563b' }, g);
+      el('rect', { x: 560, y: 560, width: 800, height: 110, rx: 10, fill: '#8d5a3b' }, g);
+      el('rect', { x: 540, y: 545, width: 840, height: 28, rx: 8, fill: '#a86f4a' }, g);
+      [760, 960, 1160].forEach(x => { const it = item(S.data.product || 'bread', g); it.setAttribute('transform', `translate(${x},548) scale(1.5)`); });
+      const pc = priceCard(g, 1500, 330, S.L.unit || '', '#264653');
+      const cols = [{ shirt: '#e76f51', shirtB: '#c0563b' }, { shirt: '#2a9d8f', shirtB: '#21867a', skin: '#8d5524' }, { shirt: '#7b2cbf', shirtB: '#5a189a', skin: '#e0ac69', hair: '#6f4518' }];
+      const B = [640, 960, 1280].map((x, i) => ({ x, P: makePerson(el('g', {}, g), cols[i]) }));
+      const cg = el('g', {}, g), sym = ctx.L.currency || '';
+      return u => {
+        const ts = u * this.base, extra = prog(ts, 1.6, 2.8), pr = ease(prog(ts, 3.0, 4.6));
+        pc.v.textContent = ctx.money(lerp(+S.L.priceFrom || 0, +S.L.priceTo || 0, pr), true); pc.v.setAttribute('fill', pr > .05 ? '#d62828' : '#264653'); fit(pc.v, 290);
+        cg.innerHTML = '';
+        B.forEach((b, bi) => {
+          const n = 2 + Math.floor(extra * 3), wave = Math.max(0, Math.sin(prog(ts, 3.0, 4.6) * Math.PI * 3 + bi)) * 8;
+          b.P.set(b.x, 1040, .95, { armF: -30 - wave, armB: 8, mood: pr > .4 ? -.3 : 1 });
+          for (let k = 0; k < n; k++) { const pop = k >= 2 ? prog(ts, 1.6 + (k - 2) * .35 + bi * .08, 1.9 + (k - 2) * .35 + bi * .08) : 1; if (pop > 0) coin(cg, b.x + 110, 860 - k * 22, .6 + .4 * bounce(pop)); }
+          if (n > 2) { const tg = el('g', { transform: `translate(${b.x + 110},${860 - n * 22 - 30})`, opacity: prog(ts, 1.8, 2.2) * (1 - prog(ts, 4.8, 5.2)) }, cg); txt(tg, 0, 0, '+' + sym, 30, 800, '#2a9d8f'); }
+        });
+      };
+    },
+  };
+
+  SCENES.costPush = {
+    label: 'Making it costs more (rising costs)', base: 4.6, captions: true,
+    fields: [
+      { k: 'heading', per: 'lang', kind: 'text', label: 'Heading' },
+      { k: 'meter', per: 'lang', kind: 'text', label: 'Cost bar label' },
+      { k: 'unit', per: 'lang', kind: 'text', label: 'Price card label' },
+      { k: 'priceFrom', per: 'lang', kind: 'money', label: 'Price before' },
+      { k: 'priceTo', per: 'lang', kind: 'money', label: 'Price after' },
+      { k: 'product', per: 'data', kind: 'item', label: 'Product' },
+      { k: 'lines', per: 'lang', kind: 'lines', label: 'Voiceover lines' },
+    ],
+    defaults: { data: { product: 'bread' }, lang: { heading: 'Cause 2: making it costs more', meter: '⚡ Energy & ingredients cost', unit: 'per loaf', priceFrom: 2, priceTo: 2.4, lines: ['And when making things costs more, prices rise too.'] } },
+    build(g, S, ctx) {
+      const wall = el('linearGradient', { id: 'cw' + ctx.uid, x1: 0, y1: 0, x2: 0, y2: 1 }, ctx.defs);
+      el('stop', { offset: 0, 'stop-color': '#f3e5f5' }, wall); el('stop', { offset: 1, 'stop-color': '#e3cfe8' }, wall);
+      el('rect', { width: W, height: H, fill: `url(#cw${ctx.uid})` }, g);
+      txt(g, 960, 110, S.L.heading || '', 54, 800, '#4a2c5a', { max: 1750 });
+      const ov = el('g', { transform: 'translate(330,330)' }, g);
+      el('rect', { width: 460, height: 520, rx: 30, fill: '#6c757d' }, ov);
+      el('rect', { x: 40, y: 60, width: 380, height: 250, rx: 18, fill: '#2b2d42' }, ov);
+      const og = el('radialGradient', { id: 'og' + ctx.uid }, ctx.defs); el('stop', { offset: 0, 'stop-color': '#ffb703' }, og); el('stop', { offset: 1, 'stop-color': '#ffb703', 'stop-opacity': 0 }, og);
+      const glow = el('circle', { cx: 230, cy: 185, r: 170, fill: `url(#og${ctx.uid})` }, ov);
+      const fl = el('g', {}, ov);
+      el('rect', { x: 40, y: 340, width: 380, height: 20, rx: 10, fill: '#495057' }, ov);
+      [110, 230, 350].forEach(x => el('circle', { cx: x, cy: 430, r: 26, fill: '#adb5bd' }, ov));
+      el('rect', { y: 520, width: 460, height: 40, fill: '#495057' }, ov);
+      txt(g, 1000, 300, S.L.meter || '', 38, 800, '#4a2c5a', { anchor: 'start', max: 760 });
+      el('rect', { x: 1000, y: 330, width: 700, height: 70, rx: 35, fill: '#fff', stroke: '#4a2c5a', 'stroke-width': 5 }, g);
+      const meter = el('rect', { x: 1008, y: 338, width: 200, height: 54, rx: 27, fill: '#2a9d8f' }, g);
+      const lf = item(S.data.product || 'bread', g); lf.setAttribute('transform', 'translate(1210,720) scale(2)');
+      const pc = priceCard(g, 1500, 650, S.L.unit || '', '#4a2c5a');
+      el('rect', { y: 890, width: W, height: 190, fill: '#cdb4db' }, g);
+      return u => {
+        const ts = u * this.base, up = ease(prog(ts, 1.0, 2.7)), pr = ease(prog(ts, 2.1, 3.5));
+        meter.setAttribute('width', lerp(180, 620, up)); meter.setAttribute('fill', up > .5 ? '#e63946' : up > .2 ? '#f4a261' : '#2a9d8f');
+        pc.v.textContent = ctx.money(lerp(+S.L.priceFrom || 0, +S.L.priceTo || 0, pr), true); pc.v.setAttribute('fill', pr > .05 ? '#d62828' : '#4a2c5a'); fit(pc.v, 290);
+        glow.setAttribute('opacity', .45 + .35 * up + .08 * Math.sin(ts * 9));
+        fl.innerHTML = '';
+        for (let i = 0; i < 5; i++) { const x = 130 + i * 50, h = (30 + up * 40) * (.8 + .3 * Math.sin(ts * 10 + i * 1.7)); el('path', { d: `M${x - 14} 300 Q${x} ${300 - h * 2} ${x + 14} 300 Z`, fill: i % 2 ? '#ffb703' : '#fb8500' }, fl); }
+      };
+    },
+  };
+
+  SCENES.endCard = {
+    label: 'End card (topic, key message, channel)', base: 3, captions: false,
+    fields: [
+      { k: 'kicker', per: 'lang', kind: 'text', label: 'Small word on top' },
+      { k: 'main', per: 'lang', kind: 'text', label: 'Main message' },
+      { k: 'small', per: 'lang', kind: 'text', label: 'Small print at the bottom' },
+      { k: 'lines', per: 'lang', kind: 'lines', label: 'What you say' },
+    ],
+    defaults: { data: {}, lang: { kicker: 'TOPIC', main: 'The one thing to remember.', small: 'Simplified illustration.', lines: ['The one thing to remember.'] } },
+    build(g, S, ctx) {
+      el('rect', { width: W, height: H, fill: '#0d1b2a' }, g);
+      const k = txt(g, 960, 430, S.L.kicker || '', 40, 700, '#ffd166', { max: 1700, attrs: { 'letter-spacing': 6 } });
+      const m = txt(g, 960, 540, S.L.main || '', 88, 800, '#fff', { max: 1760 });
+      const brand = el('g', {}, g);
+      bulb(brand, 960, 660, .8, true);
+      txt(brand, 960, 770, ctx.channelName, 44, 800, '#fff', { max: 1400 });
+      txt(brand, 960, 825, ctx.tagline, 32, 400, '#8ecae6', { max: 1600 });
+      txt(g, 960, 1010, S.L.small || '', 26, 400, '#6c7f93', { max: 1700 });
+      return u => { const ts = u * this.base; m.setAttribute('opacity', ease(prog(ts, 0, .5))); k.setAttribute('opacity', ease(prog(ts, 0, .4))); brand.setAttribute('opacity', ease(prog(ts, .5, 1.1))); };
+    },
+  };
+
+  // ---------------------------------------------------------------- episode helpers
+  function langOf(ep, lang) {
+    const L = Object.assign({ name: lang, currency: '', locale: 'en-GB', decimals: 2 }, (ep.languages || {})[lang] || {});
+    return L;
+  }
+  function moneyFn(L) {
+    return (v, full) => {
+      v = +v || 0;
+      const d = full ? (+L.decimals || 0) : (Math.abs(v - Math.round(v)) > 1e-6 ? (+L.decimals || 0) : 0);
+      let s;
+      try { s = v.toLocaleString(L.locale || 'en-GB', { minimumFractionDigits: d, maximumFractionDigits: d }); } catch (e) { s = v.toFixed(d); }
+      return (L.currency || '') + s;
+    };
+  }
+  /** Scene text for one language: that language's block, falling back to English, then to the scene defaults. */
+  function sceneLang(scene, lang) {
+    const def = (SCENES[scene.type] || {}).defaults || { lang: {} };
+    const l = scene.lang || {};
+    return Object.assign({}, def.lang, l.en || {}, l[lang] || {});
+  }
+  function sceneData(scene) { const def = (SCENES[scene.type] || {}).defaults || { data: {} }; return Object.assign({}, def.data, scene.data || {}); }
+
+  /** Start/end of every scene, and caption timings. */
+  function timeline(ep, lang) {
+    let t = 0;
+    const scenes = (ep.scenes || []).filter(s => SCENES[s.type]).map((s, i) => {
+      const dur = Math.max(.5, +s.duration || SCENES[s.type].base);
+      const o = { i, scene: s, start: t, end: t + dur, dur };
+      t += dur; return o;
+    });
+    const caps = [], cues = [];
+    scenes.forEach(o => {
+      const T = SCENES[o.scene.type], L = sceneLang(o.scene, lang), lines = (L.lines || []).filter(x => String(x).trim());
+      const k = o.dur / T.base;
+      (T.cues || []).forEach(c => { if (c.sound) cues.push({ t: o.start + c.at * k, sound: c.sound }); });
+      if (!lines.length) return;
+      const lc = (T.cues || []).filter(c => c.line != null);
+      let starts;
+      if (lc.length === lines.length) starts = lc.map(c => o.start + c.at * k);
+      else { const tot = lines.reduce((a, s) => a + Math.max(12, s.length), 0); let acc = o.start; starts = lines.map(s => { const st = acc; acc += o.dur * Math.max(12, s.length) / tot; return st; }); }
+      lines.forEach((s, j) => caps.push({ start: starts[j] + .15, end: (j + 1 < lines.length ? starts[j + 1] : o.end) - .1, text: s, show: T.captions !== false && o.scene.captions !== false }));
+    });
+    return { scenes, captions: caps, cues, duration: t };
+  }
+
+  /** Builds the animation into an <svg> and returns { duration, render(t) }. */
+  function mount(svg, ep, lang, opts = {}) {
+    const channel = opts.channel || {};
+    while (svg.firstChild) svg.removeChild(svg.firstChild);
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    svg.style.fontFamily = 'var(--ex-font, sans-serif)';
+    const defs = el('defs', {}, svg);
+    const L = langOf(ep, lang), money = moneyFn(L);
+    const channelName = (channel.names || {})[lang] || channel.name || 'Oh, I Get It';
+    const tagline = (channel.taglines || {})[lang] || (channel.taglines || {}).en || '';
+    const tl = timeline(ep, lang);
+    const built = tl.scenes.map((o, idx) => {
+      const g = el('g', { opacity: 0 }, svg);
+      const S = { data: sceneData(o.scene), L: sceneLang(o.scene, lang) };
+      const ctx = { uid: 's' + idx, defs, L, lang, money, preview: !!opts.preview, channelName, tagline };
+      let draw = () => {};
+      try { draw = SCENES[o.scene.type].build.call(SCENES[o.scene.type], g, S, ctx); } catch (e) { console.error('Scene', idx, o.scene.type, e); txt(g, 960, 540, 'Scene error: ' + e.message, 40, 700, '#d62828'); }
+      fitAll(g);
+      return { o, g, draw };
+    });
+    const capG = el('g', { opacity: 0 }, svg);
+    const capR = el('rect', { x: 260, y: 935, width: 1400, height: 92, rx: 46, fill: '#000', opacity: .62 }, capG);
+    const capT = txt(capG, 960, 996, '', 44, 700, '#fff');
+    let lastCap = null;
+    function render(t) {
+      t = clamp(t, 0, Math.max(0, tl.duration - 1e-3));
+      built.forEach((b, i) => {
+        const { start, end } = b.o, next = built[i + 1];
+        const fadeIn = i === 0 ? 1 : ease(prog(t, start - FADE / 2, start + FADE / 2));
+        const visible = t >= start - FADE / 2 && (!next || t < end + FADE / 2);
+        b.g.setAttribute('opacity', visible ? fadeIn : 0);
+        b.g.style.display = visible ? '' : 'none';
+        if (visible) { try { b.draw(clamp((t - start) / (end - start))); } catch (e) { /* keep playing */ } }
+      });
+      const c = tl.captions.find(c => c.show && t >= c.start && t < c.end);
+      if (!c) { capG.setAttribute('opacity', 0); return; }
+      capG.setAttribute('opacity', Math.min(prog(t, c.start, c.start + .2), 1 - prog(t, c.end - .2, c.end)));
+      if (lastCap !== c) {
+        lastCap = c; capT.textContent = c.text; capT.setAttribute('font-size', 44);
+        let f = 44; try { while (capT.getComputedTextLength() > 1700 && f > 24) { f -= 1; capT.setAttribute('font-size', f); } } catch (e) {}
+        let w = 600; try { w = Math.min(1860, Math.max(600, capT.getComputedTextLength() + 120)); } catch (e) {}
+        capR.setAttribute('width', w); capR.setAttribute('x', 960 - w / 2);
+      }
+    }
+    render(0);
+    return { duration: tl.duration, render, timeline: tl, refit() { built.forEach(b => fitAll(b.g)); lastCap = null; } };
+  }
+
+  const pad = (n, w = 2) => String(Math.floor(n)).padStart(w, '0');
+  const srtTime = s => `${pad(s / 3600)}:${pad((s % 3600) / 60)}:${pad(s % 60)},${pad((s % 1) * 1000, 3)}`;
+  /** Subtitle file (SRT) for YouTube. Includes every voiceover line, also ones not shown on screen. */
+  function srt(ep, lang) { return timeline(ep, lang).captions.map((c, i) => `${i + 1}\n${srtTime(Math.max(0, c.start))} --> ${srtTime(c.end)}\n${c.text}\n`).join('\n'); }
+  /** Plain teleprompter script for one language. */
+  function script(ep, lang) {
+    const tl = timeline(ep, lang), out = [`${(ep.title || {})[lang] || (ep.title || {}).en || ep.id}  (${langOf(ep, lang).name})`, ''];
+    tl.scenes.forEach((o, i) => {
+      const L = sceneLang(o.scene, lang);
+      out.push(`[Scene ${i + 1}: ${SCENES[o.scene.type].label}, ${o.start.toFixed(1)}s to ${o.end.toFixed(1)}s]`);
+      (L.lines || []).forEach(l => out.push(l));
+      out.push('');
+    });
+    return out.join('\n');
+  }
+  /** Makes a new scene from a library type, with default content copied into every language. */
+  function newScene(type, langs) {
+    const T = SCENES[type], s = { type, duration: T.base, data: JSON.parse(JSON.stringify(T.defaults.data || {})), lang: {} };
+    (langs || ['en']).forEach(l => { s.lang[l] = JSON.parse(JSON.stringify(T.defaults.lang || {})); });
+    return s;
+  }
+
+  root.Explainer = { SCENES, ITEM_KINDS, mount, timeline, srt, script, newScene, sceneLang, sceneData, langOf, W, H };
+})(typeof window !== 'undefined' ? window : globalThis);
