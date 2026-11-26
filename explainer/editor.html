@@ -47,6 +47,21 @@ html,body{overflow-x:hidden}
 details summary{cursor:pointer;font-weight:700}
 .muted{color:var(--mut);font-size:13px}
 .money{display:flex;align-items:center;gap:6px}.money span{font-weight:700}
+.stage{position:relative}
+.camv{position:absolute;object-fit:cover;display:none;background:#13263b}
+.take{border:1px dashed var(--line);border-radius:10px;padding:8px 10px}
+.take .st{font-size:13px;margin:4px 0}
+.modal{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:10px}
+.modal.on{display:flex}
+.mbox{background:var(--card);border-radius:14px;padding:12px;width:min(760px,100%);max-height:100%;overflow:auto}
+.rstage{position:relative;background:#0d1b2a;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:120px}
+.rstage video{width:100%;max-height:46vh;display:block;object-fit:contain}
+.rstage video.mirror{transform:scaleX(-1)}
+#recCount{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:120px;font-weight:800;color:#ffd166;text-shadow:0 4px 20px #000;pointer-events:none}
+#recDot{position:absolute;top:10px;left:10px;background:#c0392b;color:#fff;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:700;display:none}
+#recMeter{position:absolute;left:10px;right:10px;bottom:10px;height:8px;border-radius:4px;background:rgba(255,255,255,.15)}
+#recMeter i{display:block;height:100%;width:0;border-radius:4px;background:#2a9d8f}
+.prompter{font-size:clamp(20px,4.2vw,30px);line-height:1.35;font-weight:700;margin:12px 2px;white-space:pre-wrap}
 </style></head>
 <body>
 <header>
@@ -90,7 +105,7 @@ details summary{cursor:pointer;font-weight:700}
   </section>
   <section class="pv">
     <div class="box">
-      <div class="stage"><svg id="stage" xmlns="http://www.w3.org/2000/svg"></svg></div>
+      <div class="stage" id="stageBox"><svg id="stage" xmlns="http://www.w3.org/2000/svg"></svg></div>
       <div class="row" style="margin-top:8px">
         <button id="play" class="sm">▶ Play</button>
         <input id="scrub" type="range" min="0" max="1000" value="0" class="grow" style="width:auto">
@@ -99,11 +114,33 @@ details summary{cursor:pointer;font-weight:700}
       <div class="row" style="margin-top:8px"><span class="muted grow" id="sceneAt"></span><button id="copyScript" class="sm">Copy script (this language)</button></div>
       <div id="msg" class="msg"></div>
     </div>
+    <div class="box" id="makeBox">
+      <b>Make the final video</b> <span class="pill" id="mkLang"></span>
+      <p class="muted" style="margin:4px 0 8px">Adds your recorded voice and camera to the latest build, right here on this device. Your recordings never leave it. Save to GitHub first and wait for the build (about 5 to 10 minutes). It plays through once in real time, so keep the page open and the screen on.</p>
+      <button class="pri" id="mkGo">🎬 Make video</button>
+      <canvas id="mkCanvas" style="display:none;width:100%;border-radius:8px;margin-top:8px;background:#000"></canvas>
+      <div id="mkBar" style="height:6px;border-radius:3px;background:var(--line);margin-top:8px"><i style="display:block;height:100%;width:0;border-radius:3px;background:var(--good)"></i></div>
+      <div id="mkSt" class="msg"></div>
+      <div id="mkOut"></div>
+    </div>
     <div class="box muted">
       <b>How this works.</b> Change any words, prices or timings in the scene cards and the preview updates. Each language has its own words and prices; the animation is shared. "Save to GitHub" updates the episode file, and the video build then makes one video per language. Lines in the "voiceover" boxes become the captions and your teleprompter script.
     </div>
   </section>
 </main>
+<div class="modal" id="rec"><div class="mbox">
+  <div class="row"><b class="grow" id="recTitle">Record</b><button class="sm" id="recClose">✕ Close</button></div>
+  <div class="rstage" style="margin-top:8px"><video id="recCam" playsinline muted autoplay class="mirror"></video><div id="recCount"></div><div id="recDot">● REC <span id="recTime">0.0s</span></div><div id="recMeter"><i></i></div></div>
+  <div class="prompter" id="recScript"></div>
+  <div class="row">
+    <button class="pri" id="recGo">● Start recording</button>
+    <button id="recStop" style="display:none">■ Stop</button>
+    <button class="pri" id="recKeep" style="display:none">✓ Use this take</button>
+    <button id="recNext" style="display:none">✓ Use it, record next scene ›</button>
+    <button id="recAgain" style="display:none">↺ Try again</button>
+  </div>
+  <div class="msg" id="recMsg"></div>
+</div></div>
 <script src="engine.js"></script>
 <script>
 (() => {
@@ -149,7 +186,7 @@ function blankEpisode(id) {
 // ---------- UI ----------
 function renderAll() { renderLangTabs(); renderLangSettings(); renderScenes(); renderChannel(); remount(); }
 function renderLangTabs() {
-  const L = ep.languages;
+  const L = ep.languages; $('mkLang').textContent = (L[lang] || {}).name || lang;
   $('langTabs').innerHTML = Object.keys(L).map(k => `<button class="tab${k === lang ? ' on' : ''}" data-l="${k}">${L[k].name || k}</button>`).join('') + `<button class="tab" id="addLang">+ Add language</button>`;
   $('langTabs').querySelectorAll('[data-l]').forEach(b => b.onclick = () => { lang = b.dataset.l; renderAll(); });
   $('addLang').onclick = addLanguage;
@@ -168,7 +205,7 @@ function addLanguage() {
   ep.languages[code] = india ? { name, currency: '₹', locale: 'en-IN', decimals: 0 } : { name, currency: '£', locale: 'en-GB', decimals: 2 };
   const from = ep.languages.en ? 'en' : Object.keys(ep.languages)[0];
   ep.title = ep.title || {}; ep.title[code] = (ep.title[from] || '');
-  ep.scenes.forEach(s => { s.lang = s.lang || {}; s.lang[code] = clone(s.lang[from] || {}); });
+  ep.scenes.forEach(s => { s.lang = s.lang || {}; s.lang[code] = clone(s.lang[from] || {}); delete s.lang[code].take; });
   channel.names = channel.names || {}; if (!channel.names[code]) channel.names[code] = (channel.names.en || 'Oh, I Get It') + ' - ' + name;
   lang = code; changed(); renderAll();
   msg(`Added ${name}. Every scene starts with a copy of the ${ep.languages[from].name} words and prices: translate them and set the prices.`, 'good');
@@ -204,7 +241,8 @@ function renderScenes() {
       <div class="hd" data-toggle="${i}"><span class="pill">${i + 1}</span><b>${esc(T.label)}</b><span class="pill">${o ? o.start.toFixed(1) + 's' : ''}</span>
         <button class="sm" data-up="${i}" title="Move up">↑</button><button class="sm" data-down="${i}" title="Move down">↓</button><button class="sm" data-dup="${i}" title="Duplicate">⧉</button><button class="sm" data-del="${i}" title="Delete">✕</button></div>
       <div class="bd">
-        <div class="fld"><label for="dur_${i}">Length in seconds <span class="pill">all languages</span></label><input id="dur_${i}" type="number" step="0.1" min="0.5" value="${s.duration ?? T.base}"><div class="ref">Designed for ${T.base}s. The animation stretches to fit. When you record, this will follow your voice.</div></div>
+        ${takeHTML(s, i, o)}
+        <div class="fld"><label for="dur_${i}">Length in seconds when there is no recording <span class="pill">all languages</span></label><input id="dur_${i}" type="number" step="0.1" min="0.5" value="${s.duration ?? T.base}"><div class="ref">Designed for ${T.base}s. The animation stretches to fit. A language with a recording follows your voice instead.</div></div>
         <div class="fld"><label><input type="checkbox" id="cap_${i}" style="width:auto"${s.captions === false ? '' : ' checked'}> Show captions on screen</label></div>
         ${T.fields.map(f => fieldHTML(f, i)).join('')}
       </div></div>`;
@@ -219,6 +257,7 @@ function renderScenes() {
   ep.scenes.forEach((s, i) => {
     const T = E.SCENES[s.type]; if (!T) return;
     const d = $('dur_' + i); if (d) d.oninput = () => { s.duration = Math.max(.5, +d.value || T.base); changed(); remountSoon(); };
+    wireTake(s, i);
     const c = $('cap_' + i); if (c) c.onchange = () => { if (c.checked) delete s.captions; else s.captions = false; changed(); remountSoon(); };
     T.fields.forEach(f => {
       const id = `f_${i}_${f.k}`, n = $(id); if (!n) return;
@@ -261,11 +300,12 @@ function draw() {
   $('time').textContent = `${tNow.toFixed(1)} / ${app.duration.toFixed(1)}s`;
   const o = app.timeline.scenes.find(x => tNow >= x.start && tNow < x.end) || app.timeline.scenes[app.timeline.scenes.length - 1];
   $('sceneAt').textContent = o ? `Scene ${o.i + 1}: ${E.SCENES[o.scene.type].label}` : '';
+  syncMedia(o);
 }
 function seekScene(i) { const o = app && app.timeline.scenes.find(x => x.i === i); if (o) { tNow = o.start + .01; draw(); } }
 function loop(ts) { if (!playing) return; tNow = (ts - t0) / 1000; if (tNow >= app.duration) { tNow = app.duration; stop(); } draw(); raf = requestAnimationFrame(loop); }
-function play() { if (tNow >= app.duration - .05) tNow = 0; playing = true; t0 = performance.now() - tNow * 1000; $('play').textContent = '❚❚ Pause'; raf = requestAnimationFrame(loop); }
-function stop() { playing = false; cancelAnimationFrame(raf); $('play').textContent = '▶ Play'; }
+function play() { unlockMedia(); if (tNow >= app.duration - .05) tNow = 0; playing = true; t0 = performance.now() - tNow * 1000; $('play').textContent = '❚❚ Pause'; raf = requestAnimationFrame(loop); }
+function stop() { playing = false; cancelAnimationFrame(raf); $('play').textContent = '▶ Play'; syncMedia(null); }
 $('play').onclick = () => (playing ? stop() : play());
 $('scrub').oninput = () => { stop(); tNow = app.duration * $('scrub').value / 1000; draw(); };
 
@@ -322,9 +362,10 @@ $('save').onclick = async () => {
   const problems = check(); if (problems.length && !confirm('Please check:\n\n' + problems.join('\n') + '\n\nSave anyway?')) return;
   $('save').disabled = true; msg('Saving…');
   try {
+    // channel settings first, so the video build for this episode already sees the recordings repository
+    if (channel.__dirty) { const c = clone(channel); delete c.__dirty; await putFile('explainer/channel.json', JSON.stringify(c, null, 1) + '\n', 'Channel settings edited in the episode editor'); delete channel.__dirty; }
     await putFile(`explainer/episodes/${ep.id}.json`, JSON.stringify(ep, null, 1) + '\n', `Episode ${ep.id}: edited in the episode editor`);
     { const cur = await gh('explainer/episodes/index.json?ref=main'); const list = cur ? (JSON.parse(unb64(cur.content)).episodes || []) : []; if (!list.includes(ep.id)) { list.push(ep.id); await putFile('explainer/episodes/index.json', JSON.stringify({ episodes: list }, null, 1) + '\n', `Episode list: add ${ep.id}`); } }
-    if (channel.__dirty) { const c = clone(channel); delete c.__dirty; await putFile('explainer/channel.json', JSON.stringify(c, null, 1) + '\n', 'Channel names edited in the episode editor'); delete channel.__dirty; }
     dirty = false; store.set('ex.draft.' + ep.id, null);
     msg('Saved. The videos will be built in a few minutes: open your repository on GitHub, then Actions → "Explainer videos" to download them.', 'good');
   } catch (e) { msg(e.message, 'bad'); }
@@ -336,13 +377,340 @@ $('ghLoad').onclick = async () => {
     ep = JSON.parse(unb64(f.content)); dirty = false; renderAll(); msg('Loaded the latest saved version from GitHub.', 'good');
   } catch (e) { msg(e.message, 'bad'); }
 };
+// ---------- recordings (takes) ----------
+// A take is your recording for one scene in one language. The scene then lasts as long as you speak.
+// Takes are never uploaded: they stay in this browser on this device (IndexedDB). Only their timings go into the
+// episode file, so the video build can time each scene to your voice. "Make video" then adds your voice and camera.
+const media = {};     // file -> <audio>/<video> element for the preview
+const blobs = {};     // file -> Blob, recordings on this device (loaded from the browser's storage)
+const DB = (() => {
+  let p = null;
+  const open = () => p || (p = new Promise((res, rej) => { const r = indexedDB.open('oh-i-get-it-takes', 1); r.onupgradeneeded = () => r.result.createObjectStore('takes'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }));
+  const tx = (mode, fn) => open().then(db => new Promise((res, rej) => { const t = db.transaction('takes', mode), q = fn(t.objectStore('takes')); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error); }));
+  return { put: (k, v) => tx('readwrite', st => st.put(v, k)), get: k => tx('readonly', st => st.get(k)), keys: () => tx('readonly', st => st.getAllKeys()) };
+})();
+// stored as raw bytes + type: the most reliable way on iPhone Safari
+async function saveBlob(file, blob) { blobs[file] = blob; await DB.put(file, { type: blob.type, buf: await blob.arrayBuffer(), at: Date.now() }); }
+async function loadBlob(file) {
+  if (blobs[file]) return blobs[file];
+  try { const v = await DB.get(file); if (v && v.buf) return (blobs[file] = new Blob([v.buf], { type: v.type || '' })); } catch (e) {}
+  return null;
+}
+let deviceKeys = new Set();
+async function refreshDeviceKeys() { try { deviceKeys = new Set(await DB.keys()); } catch (e) { deviceKeys = new Set(); } Object.keys(blobs).forEach(k => deviceKeys.add(k)); refreshTakeStatus(); }
+const isCam = s => !!(E.SCENES[s.type] || {}).camera;
+const takeOf = (s, l = lang) => E.takeOf(s, l);
+function takeStatus(s, o) {
+  const t = takeOf(s), L = ep.languages[lang].name || lang;
+  let st;
+  if (t) {
+    const up = deviceKeys.has(t.file) ? ' · kept on this device' : ' · <b style="color:var(--bad)">not on this device</b> (recorded on another phone or browser: record it again here before making the video)';
+    st = `${t.kind === 'video' ? '🎥' : '🎙'} ${(t.out - t.in).toFixed(1)}s of you speaking. In ${esc(L)} this scene lasts ${o ? o.dur.toFixed(1) : '?'}s${up}`;
+  } else st = `No recording in ${esc(L)} yet. The scene uses the length below.`;
+  return st;
+}
+function refreshTakeStatus() {
+  const tl = E.timeline(ep, lang);
+  ep.scenes.forEach((s, i) => { const n = $('tst_' + i); if (n) n.innerHTML = takeStatus(s, tl.scenes.find(x => x.i === i)); });
+}
+function takeHTML(s, i, o) {
+  const t = takeOf(s), L = ep.languages[lang].name || lang, cam = isCam(s), st = takeStatus(s, o);
+  const what = cam ? 'yourself on camera' : 'your voice';
+  return `<div class="fld take"><label>Your recording <span class="pill">${esc(L)}</span></label>
+    <div class="st" id="tst_${i}">${st}</div>
+    <div class="row"><button class="sm pri" data-rec="${i}">${t ? '↺ Record again' : cam ? '🎥 Record yourself' : '🎙 Record voice'}</button>
+    <label class="sm" style="padding:4px 8px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:13px">📁 Choose a ${cam ? 'video' : 'video or sound'} file<input type="file" accept="video/*,audio/*" data-tfile="${i}" style="display:none"></label>
+    ${t ? `<button class="sm" data-tplay="${i}">▶ Play this scene</button><button class="sm" data-tdel="${i}">✕ Remove recording</button>` : ''}</div>
+    <div class="ref">Record ${what} reading this scene's lines. The scene stretches to fit, and quiet bits at the start and end are trimmed. Recordings stay on this device; only their timings are saved.</div></div>`;
+}
+function wireTake(s, i) {
+  const box = $('scenes'), q = k => box.querySelector(`[data-${k}="${i}"]`);
+  const r = q('rec'); if (r) r.onclick = e => { e.stopPropagation(); openRecorder(i); };
+  const f = q('tfile'); if (f) { f.onclick = e => e.stopPropagation(); f.onchange = () => { const file = f.files[0]; f.value = ''; if (file) useFile(i, file); }; }
+  const p = q('tplay'); if (p) p.onclick = e => { e.stopPropagation(); seekScene(i); play(); };
+  const d = q('tdel'); if (d) d.onclick = e => { e.stopPropagation(); if (!confirm('Remove this recording? The scene goes back to its fixed length.')) return; delete s.lang[lang].take; changed(); renderScenes(); remount(); };
+}
+
+// preview playback: your recording plays in step with the animation
+function mediaFor(t, cam) {
+  if (media[t.file]) return media[t.file];
+  const vid = cam && t.kind === 'video', m = document.createElement(vid ? 'video' : 'audio');
+  m.playsInline = true; m.setAttribute('playsinline', ''); m.preload = 'auto';
+  if (vid) { m.className = 'camv'; $('stageBox').appendChild(m); } else { m.style.display = 'none'; document.body.appendChild(m); }
+  loadBlob(t.file).then(b => { if (b) m.src = URL.createObjectURL(b); });
+  return (media[t.file] = m);
+}
+function unlockMedia() { // phones only allow sound that starts from a tap
+  ep.scenes.forEach(s => { const t = takeOf(s); if (t) { const m = mediaFor(t, isCam(s)); const pr = m.play(); if (pr) pr.then(() => { if (!playing) m.pause(); }).catch(() => {}); } });
+}
+function syncMedia(o) {
+  const cur = o && o.take ? mediaFor(o.take, isCam(o.scene)) : null;
+  Object.values(media).forEach(m => { if (m !== cur) { if (!m.paused) m.pause(); if (m.tagName === 'VIDEO') m.style.display = 'none'; } });
+  if (!cur) return;
+  const t = o.take, local = t.in + (tNow - o.start - E.LEAD), inside = local >= t.in && local < t.out;
+  if (cur.tagName === 'VIDEO') {
+    const r = E.SCENES[o.scene.type].slot(E.sceneData(o.scene)), sw = $('stageBox').clientWidth / E.W;
+    Object.assign(cur.style, { display: 'block', left: r.x * sw + 'px', top: r.y * sw + 'px', width: r.w * sw + 'px', height: r.h * sw + 'px', borderRadius: r.r * sw + 'px' });
+  }
+  const want = Math.min(Math.max(local, t.in), t.out - .05);
+  if (playing && inside) {
+    if (cur.paused) { try { cur.currentTime = want; } catch (e) {} cur.play().catch(() => {}); }
+    else if (Math.abs(cur.currentTime - want) > .35) { try { cur.currentTime = want; } catch (e) {} }
+  } else {
+    if (!cur.paused) cur.pause();
+    if (cur.tagName === 'VIDEO' && Math.abs(cur.currentTime - want) > .08) { try { cur.currentTime = want; } catch (e) {} }
+  }
+}
+
+// the recorder
+const R = { i: -1, stream: null, kind: null, rec: null, chunks: [], blob: null, mime: '', t0: 0, timer: 0, ac: null, an: null, floor: 1, first: null, last: null, dur: 0 };
+const recMsg = (t, c) => { $('recMsg').textContent = t || ''; $('recMsg').className = 'msg ' + (c || ''); };
+const pickMime = list => (window.MediaRecorder && MediaRecorder.isTypeSupported ? list.find(m => MediaRecorder.isTypeSupported(m)) : '') || '';
+const extOf = m => (/mp4/.test(m) ? (/^audio/.test(m) ? 'm4a' : 'mp4') : /ogg/.test(m) ? 'ogg' : 'webm');
+function recButtons(state) { // ready | counting | recording | review
+  const show = (id, on) => { $(id).style.display = on ? '' : 'none'; };
+  show('recGo', state === 'ready'); show('recStop', state === 'recording');
+  show('recKeep', state === 'review'); show('recAgain', state === 'review'); show('recNext', state === 'review' && R.i < ep.scenes.length - 1);
+  $('recDot').style.display = state === 'recording' ? 'block' : 'none';
+}
+async function openRecorder(i) {
+  stop();
+  const s = ep.scenes[i], kind = isCam(s) ? 'video' : 'voice', L = E.sceneLang(s, lang);
+  R.i = i; R.blob = null;
+  $('recTitle').textContent = `Scene ${i + 1} in ${ep.languages[lang].name || lang}: ${kind === 'video' ? 'record yourself' : 'record your voice'}`;
+  $('recScript').textContent = (L.lines || []).join('\n') || '(This scene has no lines yet. Add them first, then record.)';
+  $('rec').classList.add('on'); recButtons('ready'); recMsg(kind === 'video' ? 'Hold the phone at eye level, in good light. Read the lines below when the countdown ends, then tap Stop.' : 'Read the lines below when the countdown ends, then tap Stop. A quiet room works best.');
+  if (!window.MediaRecorder || !navigator.mediaDevices) return recMsg('This browser cannot record. Use Safari on iPhone or Chrome on Android or a laptop.', 'bad');
+  if (R.stream && R.kind !== kind) closeStream();
+  if (!R.stream) {
+    try {
+      R.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }, video: kind === 'video' ? { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } : false });
+      R.kind = kind;
+    } catch (e) { return recMsg('Could not use the ' + (kind === 'video' ? 'camera and microphone' : 'microphone') + '. Allow access when the browser asks (on iPhone: Settings → Safari → Camera / Microphone).', 'bad'); }
+  }
+  showLive();
+  if (!R.ac) { const AC = window.AudioContext || window.webkitAudioContext; R.ac = new AC(); }
+  if (R.ac.state === 'suspended') R.ac.resume().catch(() => {});
+  try { R.src && R.src.disconnect(); } catch (e) {}
+  R.src = R.ac.createMediaStreamSource(R.stream); R.an = R.ac.createAnalyser(); R.an.fftSize = 1024; R.src.connect(R.an);
+  clearInterval(R.meter); R.meter = setInterval(meterTick, 40);
+}
+function showLive() {
+  const v = $('recCam'); v.controls = false; v.muted = true; v.classList.add('mirror'); v.removeAttribute('src'); v.srcObject = R.stream;
+  v.style.display = R.kind === 'video' ? 'block' : 'none'; v.play().catch(() => {});
+  $('recMeter').style.display = '';
+}
+function level() { const a = new Float32Array(R.an.fftSize); R.an.getFloatTimeDomainData(a); let x = 0; for (const v of a) x += v * v; return Math.sqrt(x / a.length); }
+function meterTick() {
+  if (!R.an) return;
+  const lv = level(); $('recMeter').firstChild.style.width = Math.min(100, lv * 600) + '%';
+  if (R.state === 'counting') R.floor = Math.min(R.floor, Math.max(lv, .002));     // room noise, measured during the countdown
+  if (R.state === 'recording') {
+    const t = (performance.now() - R.t0) / 1000;
+    $('recTime').textContent = t.toFixed(1) + 's';
+    if (lv > Math.max(.02, R.floor * 4)) { if (R.first == null) R.first = t; R.last = t; }   // you are speaking
+  }
+}
+$('recGo').onclick = async () => {
+  if (R.ac && R.ac.state === 'suspended') R.ac.resume().catch(() => {});
+  R.state = 'counting'; R.floor = 1; recButtons('counting'); recMsg('');
+  for (const n of [3, 2, 1]) { $('recCount').textContent = n; await new Promise(r => setTimeout(r, 800)); if (R.state !== 'counting') { $('recCount').textContent = ''; return; } }
+  $('recCount').textContent = '';
+  R.mime = R.kind === 'video' ? pickMime(['video/mp4;codecs=avc1,mp4a', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm'])
+    : pickMime(['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus']);
+  const stream = R.kind === 'video' ? R.stream : new MediaStream(R.stream.getAudioTracks());
+  try { R.rec = new MediaRecorder(stream, Object.assign(R.mime ? { mimeType: R.mime } : {}, R.kind === 'video' ? { videoBitsPerSecond: 2500000, audioBitsPerSecond: 128000 } : { audioBitsPerSecond: 128000 })); }
+  catch (e) { R.rec = new MediaRecorder(stream); R.mime = ''; }
+  R.chunks = []; R.first = R.last = null;
+  R.rec.ondataavailable = e => { if (e.data && e.data.size) R.chunks.push(e.data); };
+  R.rec.onstop = () => {
+    R.dur = (performance.now() - R.t0) / 1000;
+    R.mime = (R.rec.mimeType || R.mime || (R.kind === 'video' ? 'video/webm' : 'audio/webm')).split(';')[0];
+    R.blob = new Blob(R.chunks, { type: R.mime }); R.state = 'review'; recButtons('review');
+    const v = $('recCam'); v.srcObject = null; v.classList.remove('mirror'); v.muted = false; v.controls = true; v.style.display = 'block'; v.src = URL.createObjectURL(R.blob);
+    $('recMeter').style.display = 'none';
+    if (R.first == null) recMsg('I could not hear any speaking in that take. Check the microphone and try again, or use it anyway.', 'bad');
+    else recMsg(`You spoke for about ${(R.last - R.first + .4).toFixed(1)}s. Play it back above, then keep it or try again.`, 'good');
+  };
+  R.rec.start(250); R.t0 = performance.now(); R.state = 'recording'; recButtons('recording');
+};
+$('recStop').onclick = () => { if (R.rec && R.rec.state !== 'inactive') R.rec.stop(); };
+$('recAgain').onclick = () => { R.blob = null; R.state = 'ready'; recButtons('ready'); showLive(); recMsg('Ready when you are.'); };
+$('recClose').onclick = () => { if (R.state === 'review' && R.blob && !confirm('Close without keeping this take?')) return; if (R.rec && R.rec.state !== 'inactive') { R.rec.onstop = null; R.rec.stop(); } R.state = 'ready'; closeRecorder(); };
+$('recKeep').onclick = () => { keepTake(); closeRecorder(); };
+$('recNext').onclick = () => { const n = R.i + 1; keepTake(); openScene = n; renderScenes(); openRecorder(n); };
+function closeStream() { if (R.stream) R.stream.getTracks().forEach(t => t.stop()); R.stream = null; R.kind = null; }
+function closeRecorder() { clearInterval(R.meter); closeStream(); const v = $('recCam'); v.srcObject = null; v.removeAttribute('src'); $('rec').classList.remove('on'); }
+function keepTake() {
+  const dur = R.dur, a = R.first == null ? 0 : Math.max(0, R.first - .25), b = R.last == null ? dur : Math.min(dur, R.last + .35);
+  const blob = R.blob; R.blob = null; R.state = 'ready';
+  storeTake(R.i, blob, R.kind, dur, a, b, extOf(R.mime));
+}
+// a clip you filmed or recorded somewhere else (for example the phone's camera app): it stays on this device too
+async function useFile(i, f) {
+  const s = ep.scenes[i], cam = isCam(s), isAudio = /^audio\//.test(f.type) || /\.(m4a|mp3|wav|aac|ogg|opus)$/i.test(f.name);
+  if (f.size > 400e6) return msg('That file is very large (' + Math.round(f.size / 1e6) + ' MB). Film at 1080p, or trim the clip, then try again.', 'bad');
+  msg('Reading ' + f.name + '…');
+  let dur = 0, a = 0, b = 0;
+  try { // find where you start and stop speaking
+    const AC = window.AudioContext || window.webkitAudioContext, ac = new AC();
+    const buf = await ac.decodeAudioData(await f.arrayBuffer()); ac.close && ac.close();
+    dur = buf.duration; const d = buf.getChannelData(0), sr = buf.sampleRate, win = Math.floor(sr * .03), lv = [];
+    for (let k = 0; k + win <= d.length; k += win) { let x = 0; for (let j = k; j < k + win; j++) x += d[j] * d[j]; lv.push(Math.sqrt(x / win)); }
+    const sorted = lv.slice().sort((x, y) => x - y), floor = sorted[Math.floor(sorted.length * .1)] || .002, th = Math.max(.02, floor * 4);
+    const first = lv.findIndex(v => v > th), last = lv.length - 1 - lv.slice().reverse().findIndex(v => v > th);
+    if (first >= 0) { a = Math.max(0, first * .03 - .25); b = Math.min(dur, (last + 1) * .03 + .35); } else { a = 0; b = dur; }
+  } catch (e) { // sound could not be read here: use the whole clip
+    dur = await new Promise(res => { const m = document.createElement('video'); m.preload = 'metadata'; m.onloadedmetadata = () => res(isFinite(m.duration) ? m.duration : 0); m.onerror = () => res(0); m.src = URL.createObjectURL(f); });
+    a = 0; b = dur;
+  }
+  if (!(dur > .3)) return msg('Could not read that file. Try a video from the phone\'s camera app (.mp4 or .mov).', 'bad');
+  const ext = (f.name.match(/\.([a-z0-9]{2,4})$/i) || [, isAudio ? 'm4a' : 'mp4'])[1].toLowerCase();
+  storeTake(i, f, cam && !isAudio ? 'video' : 'voice', dur, a, b, ext);
+}
+function storeTake(i, blob, kind, dur, a, b, ext) {
+  const s = ep.scenes[i];
+  const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '').replace('T', '-');
+  const file = `takes/${ep.id}/${lang}/scene${i + 1}-${stamp}.${ext}`;
+  s.lang = s.lang || {}; s.lang[lang] = s.lang[lang] || {};
+  s.lang[lang].take = { file, kind, dur: +dur.toFixed(2), in: +a.toFixed(2), out: +b.toFixed(2), store: 'device' };
+  blobs[file] = blob; deviceKeys.add(file);
+  changed(); renderScenes(); remount(); seekScene(i);
+  saveBlob(file, blob).then(() => msg('Recording kept on this device. Tap "Save to GitHub" when you are done, so the build times the scenes to your voice.', 'good'))
+    .catch(e => msg('Could not keep the recording in this browser (' + (e && e.message || e) + '). It works until you close the page. Free some space on the phone and record again.', 'bad'));
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
+}
+
+// ---------- Make video: your voice and camera on top of the finished animation, made on this device ----------
+// Uses the soundless video and timeline.json that the build publishes to the explainer-renders branch.
+const mk = { busy: false, url: null, blob: null };
+const mkSt = (h, c) => { $('mkSt').innerHTML = h || ''; $('mkSt').className = 'msg ' + (c || ''); };
+async function fetchRender(rel, as) {
+  const repo = $('ghRepo').value.trim() || 'bkilapar-ship-it/profits-with-bk', tok = $('ghTok').value.trim();
+  const h = { Accept: 'application/vnd.github.raw' }; if (tok) h.Authorization = 'Bearer ' + tok;
+  const r = await fetch(`https://api.github.com/repos/${repo}/contents/${rel}?ref=explainer-renders&v=${Date.now()}`, { headers: h, cache: 'no-store' });
+  if (r.status === 404) return null;
+  if (!r.ok) throw new Error(`GitHub said ${r.status} while fetching the build`);
+  return as === 'json' ? r.json() : r.blob();
+}
+function mkFrame() {
+  const coarse = matchMedia('(pointer:coarse)').matches; // phones: 720p keeps up in real time; laptops: 1080p
+  return coarse ? [1280, 720] : [1920, 1080];
+}
+const mkEase = u => (u < .5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2), mkProg = (t, a, b) => Math.min(1, Math.max(0, (t - a) / (b - a)));
+function rrect(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
+async function makeVideo() {
+  if (mk.busy) return; mk.busy = true; $('mkGo').disabled = true; $('mkOut').innerHTML = ''; stop();
+  let wake = null, ac = null;
+  try {
+    if (dirty) throw new Error('You have changes that are not saved. Tap "Save to GitHub", wait for the build (about 5 to 10 minutes), then make the video.');
+    const A = window.AudioContext || window.webkitAudioContext; ac = new A(); // made on the tap, so phones allow sound
+    mkSt('Getting the latest build…');
+    const tl = await fetchRender(`${ep.id}/${lang}/timeline.json`, 'json');
+    if (!tl) throw new Error('There is no build for this episode and language yet. Tap "Save to GitHub" and wait for the build (about 5 to 10 minutes).');
+    if (tl.sig !== E.takeSig(ep, lang)) throw new Error('The latest build does not match your latest recordings yet. If you just saved, wait a few minutes for the build to finish and try again. Otherwise tap "Save to GitHub" first.');
+    const takes = [];
+    for (const k of tl.takes) {
+      const b = await loadBlob(k.file);
+      if (!b) throw new Error(`The recording for scene ${k.scene + 1} is not on this device. Record it again here (or use the phone you recorded on).`);
+      takes.push(Object.assign({}, k, { blob: b }));
+    }
+    const missing = ep.scenes.map((s, i) => i).filter(i => !tl.takes.some(k => k.scene === i));
+    mkSt('Downloading the animation…');
+    const base = await fetchRender(`${ep.id}/${lang}/video.mp4`, 'blob');
+    if (!base) throw new Error('The build is missing its video. Run the build again.');
+    // prepare: the animation, your voice as sound clips, your camera as videos
+    mkSt('Getting your recordings ready…');
+    const bv = document.createElement('video'); bv.playsInline = true; bv.setAttribute('playsinline', ''); bv.preload = 'auto'; bv.src = URL.createObjectURL(new Blob([base], { type: 'video/mp4' }));
+    await new Promise((res, rej) => { bv.onloadeddata = res; bv.onerror = () => rej(new Error('This browser could not open the build video.')); });
+    const dest = ac.createMediaStreamDestination(), mix = ac.createGain();
+    const comp = ac.createDynamicsCompressor(); comp.threshold.value = -18; comp.ratio.value = 3; comp.attack.value = .005; comp.release.value = .2;
+    mix.connect(comp); comp.connect(dest); comp.connect(ac.destination);
+    const bsrc = ac.createMediaElementSource(bv); bsrc.connect(mix); // sound effects from the animation (the card beep)
+    for (const k of takes) {
+      try { k.buf = await ac.decodeAudioData(await k.blob.arrayBuffer()); } catch (e) { k.buf = null; }
+      if (k.buf) { // even out loudness: aim every recording at the same level
+        const d = k.buf.getChannelData(0), a = Math.floor(k.in * k.buf.sampleRate), b = Math.min(d.length, Math.floor(k.out * k.buf.sampleRate)); let sq = 0;
+        for (let i = a; i < b; i++) sq += d[i] * d[i];
+        const rms = Math.sqrt(sq / Math.max(1, b - a)) || .05; k.gain = Math.min(6, Math.max(.5, .1 / rms));
+      }
+      if (k.slot || !k.buf) { // camera picture, or sound the browser could not decode: play it as a media element
+        const m = document.createElement(k.slot ? 'video' : 'audio'); m.playsInline = true; m.setAttribute('playsinline', ''); m.preload = 'auto';
+        m.src = URL.createObjectURL(k.blob); m.muted = !!k.buf;
+        await new Promise(res => { m.onloadeddata = res; m.onerror = res; setTimeout(res, 4000); });
+        try { m.currentTime = k.in; } catch (e) {}
+        if (!k.buf) { const g = ac.createGain(); g.gain.value = 1; ac.createMediaElementSource(m).connect(g); g.connect(mix); m.muted = false; }
+        k.el = m;
+      }
+    }
+    // record the canvas
+    const [W2, H2] = mkFrame(), sc = W2 / E.W, cv = $('mkCanvas'); cv.width = W2; cv.height = H2; cv.style.display = 'block';
+    const c = cv.getContext('2d');
+    const stream = cv.captureStream(30); dest.stream.getAudioTracks().forEach(t => stream.addTrack(t));
+    const mime = pickMime(['video/mp4;codecs=avc1.42E01E,mp4a.40.2', 'video/mp4', 'video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm']);
+    const mr = new MediaRecorder(stream, Object.assign(mime ? { mimeType: mime } : {}, { videoBitsPerSecond: H2 >= 1080 ? 8e6 : 4e6, audioBitsPerSecond: 160e3 }));
+    const chunks = []; mr.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+    const stopped = new Promise(res => { mr.onstop = res; });
+    try { if (navigator.wakeLock) wake = await navigator.wakeLock.request('screen'); } catch (e) {}
+    if (ac.state === 'suspended') await ac.resume().catch(() => {});
+    mkSt('Making the video. Keep this page open and the screen on…' + (missing.length ? ` Scenes without a recording are silent: ${missing.map(i => i + 1).join(', ')}.` : ''));
+    c.drawImage(bv, 0, 0, W2, H2);
+    mr.start(1000); await bv.play();
+    const F = tl.fade;
+    await new Promise(res => {
+      const tick = () => {
+        const t = bv.currentTime;
+        c.drawImage(bv, 0, 0, W2, H2);
+        for (const k of takes) {
+          if (!k.started && t >= k.at - .06) { // start your voice on time
+            k.started = true;
+            const wait = Math.max(0, k.at - t), off = k.in + Math.max(0, t - k.at), len = Math.max(.05, k.out - off);
+            if (k.buf) { const s = ac.createBufferSource(), g = ac.createGain(); s.buffer = k.buf; g.gain.value = k.gain; s.connect(g); g.connect(mix); s.start(ac.currentTime + wait, off, len); }
+            if (k.el) { setTimeout(() => { try { k.el.currentTime = off; } catch (e) {} k.el.play().catch(() => {}); }, wait * 1000); }
+          }
+          if (k.el && k.started && !k.el.paused && k.el.currentTime >= k.out) k.el.pause();
+          if (k.slot && t >= k.start - F / 2 && t < k.end + F / 2) { // your camera in its rounded frame
+            const op = (k.first ? 1 : mkEase(mkProg(t, k.start - F / 2, k.start + F / 2))) * (tl.takes.length && k.scene === tl.last ? 1 : 1 - mkEase(mkProg(t, k.end - F / 2, k.end + F / 2))) * mkEase(mkProg(t - k.start, 0, .35));
+            const v = k.el, r = k.slot, x = r.x * sc, y = r.y * sc, w = r.w * sc, h = r.h * sc;
+            if (v && v.videoWidth && op > 0) {
+              const s2 = Math.max(w / v.videoWidth, h / v.videoHeight), dw = v.videoWidth * s2, dh = v.videoHeight * s2;
+              c.save(); c.globalAlpha = op; rrect(c, x, y, w, h, r.r * sc); c.clip(); c.drawImage(v, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh); c.restore();
+            }
+          }
+        }
+        $('mkBar').firstChild.style.width = (100 * t / tl.duration).toFixed(1) + '%';
+        if (bv.ended || t >= tl.duration - .02) return res();
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+    await new Promise(r => setTimeout(r, 250)); mr.stop(); await stopped;
+    takes.forEach(k => k.el && k.el.pause());
+    const type = (mr.mimeType || mime || 'video/webm').split(';')[0], ext = /mp4/.test(type) ? 'mp4' : 'webm';
+    mk.blob = new Blob(chunks, { type }); if (mk.url) URL.revokeObjectURL(mk.url); mk.url = URL.createObjectURL(mk.blob);
+    const name = `${ep.id}-${lang}.${ext}`;
+    $('mkOut').innerHTML = `<video controls playsinline src="${mk.url}" style="width:100%;border-radius:8px;margin-top:8px"></video>
+      <div class="row" style="margin-top:8px"><a class="sm" href="${mk.url}" download="${name}" style="padding:7px 12px;border:1px solid var(--line);border-radius:8px;text-decoration:none;color:inherit">⬇ Save the video</a>
+      <button class="sm pri" id="mkShare">Share… (YouTube, WhatsApp, Files)</button></div>
+      <p class="muted">Watch it once before publishing. If Save does nothing on iPhone, tap Share and choose Save Video. Subtitles: download captions.srt from the build if you want them on YouTube.</p>`;
+    $('mkShare').onclick = async () => {
+      const f = new File([mk.blob], name, { type });
+      if (navigator.canShare && navigator.canShare({ files: [f] })) { try { await navigator.share({ files: [f], title: (ep.title || {})[lang] || ep.id }); } catch (e) {} }
+      else mkSt('This browser cannot share files. Use Save the video instead.', 'bad');
+    };
+    mkSt(`Done: ${(mk.blob.size / 1048576).toFixed(1)} MB, ${tl.duration.toFixed(0)} seconds.`, 'good');
+  } catch (e) { mkSt(e.message || String(e), 'bad'); }
+  finally { try { wake && wake.release(); } catch (e) {} mk.busy = false; $('mkGo').disabled = false; $('mkCanvas').style.display = 'none'; setTimeout(() => { try { ac && ac.close(); } catch (e) {} }, 500); }
+}
+$('mkGo').onclick = makeVideo;
+
 function check() {
   const out = [];
   Object.keys(ep.languages).forEach(l => ep.scenes.forEach((s, i) => { const L = (s.lang || {})[l]; if (!L || !(L.lines || []).length) out.push(`• Scene ${i + 1} has no voiceover lines in ${ep.languages[l].name}.`); }));
   return out.slice(0, 8);
 }
 window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
-boot().catch(e => msg('Could not start: ' + e.message, 'bad'));
+boot().then(refreshDeviceKeys).catch(e => msg('Could not start: ' + e.message, 'bad'));
 })();
 </script>
 </body></html>
