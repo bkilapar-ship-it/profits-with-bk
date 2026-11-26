@@ -7,8 +7,9 @@
  *   { id, title:{lang:..}, languages:{ en:{name,currency,locale,decimals}, te:{...} },
  *     scenes:[ { type, duration, data:{...same in every language}, lang:{ en:{lines:[..], ...}, te:{...} } } ] }
  *
- * Recordings: scene.lang.<lang>.take = { file:'takes/<episode>/<lang>/<name>.webm', kind:'video'|'voice', dur, in, out }
+ * Recordings: scene.lang.<lang>.take = { file, kind:'video'|'voice', dur, in, out, store:'device' }
  *   (in/out = where the voice starts and ends, in seconds). That language's scene then follows the voice length.
+ *   store 'device': the recording itself stays in the browser that made it; only these timings are in the file.
  *
  * Each scene type below lists its editable fields, so the editor can build its form automatically.
  * Adding a new kind of scene = adding one entry to SCENES. Changing words, prices, order or timing = editing the episode file only.
@@ -537,6 +538,11 @@
     const dur = +t.dur || 0, a = Math.max(0, +t.in || 0), b = Math.min(dur || Infinity, t.out == null ? dur : +t.out);
     return b - a > 0.2 ? Object.assign({}, t, { in: a, out: b }) : null;
   }
+  /** A short fingerprint of one language's recording timings: "Make video" checks the build used the same ones. */
+  function takeSig(ep, lang) {
+    const tl = timeline(ep, lang);
+    return tl.scenes.filter(o => o.take).map(o => `${o.i}:${o.take.file}:${o.take.in.toFixed(2)}-${o.take.out.toFixed(2)}`).join('|') + `#${tl.duration.toFixed(2)}`;
+  }
   /** Scene length when it follows a recording. */
   const takeLength = t => (t.out - t.in) + LEAD + TAIL;
   function sceneData(scene) { const def = (SCENES[scene.type] || {}).defaults || { data: {} }; return Object.assign({}, def.data, scene.data || {}); }
@@ -637,5 +643,5 @@
     return s;
   }
 
-  root.Explainer = { SCENES, ITEM_KINDS, mount, timeline, srt, script, newScene, sceneLang, sceneData, langOf, takeOf, W, H, LEAD, TAIL };
+  root.Explainer = { SCENES, ITEM_KINDS, mount, timeline, srt, script, newScene, sceneLang, sceneData, langOf, takeOf, takeSig, W, H, LEAD, TAIL, FADE };
 })(typeof window !== 'undefined' ? window : globalThis);

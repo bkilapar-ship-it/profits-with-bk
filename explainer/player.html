@@ -17,6 +17,11 @@
   window.DUR = app.duration; window.render = app.render; window.CUES = app.timeline.cues;
   // recordings: which scenes have voice, and where it starts (render.js mixes the sound in)
   window.TAKES = app.timeline.scenes.filter(o => o.take).map(o => ({ i: o.i, at: o.start + Explainer.LEAD, take: o.take }));
+  // what the "Make video" page needs to add your voice and camera on top of the finished animation
+  window.TIMELINE = { episode: ep.id, lang, duration: app.duration, lead: Explainer.LEAD, fade: Explainer.FADE, sig: Explainer.takeSig(ep, lang), last: app.timeline.scenes.length ? app.timeline.scenes[app.timeline.scenes.length - 1].i : -1,
+    takes: app.timeline.scenes.filter(o => o.take).map(o => { const T = Explainer.SCENES[o.scene.type];
+      return { scene: o.i, file: o.take.file, kind: o.take.kind, in: o.take.in, out: o.take.out, start: o.start, end: o.end, at: o.start + Explainer.LEAD, first: o === app.timeline.scenes[0],
+        slot: T.camera && o.take.kind === 'video' ? T.slot(Explainer.sceneData(o.scene)) : null }; }) };
   // draws time t and waits until any camera frames on screen have loaded
   const svg = document.getElementById('v');
   window.renderAsync = async t => {

@@ -17,7 +17,7 @@ on:
         default: ''
 
 permissions:
-  contents: read
+  contents: write   # to publish the soundless videos to the explainer-renders branch for the "Make video" page
   actions: write
 
 concurrency:
@@ -64,20 +64,28 @@ jobs:
           npx playwright install --with-deps chromium
           sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
 
-      - name: Get your recordings from the private repository
-        if: steps.eps.outputs.list != ''
-        env:
-          TAKES_TOKEN: ${{ secrets.TAKES_TOKEN }}
-        run: |
-          repo=$(jq -r '.takesRepo // ""' explainer/channel.json)
-          if [ -z "$repo" ]; then echo "No private recordings repository set in explainer/channel.json; using explainer/takes."; exit 0; fi
-          if [ -z "$TAKES_TOKEN" ]; then echo "::warning::Add the secret TAKES_TOKEN (a token that can read $repo) so the videos can use your recordings."; exit 0; fi
-          git clone --quiet --depth 1 "https://x-access-token:${TAKES_TOKEN}@github.com/${repo}.git" explainer-takes \
-            || echo "::warning::Could not read $repo. Check that TAKES_TOKEN has access to it. Scenes without their recording keep their fixed length."
-
       - name: Build the videos
         if: steps.eps.outputs.list != ''
-        run: for f in ${{ steps.eps.outputs.list }}; do node explainer/render.js "$f" --out explainer-out --takes-root explainer-takes; done
+        run: for f in ${{ steps.eps.outputs.list }}; do node explainer/render.js "$f" --out explainer-out; done
+
+      - name: Publish the soundless videos for "Make video" on your phone
+        if: steps.eps.outputs.list != ''
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # One commit with no history on the explainer-renders branch, so old videos do not pile up.
+          # Only animation and captions are in these files: your voice and camera stay on your phone.
+          dir=$(mktemp -d)
+          if git fetch -q --depth 1 origin explainer-renders 2>/dev/null; then git archive FETCH_HEAD | tar -x -C "$dir"; fi
+          for d in explainer-out/*/*/; do
+            rel=${d#explainer-out/}; mkdir -p "$dir/$rel"
+            cp "$d/video.mp4" "$d/timeline.json" "$dir/$rel"
+          done
+          cd "$dir"
+          git init -q -b explainer-renders
+          git add -A
+          git -c user.name="github-actions[bot]" -c user.email="41898282+github-actions[bot]@users.noreply.github.com" commit -qm "Soundless explainer videos for Make video [skip scan]"
+          git push -q -f "https://x-access-token:${GH_TOKEN}@github.com/${{ github.repository }}.git" HEAD:explainer-renders
 
       - name: Keep the videos for 14 days
         if: steps.eps.outputs.list != ''
