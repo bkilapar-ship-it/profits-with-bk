@@ -389,7 +389,7 @@ const DB = (() => {
   let p = null;
   const open = () => p || (p = new Promise((res, rej) => { const r = indexedDB.open('oh-i-get-it-takes', 1); r.onupgradeneeded = () => r.result.createObjectStore('takes'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); }));
   const tx = (mode, fn) => open().then(db => new Promise((res, rej) => { const t = db.transaction('takes', mode), q = fn(t.objectStore('takes')); t.oncomplete = () => res(q && q.result); t.onerror = () => rej(t.error); t.onabort = () => rej(t.error); }));
-  return { put: (k, v) => tx('readwrite', st => st.put(v, k)), get: k => tx('readonly', st => st.get(k)), keys: () => tx('readonly', st => st.getAllKeys()) };
+  return { put: (k, v) => tx('readwrite', st => st.put(v, k)), get: k => tx('readonly', st => st.get(k)), keys: () => tx('readonly', st => st.getAllKeys()), del: k => tx('readwrite', st => st.delete(k)) };
 })();
 // stored as raw bytes + type: the most reliable way on iPhone Safari
 async function saveBlob(file, blob) { blobs[file] = blob; await DB.put(file, { type: blob.type, buf: await blob.arrayBuffer(), at: Date.now() }); }
@@ -422,7 +422,8 @@ function takeHTML(s, i, o) {
     <div class="st" id="tst_${i}">${st}</div>
     <div class="row"><button class="sm pri" data-rec="${i}">${t ? '↺ Record again' : cam ? '🎥 Record yourself' : '🎙 Record voice'}</button>
     <label class="sm" style="padding:4px 8px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:13px">📁 Choose a ${cam ? 'video' : 'video or sound'} file<input type="file" accept="video/*,audio/*" data-tfile="${i}" style="display:none"></label>
-    ${t ? `<button class="sm" data-tplay="${i}">▶ Play this scene</button><button class="sm" data-tdel="${i}">✕ Remove recording</button>` : ''}</div>
+    ${t ? `<button class="sm" data-tprev="${i}">👁 Preview my recording</button><button class="sm" data-tplay="${i}">▶ Play scene with animation</button><button class="sm" data-tdl="${i}">⬇ Download to phone</button><button class="sm" data-tdel="${i}">✕ Discard recording</button>` : ''}</div>
+    <div id="tpv_${i}"></div>
     <div class="ref">Record ${what} reading this scene's lines. The scene stretches to fit, and quiet bits at the start and end are trimmed. Recordings stay on this device; only their timings are saved.</div></div>`;
 }
 function wireTake(s, i) {
@@ -430,7 +431,25 @@ function wireTake(s, i) {
   const r = q('rec'); if (r) r.onclick = e => { e.stopPropagation(); openRecorder(i); };
   const f = q('tfile'); if (f) { f.onclick = e => e.stopPropagation(); f.onchange = () => { const file = f.files[0]; f.value = ''; if (file) useFile(i, file); }; }
   const p = q('tplay'); if (p) p.onclick = e => { e.stopPropagation(); seekScene(i); play(); };
-  const d = q('tdel'); if (d) d.onclick = e => { e.stopPropagation(); if (!confirm('Remove this recording? The scene goes back to its fixed length.')) return; delete s.lang[lang].take; changed(); renderScenes(); remount(); };
+  const pv = q('tprev'); if (pv) pv.onclick = async e => { // watch or listen to your trimmed recording right here, no build needed
+    e.stopPropagation(); const t = takeOf(s), box = $('tpv_' + i); if (!t) return;
+    box.innerHTML = '<div class="muted">Opening your recording…</div>';
+    const b = blobs[t.file] || await loadBlob(t.file);
+    if (!b) { box.innerHTML = '<div class="msg bad">This recording is not on this device. Record it again here.</div>'; return; }
+    const m = document.createElement(t.kind === 'video' ? 'video' : 'audio'); m.controls = true; m.playsInline = true; m.setAttribute('playsinline', ''); m.style.cssText = 'width:100%;margin-top:8px;border-radius:8px'; m.src = URL.createObjectURL(b);
+    m.onloadedmetadata = () => { try { m.currentTime = t.in; } catch (x) {} };
+    m.ontimeupdate = () => { if (m.currentTime >= t.out) { m.pause(); try { m.currentTime = t.in; } catch (x) {} } };
+    box.innerHTML = ''; box.appendChild(m); m.play().catch(() => {});
+    const hint = document.createElement('div'); hint.className = 'muted'; hint.textContent = 'This is the part that will be used (quiet bits at the start and end are already cut). Not happy? Tap Discard recording and record again.'; box.appendChild(hint);
+  };
+  const dl = q('tdl'); if (dl) dl.onclick = async e => {
+    e.stopPropagation(); const t = takeOf(s); if (!t) return; const b = blobs[t.file] || await loadBlob(t.file);
+    if (!b) return msg('This recording is not on this device.', 'bad');
+    const ext = (t.file.match(/\.([a-z0-9]{2,4})$/i) || [, 'mp4'])[1], name = `${ep.id}-${lang}-scene${i + 1}.${ext}`, f = new File([b], name, { type: b.type || (t.kind === 'video' ? 'video/mp4' : 'audio/mp4') });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) { try { await navigator.share({ files: [f], title: name }); return; } catch (x) { if (x && x.name === 'AbortError') return; } }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); a.remove(); msg('If nothing downloaded on iPhone, open "Preview my recording" and use the share button there, or try Share from Safari.', '');
+  };
+  const d = q('tdel'); if (d) d.onclick = e => { e.stopPropagation(); if (!confirm('Discard this recording completely? The scene goes back to its fixed length, and the file is deleted from this device.')) return; const f = (s.lang[lang].take || {}).file; delete s.lang[lang].take; if (f) { delete blobs[f]; if (media[f]) { try { media[f].pause(); } catch (x) {} delete media[f]; } deviceKeys.delete(f); DB.del(f).catch(() => {}); } changed(); renderScenes(); remount(); };
 }
 
 // preview playback: your recording plays in step with the animation
