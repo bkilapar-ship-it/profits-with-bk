@@ -43,7 +43,10 @@ jobs:
           else
             before="${{ github.event.before }}"
             if [ -z "$before" ] || ! git cat-file -e "$before" 2>/dev/null; then changed=$(git diff --name-only HEAD~1 HEAD); else changed=$(git diff --name-only "$before" "${{ github.sha }}"); fi
-            if echo "$changed" | grep -qE '^explainer/(engine\.js|channel\.json|player\.html|render\.js|fonts\.css|fonts/)'; then list="$all"
+            msg=$(git log -1 --format=%B "${{ github.sha }}")
+            # Changes to the engine, channel file or fonts no longer re-render every episode (that takes 20+ minutes and only feeds the optional "GitHub build" button).
+            # Put [render all] in the commit message, or run this workflow by hand, when you do want that.
+            if echo "$changed" | grep -qE '^explainer/(engine\.js|channel\.json|player\.html|render\.js|fonts\.css|fonts/)' && echo "$msg" | grep -qiF '[render all]'; then list="$all"
             else list=$(echo "$changed" | grep -E '^explainer/episodes/.+\.json$' | grep -v '/index.json$' || true); fi
           fi
           list=$(for f in $list; do [ -f "$f" ] && echo "$f"; done | tr '\n' ' ')
@@ -95,7 +98,13 @@ jobs:
           path: explainer-out/
           retention-days: 14
 
+  # Runs at once and on its own, so a slow render never holds up the editor on the website.
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
       - name: Refresh the editor on the website
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: gh workflow run scan.yaml --ref "${{ github.event.repository.default_branch }}" -f skip_scan=true || echo "Could not start the site deploy; the editor updates on the next scan run."
