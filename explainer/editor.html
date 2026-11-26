@@ -969,13 +969,18 @@ async function makeOnDevice() {
     for (const c of [{ codec: 'mp4a.40.2', name: 'aac' }, { codec: 'opus', name: 'opus' }]) { const cfg = { codec: c.codec, sampleRate: SR, numberOfChannels: 2, bitrate: 160000 }; try { const r = await AudioEncoder.isConfigSupported(cfg); if (r && r.supported) { acfg = r.config || cfg; aname = c.name; break; } } catch (e) {} }
     if (!acfg) throw new Error('This browser cannot encode sound.');
     // 2. your recordings: the voice of each take, and the camera picture
-    const takes = [];
+    const takes = [], voiceNote = [];
     for (const o of tl.scenes.filter(x => x.take)) {
       const t = o.take, T = E.SCENES[o.scene.type], n = o.i + 1;
       const main = await loadBlob(t.file); if (!main) throw new Error(`The recording for scene ${n} is not on this device. Record it again here.`);
       const aud = t.aud ? await loadBlob(t.file + '.aud') : null;
       mkSt(`Reading the voice of scene ${n}…`);
-      const buf = (aud && await decodeSound(ac, aud)) || await decodeSound(ac, main);
+      // the separate voice copy can come out silent on some phones (two recorders on one microphone), so listen to both and use the louder one
+      const levelOf = b => { const d = b.getChannelData(0), a0 = Math.floor(t.in * b.sampleRate), b0 = Math.min(d.length, Math.floor(t.out * b.sampleRate)); let sq = 0; for (let i = a0; i < b0; i++) sq += d[i] * d[i]; return Math.sqrt(sq / Math.max(1, b0 - a0)); };
+      let buf = null, lvl = 0;
+      for (const src of [aud, main]) { if (!src) continue; const b = await decodeSound(ac, src); if (!b) continue; const l = levelOf(b); if (!buf || l > lvl * 2) { buf = b; lvl = l; } if (lvl > .004) break; }
+      voiceNote.push(`scene ${n}: voice ${lvl > 0 ? Math.round(20 * Math.log10(lvl)) + ' dB' : 'silent'}`);
+      if (buf && lvl < .0005) throw new Error(`The voice of scene ${n} is silent in the saved recording (this phone did not keep the microphone sound). Record scene ${n} again, and tell me if it happens again.`);
       if (!buf) throw new Error(`This browser could not read the sound of scene ${n}. Record that scene again (new recordings keep a separate voice copy that always works).`);
       const d = buf.getChannelData(0), a0 = Math.floor(t.in * buf.sampleRate), b0 = Math.min(d.length, Math.floor(t.out * buf.sampleRate)); let sq = 0;
       for (let i = a0; i < b0; i++) sq += d[i] * d[i];
@@ -1061,7 +1066,7 @@ async function makeOnDevice() {
     }
     mkSt('Finishing the file…'); await encV.flush(); muxer.finalize();
     $('mkBar').firstChild.style.width = '100%';
-    mkResult(new Blob([target.buffer], { type: 'video/mp4' }), 'video/mp4', `${ep.id}-${lang}.mp4`, `${DUR.toFixed(0)} seconds, ${W2}x${H2}.${cutNote}`);
+    mkResult(new Blob([target.buffer], { type: 'video/mp4' }), 'video/mp4', `${ep.id}-${lang}.mp4`, `${DUR.toFixed(0)} seconds, ${W2}x${H2}.${cutNote} Sound: ${aname === 'aac' ? 'AAC' : aname.toUpperCase() + ' (iPhone Photos may not play this; try Files or another player)'}; ${voiceNote.join(', ')}.`);
   } catch (e) { mkSt(e.message || String(e), 'bad'); console.error(e); }
   finally {
     try { wake && wake.release(); } catch (e) {} try { els.forEach(x => x.remove()); } catch (e) {}
