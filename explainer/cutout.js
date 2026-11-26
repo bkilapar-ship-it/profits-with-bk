@@ -8,7 +8,7 @@
   function ready() {
     if (loading) return loading;
     return (loading = (async () => {
-      await loadScript(base + 'vendor/selfie/selfie_segmentation.js?v=2110');
+      await loadScript(base + 'vendor/selfie/selfie_segmentation.js?v=2030');
       if (!root.SelfieSegmentation) throw new Error('The cut-out tool did not start.');
       const s = new root.SelfieSegmentation({ locateFile: f => base + 'vendor/selfie/' + f });
       s.setOptions({ modelSelection: 1, selfieMode: false });
@@ -38,8 +38,10 @@
       last = null; await seg.send({ image: video });
       const c = out.getContext('2d'); c.clearRect(0, 0, w, h);
       if (!last || !last.segmentationMask) return out;
-      c.globalCompositeOperation = 'source-over'; c.drawImage(maskAlpha(last.segmentationMask), 0, 0, w, h);
-      c.globalCompositeOperation = 'source-in'; c.drawImage(video, 0, 0, w, h);
+      // picture first, then trim it with the mask canvas (canvas-to-canvas blending; blending a <video> directly is unreliable on iPhone Safari)
+      const mk = maskAlpha(last.segmentationMask);
+      c.globalCompositeOperation = 'source-over'; c.drawImage(video, 0, 0, w, h);
+      c.globalCompositeOperation = 'destination-in'; c.drawImage(mk, 0, 0, w, h);
       c.globalCompositeOperation = 'source-over';
       return out;
     });
