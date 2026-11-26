@@ -786,12 +786,68 @@ async function fontCssFor(text) { // fonts the picture needs, packed into the dr
   return out.join('');
 }
 async function decodeSound(ac, blob) { try { return await ac.decodeAudioData(await blob.arrayBuffer()); } catch (e) { return null; } }
+
+// ---------- Upload to YouTube straight from this device (Google sign-in, resumable upload) ----------
+let ytTok = null, ytTokExp = 0;
+const ytSt = (h, c) => { const n = $('ytSt'); if (n) { n.innerHTML = h || ''; n.className = 'msg ' + (c || ''); } };
+function ytAuth(cid) {
+  return new Promise((res, rej) => {
+    if (ytTok && Date.now() < ytTokExp) return res(ytTok);
+    const go = () => { try { google.accounts.oauth2.initTokenClient({ client_id: cid, scope: 'https://www.googleapis.com/auth/youtube.upload', callback: r => { if (r.error) return rej(new Error('Google sign-in: ' + r.error)); ytTok = r.access_token; ytTokExp = Date.now() + (r.expires_in - 60) * 1000; res(ytTok); } }).requestAccessToken(); } catch (e) { rej(e); } };
+    if (window.google && google.accounts) return go();
+    const sc = document.createElement('script'); sc.src = 'https://accounts.google.com/gsi/client'; sc.onload = go; sc.onerror = () => rej(new Error('Could not load Google sign-in. Check your connection or an ad blocker.')); document.head.appendChild(sc);
+  });
+}
+function ytPut(url, blob, type) {
+  return new Promise((res, rej) => {
+    const x = new XMLHttpRequest(); x.open('PUT', url); x.setRequestHeader('Content-Type', type);
+    x.upload.onprogress = e => { if (e.lengthComputable) { $('mkBar').firstChild.style.width = (100 * e.loaded / e.total) + '%'; ytSt(`Uploading ${(e.loaded / 1048576).toFixed(0)} of ${(e.total / 1048576).toFixed(0)} MB. Keep this page open.`); } };
+    x.onload = () => (x.status >= 200 && x.status < 300 ? res(JSON.parse(x.responseText)) : rej(new Error('YouTube said ' + x.status + ': ' + x.responseText.slice(0, 200))));
+    x.onerror = () => rej(new Error('The upload connection dropped. Tap Upload again to retry.')); x.send(blob);
+  });
+}
+async function ytUpload() {
+  const btn = $('ytGo'); btn.disabled = true;
+  try {
+    if (!mk.blob) throw new Error('Make the video first.');
+    const cid = $('ytId').value.trim();
+    if (!/\.apps\.googleusercontent\.com$/.test(cid)) throw new Error('Paste your Google OAuth client ID first (the same one the studio page uses; see the one-time setup below).');
+    try { localStorage.setItem('bkstudio-ytid', cid); } catch (e) {}
+    const title = $('ytT').value.trim().slice(0, 100); if (!title) throw new Error('Add a title.');
+    const desc = $('ytD').value.slice(0, 4900), type = mk.blob.type || 'video/mp4';
+    ytSt('Signing in with Google…'); const tok = await ytAuth(cid);
+    ytSt('Starting the upload…');
+    const r = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status', { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json; charset=UTF-8', 'X-Upload-Content-Type': type, 'X-Upload-Content-Length': String(mk.blob.size) },
+      body: JSON.stringify({ snippet: { title, description: desc, categoryId: '27', defaultLanguage: lang, defaultAudioLanguage: lang }, status: { privacyStatus: $('ytPriv').value, selfDeclaredMadeForKids: false } }) });
+    if (!r.ok) throw new Error('YouTube refused to start the upload (' + r.status + '): ' + (await r.text()).slice(0, 200));
+    const loc = r.headers.get('Location'); if (!loc) throw new Error('YouTube did not return an upload address.');
+    const v = await ytPut(loc, mk.blob, type);
+    ytSt(`Uploaded as ${$('ytPriv').value}. <a href="https://studio.youtube.com/video/${v.id}/edit" target="_blank" rel="noopener">Open it in YouTube Studio</a>`, 'good');
+  } catch (e) { ytSt(esc(e.message || String(e)), 'bad'); }
+  finally { btn.disabled = false; }
+}
+function ytCard() {
+  const L = ep.languages[lang] || {}, lines = []; ep.scenes.forEach(sc => ((sc.lang || {})[lang] || {}).lines && lines.push(...sc.lang[lang].lines.filter(x => String(x).trim())));
+  const tag = ((channel.taglines || {})[lang] || (channel.taglines || {}).en || ''), name = ((channel.names || {})[lang] || (channel.names || {}).en || 'Oh, I Get It');
+  const desc = [tag, lines.join(' '), 'All prices in this video are illustrative.', `#OhIGetIt #${(L.name || lang).replace(/\W/g, '')} #explained`].filter(Boolean).join('\n\n');
+  let cid = ''; try { cid = localStorage.getItem('bkstudio-ytid') || ''; } catch (e) {}
+  return `<div class="box" style="margin-top:10px"><b>Upload to YouTube</b> <span class="pill">${esc(name)}</span>
+    <div class="fld"><label>Title</label><input id="ytT" value="${esc(((ep.title || {})[lang] || ep.id).slice(0, 100))}"></div>
+    <div class="fld"><label>Description</label><textarea id="ytD" rows="6">${esc(desc)}</textarea></div>
+    <div class="row"><select id="ytPriv" style="width:auto"><option value="private">Private</option><option value="unlisted">Unlisted</option></select><button class="pri" id="ytGo">⬆ Upload to YouTube</button></div>
+    <div id="ytSt" class="msg"></div>
+    <details><summary>YouTube connection (one time)</summary>
+      <div class="fld"><label>Google OAuth client ID</label><input id="ytId" value="${esc(cid)}" placeholder="…apps.googleusercontent.com"></div>
+      <p class="muted">If you already set up uploads in the studio page, the client ID is remembered here too (same website). Otherwise: in console.cloud.google.com create a project, enable <b>YouTube Data API v3</b>, set the OAuth consent screen to External with your Google account as a test user, create an OAuth client ID of type <b>Web application</b> with this site's address as an authorised JavaScript origin, and paste the client ID above. When Google asks which account to use, pick the channel <b>${esc(name)}</b>. Until Google audits the project, YouTube keeps API uploads private; switch it to public by hand in YouTube Studio.</p>
+    </details></div>`;
+}
 function mkResult(blob, type, name, info) {
   mk.blob = blob; if (mk.url) URL.revokeObjectURL(mk.url); mk.url = URL.createObjectURL(blob);
   $('mkOut').innerHTML = `<video controls playsinline src="${mk.url}" style="width:100%;border-radius:8px;margin-top:8px"></video>
     <div class="row" style="margin-top:8px"><a class="sm" href="${mk.url}" download="${name}" style="padding:7px 12px;border:1px solid var(--line);border-radius:8px;text-decoration:none;color:inherit">⬇ Save the video</a>
     <button class="sm pri" id="mkShare">Share… (Save Video, YouTube, WhatsApp)</button></div>
-    <p class="muted">Watch it once before publishing. If Save does nothing on iPhone, tap Share and choose Save Video.</p>`;
+    <p class="muted">Watch it once before publishing. If Save does nothing on iPhone, tap Share and choose Save Video.</p>${ytCard()}`;
+  $('ytGo').onclick = ytUpload;
   $('mkShare').onclick = async () => {
     const f = new File([blob], name, { type });
     if (navigator.canShare && navigator.canShare({ files: [f] })) { try { await navigator.share({ files: [f], title: (ep.title || {})[lang] || ep.id }); } catch (e) {} }
