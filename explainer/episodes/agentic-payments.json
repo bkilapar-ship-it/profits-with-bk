@@ -28,6 +28,22 @@
       "But we're a bit lazy. Visiting two shops for two kinds of items is a hassle, so we end up compromising.",
       "What if an AI agent did the checking, and even made the payment for us?",
       "Here's how that could work."
+     ],
+     "popups": [
+      "1 | bulb | Complex made simple",
+      "2 | agent | AI agent",
+      "2 | card | Pays for you",
+      "3 | detergent | Detergent",
+      "3 | soap | Soap",
+      "3 | milk | Milk",
+      "3 | cheese | Cheese",
+      "4 | shop | Shop 1",
+      "4 | shop | Shop 2",
+      "4 | scales | Compromise",
+      "5 | agent | AI agent",
+      "5 | tick | Checks",
+      "5 | pound | Pays",
+      "6 | basket | Let's see"
      ]
     }
    }

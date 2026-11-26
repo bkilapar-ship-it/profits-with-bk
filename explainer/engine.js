@@ -135,6 +135,7 @@
   // fields: what the editor shows. per:'lang' = different in each language, per:'data' = same for every language.
   const SCENES = {};
 
+  const CARD_ICONS = ['card', 'phone', 'fingerprint', 'list', 'shop', 'basket', 'lock', 'tick', 'stop', 'bank', 'question', 'pound', 'agent', 'network', 'shield', 'id', 'alert', 'scales', 'bulb', 'detergent', 'soap', 'milk', 'cheese'];
   // Layouts for the presenter scene, like the ones common on YouTube. Your camera picture always sits in the "slot" box.
   const PRES_LAYOUTS = {
     talking: { label: 'Talking head: big and centred, title across the top', slot: { x: 480, y: 200, w: 960, h: 720, r: 36 } },
@@ -195,6 +196,7 @@
       { k: 'lines', per: 'lang', kind: 'lines', label: 'What you say (one line per caption)' },
       { k: 'layout', per: 'data', kind: 'select', options: Object.keys(PRES_LAYOUTS).map(k => [k, PRES_LAYOUTS[k].label]), label: 'Layout' },
       { k: 'side', per: 'data', kind: 'select', options: ['left', 'right', 'center'], label: 'Which side (for Side by side and Circle)' },
+      { k: 'popups', per: 'lang', kind: 'lines', label: 'Popups behind you while you speak, one per line, as: line number | picture | word. The picture appears when that spoken line starts and goes away again. Pictures: ' + CARD_ICONS.join(', ') },
     ],
     defaults: { data: { layout: 'talking', side: 'right' }, lang: { title: 'Topic title', lines: ['Say hello and introduce the topic.'] } },
     build(g, S, ctx) {
@@ -207,6 +209,23 @@
       for (let i = 0; i < 26; i++) { const x = (i * 337) % W, y = (i * 211) % H; el('circle', { cx: x, cy: y, r: 3 + (i % 4) * 2, fill: '#ffd166' }, dots); }
       if (banner) bannerDecor(bg, ctx.uid);
       else { const big = bulb(bg, side === 'left' ? 1500 : 420, 560, 6.5, false); big.setAttribute('opacity', .07); }
+      // popups that come and go behind you, each tied to a spoken line (the camera picture is drawn on top of them)
+      const popSpec = (S.L.popups || []).map(x => String(x).split('|').map(q => q.trim())).filter(a => a.length >= 2 && +a[0] > 0 && a[1]).map(a => ({ line: +a[0] - 1, icon: a[1].toLowerCase(), label: a[2] || '' })), popLines = (S.L.lines || []).filter(x => String(x).trim());
+      const pops = [];
+      if (popSpec.length && popLines.length) {
+        const tk = S.L.take, spanT = tk ? tk.out - tk.in : ctx.dur, offT = tk ? LEAD - .15 : 0, tot = popLines.reduce((a, q) => a + Math.max(12, q.length), 0); let acc = offT;
+        const st = popLines.map(q => { const x = acc; acc += spanT * Math.max(12, q.length) / tot; return x; }), en = st.map((x, j) => (j + 1 < st.length ? st[j + 1] : offT + spanT + .35));
+        const slots = [[240, 310], [1680, 340], [240, 510], [1680, 530], [240, 650], [1680, 640]], per = {};
+        popSpec.forEach(p => { if (st[p.line] != null) (per[p.line] = per[p.line] || []).push(p); });
+        const popG = el('g', {}, g); let k = 0;
+        Object.keys(per).forEach(j => { const arr = per[j], len = en[j] - st[j]; arr.forEach((p, i) => {
+          const [px, py] = slots[k % slots.length], gg = el('g', { opacity: 0 }, popG);
+          const ring = el('circle', { r: 100, fill: 'none', stroke: '#ffd166', 'stroke-width': 5 }, gg);
+          el('circle', { r: 100, fill: '#0b1522', opacity: .9, stroke: '#ffd166', 'stroke-width': 6 }, gg);
+          const ic = el('g', { transform: 'scale(.95)' }, gg); cardIcon(ic, p.icon);
+          if (p.label) { const t = txt(gg, 0, 160, p.label, 40, 800, '#fff', { max: 330, attrs: { stroke: '#05101c', 'stroke-width': 7, 'paint-order': 'stroke' } }); void t; }
+          pops.push({ gg, ring, px, py, k, t0: st[j] + .12 + (len * .78) * (i / arr.length), life: Math.min(4.4, Math.max(2.6, len / arr.length * 1.5 + 1)) }); k++; }); });
+      }
       const brand = el('g', {}, g), third = el('g', {}, g);
       const cam = S.L.take && S.L.take.kind === 'video' ? S.L.take : null;
       if (banner) { // channel name big in gold across the top, topic title under it
@@ -258,6 +277,10 @@
         brand.setAttribute('opacity', ease(prog(ts, 0, .5)));
         dots.setAttribute('transform', `translate(0,${-ts * 6})`);
         if (camG) camG.setAttribute('opacity', ease(prog(u * ctx.dur, 0, .35)));
+        pops.forEach(p => { const t = u * ctx.dur - p.t0; if (t < 0 || t > p.life) { p.gg.setAttribute('opacity', 0); return; }
+          const inn = bounce(prog(t, 0, .5)), out = 1 - ease(prog(t, p.life - .35, p.life)), sc = lerp(.3, 1, inn) * lerp(.7, 1, out), bob = Math.sin(t * 3 + p.k) * 9, rot = Math.sin(t * 2.2 + p.k * 1.7) * 4, rg = prog(t, 0, .7);
+          p.gg.setAttribute('opacity', Math.min(1, t / .15) * out); p.gg.setAttribute('transform', `translate(${p.px},${p.py + bob}) rotate(${rot}) scale(${sc})`);
+          p.ring.setAttribute('r', lerp(105, 190, rg)); p.ring.setAttribute('opacity', 1 - rg); });
         if (img) { // video frames prepared by render.js: frame number = time since the voice started
           const f = cam.frames, n = clamp(Math.floor((u * ctx.dur - LEAD) * f.fps), 0, f.count - 1) + 1;
           const href = `${f.url}/${String(n).padStart(5, '0')}.jpg`;
@@ -593,7 +616,6 @@
   };
 
   // ---------------------------------------------------------------- step cards (icons + short words, appearing one by one)
-  const CARD_ICONS = ['card', 'phone', 'fingerprint', 'list', 'shop', 'basket', 'lock', 'tick', 'stop', 'bank', 'question', 'pound', 'agent', 'network', 'shield', 'id', 'alert', 'scales'];
   function cardIcon(parent, name) { // simple flat pictures, no brand logos; drawn inside about -70..70
     const g = el('g', {}, parent), gold = '#ffd166', ink = '#0d1b2a', blue = '#8ecae6';
     switch (name) {
@@ -615,6 +637,11 @@
       case 'id': el('rect', { x: -64, y: -44, width: 128, height: 88, rx: 12, fill: '#e9f5fb' }, g); el('circle', { cx: -30, cy: -8, r: 14, fill: '#6b7f8e' }, g); el('path', { d: 'M-52 34 q22 -34 44 0 z', fill: '#6b7f8e' }, g); [-14, 8, 30].forEach(y => el('rect', { x: 0, y: y - 12, width: 52, height: 9, rx: 4, fill: '#9fb3c8' }, g)); break;
       case 'alert': el('rect', { x: -38, y: -66, width: 76, height: 132, rx: 14, fill: '#1b3a5c', stroke: gold, 'stroke-width': 6 }, g); el('circle', { cx: 0, cy: -4, r: 24, fill: '#d62828' }, g); el('rect', { x: -4, y: -18, width: 8, height: 20, rx: 3, fill: '#fff' }, g); el('circle', { cx: 0, cy: 10, r: 4.5, fill: '#fff' }, g); break;
       case 'scales': el('rect', { x: -4, y: -56, width: 8, height: 104, fill: '#c9d3df' }, g); el('rect', { x: -40, y: 44, width: 80, height: 12, rx: 5, fill: '#c9d3df' }, g); el('rect', { x: -62, y: -50, width: 124, height: 8, rx: 4, fill: gold }, g); [-52, 52].forEach(x => { el('path', { d: `M${x} -42 l-24 52 h48 z`, fill: 'none', stroke: gold, 'stroke-width': 4 }, g); el('path', { d: `M${x - 30} 10 h60 a30 22 0 0 1 -60 0 z`, fill: blue }, g); }); break;
+      case 'bulb': bulb(g, 0, 10, 1.7, false); break;
+      case 'detergent': el('rect', { x: -14, y: -66, width: 28, height: 22, rx: 5, fill: gold }, g); el('rect', { x: -38, y: -48, width: 76, height: 112, rx: 20, fill: '#4cc9f0' }, g); el('rect', { x: -38, y: -4, width: 76, height: 44, fill: '#fff' }, g); el('path', { d: 'M-38 18 q19 -16 38 0 t38 0', fill: 'none', stroke: '#4cc9f0', 'stroke-width': 6 }, g); break;
+      case 'soap': el('g', { transform: 'rotate(-14)' }, g).appendChild(el('rect', { x: -58, y: -28, width: 116, height: 62, rx: 26, fill: '#f7a8d8' })); [[40, -46, 16], [58, -20, 10], [24, -66, 9]].forEach(([x, y, r]) => el('circle', { cx: x, cy: y, r, fill: 'none', stroke: blue, 'stroke-width': 5 }, g)); el('rect', { x: -34, y: -6, width: 62, height: 10, rx: 5, fill: '#fff', opacity: .6, transform: 'rotate(-14)' }, g); break;
+      case 'milk': item('milk', g).setAttribute('transform', 'translate(0,64) scale(.62)'); break;
+      case 'cheese': item('cheese', g).setAttribute('transform', 'translate(0,46) scale(1)'); break;
       default: el('circle', { r: 46, fill: gold }, g);
     }
     return g;
