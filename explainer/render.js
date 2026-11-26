@@ -7,10 +7,8 @@
  *
  * Recordings: a scene with a take (scene.lang.<lang>.take, see engine.js) gets that voice in the soundtrack, and a
  * presenter scene with a video take shows the video in its camera frame. The scene follows the voice length.
- * Recordings made in the editor stay on Bharat's phone (store:'device'): here only their timings are used, so the
- * scenes are timed to his voice but the video has no voice. The editor's "Make video" adds voice and camera on the
- * phone, using video.mp4 + timeline.json from the explainer-renders branch. A recording file placed in explainer/takes/
- * is mixed in here instead. The voice is evened out in loudness; silence at the
+ * Takes live in your private recordings repository (checked out by the workflow and passed as --takes-root <dir>),
+ * or in explainer/takes/ when no private repository is set. The voice is evened out in loudness; silence at the
  * start and end is cut using the editor's in/out marks, or found automatically when those are missing.
  */
 'use strict';
@@ -27,6 +25,7 @@ const ROOT = __dirname, FPS = +opt('fps', 30), OUT = opt('out', 'explainer-out')
 const ep = JSON.parse(fs.readFileSync(epFile, 'utf8'));
 const langs = opt('lang', null) ? opt('lang').split(',') : Object.keys(ep.languages || { en: {} });
 const stills = opt('stills', null);
+const TAKES_ROOT = opt('takes-root', null) ? path.resolve(opt('takes-root')) : null;
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'explainer-'));
 const epByLang = {};   // the episode as each language sees it, with recordings measured and prepared
 
@@ -52,8 +51,8 @@ function prepareTakes(lang) {
   (e.scenes || []).forEach((s, i) => {
     const t = ((s.lang || {})[lang] || {}).take;
     if (!t || !t.file) return;
-    const src = [path.resolve(ROOT, t.file)].find(f => f.startsWith(ROOT + path.sep) && fs.existsSync(f));
-    if (!src && +t.dur > 0) { console.log(`[${lang}] scene ${i + 1}: timed to your recording (${(Math.min(+t.out, +t.dur) - (+t.in || 0)).toFixed(1)}s), which stays on your phone`); return; }
+    const roots = (t.store === 'private' ? [TAKES_ROOT, ROOT] : [ROOT, TAKES_ROOT]).filter(Boolean);
+    const src = roots.map(r => path.resolve(r, t.file)).find((f, k) => f.startsWith(roots[k] + path.sep) && fs.existsSync(f));
     if (!src) { console.log(`[${lang}] scene ${i + 1}: recording ${t.file} not found, using the fixed length instead`); delete s.lang[lang].take; return; }
     const full = path.join(TMP, `${lang}-${i}-full.wav`), wav = path.join(TMP, `${lang}-${i}.wav`);
     // decode the whole sound first: phone recordings often have no reliable length in the file
@@ -109,7 +108,6 @@ async function renderLang(browser, port, lang) {
   const { DUR, CUES, SRT, SCRIPT, TAKES } = await page.evaluate(() => ({ DUR: window.DUR, CUES: window.CUES, SRT: window.SRT, SCRIPT: window.SCRIPT, TAKES: window.TAKES }));
   fs.writeFileSync(path.join(dir, 'captions.srt'), SRT);
   fs.writeFileSync(path.join(dir, 'script.txt'), SCRIPT);
-  fs.writeFileSync(path.join(dir, 'timeline.json'), JSON.stringify(await page.evaluate(() => window.TIMELINE), null, 1));
   if (stills) {
     for (const t of stills.split(',')) { await page.evaluate(t => window.renderAsync(t), +t); await page.screenshot({ path: path.join(dir, `still-${t}.png`) }); }
     console.log(`[${lang}] stills written to ${dir}`);
