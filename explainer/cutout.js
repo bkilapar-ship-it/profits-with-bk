@@ -8,7 +8,7 @@
   function ready() {
     if (loading) return loading;
     return (loading = (async () => {
-      await loadScript(base + 'vendor/selfie/selfie_segmentation.js?v=2045');
+      await loadScript(base + 'vendor/selfie/selfie_segmentation.js?v=2110');
       if (!root.SelfieSegmentation) throw new Error('The cut-out tool did not start.');
       const s = new root.SelfieSegmentation({ locateFile: f => base + 'vendor/selfie/' + f });
       s.setOptions({ modelSelection: 1, selfieMode: false });
@@ -22,10 +22,11 @@
   function maskAlpha(m) {
     const mw = m.width || 256, mh = m.height || 144; mcv.width = mw; mcv.height = mh;
     const x = mcv.getContext('2d', { willReadFrequently: true }); x.clearRect(0, 0, mw, mh); x.globalCompositeOperation = 'source-over'; x.drawImage(m, 0, 0, mw, mh);
-    const id = x.getImageData(0, 0, mw, mh), d = id.data; let amin = 255;
-    for (let i = 3; i < d.length; i += 4) if (d[i] < amin) amin = d[i];
-    api.maskMode = amin > 200 ? 'red' : 'alpha';
-    if (amin > 200) { for (let i = 0; i < d.length; i += 4) { d[i + 3] = d[i]; d[i] = d[i + 1] = d[i + 2] = 255; } x.putImageData(id, 0, 0); }
+    const id = x.getImageData(0, 0, mw, mh), d = id.data; let sa = 0, sr = 0, n = d.length / 4;
+    for (let i = 0; i < d.length; i += 4) { sa += d[i + 3]; sr += Math.max(d[i], d[i + 1], d[i + 2]); }
+    const ma = sa / n, mr = sr / n, opaque = ma > 235; // an (almost) fully opaque mask carries the person in its colour, not its alpha
+    api.maskMode = (opaque ? 'colour' : 'alpha') + ' a' + Math.round(ma) + ' c' + Math.round(mr);
+    if (opaque) { for (let i = 0; i < d.length; i += 4) { d[i + 3] = Math.max(d[i], d[i + 1], d[i + 2]); d[i] = d[i + 1] = d[i + 2] = 255; } x.putImageData(id, 0, 0); }
     return mcv;
   }
   function cut(video, out, dims) {
