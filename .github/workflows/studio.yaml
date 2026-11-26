@@ -5,9 +5,10 @@ name: Studio (daily and weekly video)
 # Also starts when Claude pushes research-trigger/studio.txt (line 1 = daily or weekly; line 3 = draft for the early, pre-close review draft, published separately as daily-draft).
 
 on:
-  schedule:
-    - cron: '25 23 * * 1-5'    # about 7:25 pm ET (EDT) / 6:25 pm (EST): after the 22:45 UTC scan has published today's signals
-    - cron: '55 23 * * 5'      # Fridays: the weekly review, a little later
+  # PAUSED 2026-11-26 (UK regulatory review): scheduled builds off. Re-enable by restoring the two cron lines.
+  # schedule:
+  #   - cron: '25 23 * * 1-5'    # about 7:25 pm ET (EDT) / 6:25 pm (EST): after the 22:45 UTC scan has published today's signals
+  #   - cron: '55 23 * * 5'      # Fridays: the weekly review, a little later
   push:
     paths: ['research-trigger/studio.txt']
   workflow_dispatch:
