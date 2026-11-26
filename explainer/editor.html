@@ -41,6 +41,7 @@ body:not([data-tab=edit]) main{grid-template-columns:minmax(0,760px)}body:not([d
 .scene.open .bd{display:block}
 .fld{margin:10px 0}
 .fld label{display:block;font-size:13px;color:var(--mut);margin-bottom:3px}
+.layprev{display:flex;gap:10px;align-items:center;margin-top:8px;background:#0d1b2a;border-radius:10px;padding:8px}.layprev svg{width:46%;max-width:240px;flex:none;border-radius:6px;display:block}.layprev span{color:#cfe3ff;font-size:12.5px;line-height:1.35}
 .ref{font-size:12px;color:var(--mut);margin-top:3px;white-space:pre-wrap}
 .pill{font-size:12px;padding:2px 8px;border-radius:999px;background:var(--bg);border:1px solid var(--line);color:var(--mut)}
 .msg{font-size:13px;color:var(--mut);min-height:18px}
@@ -72,7 +73,7 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 20:30 mask-order</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 20:50 layout-preview</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -300,8 +301,28 @@ function fieldHTML(f, si) {
   else if (f.kind === 'select') input = `<select id="${id}">${f.options.map(o => { const a2 = Array.isArray(o) ? o : [o, o]; return `<option value="${esc(a2[0])}"${a2[0] === v ? ' selected' : ''}>${esc(a2[1])}</option>`; }).join('')}</select>`;
   else if (f.kind === 'item') input = `<select id="${id}">${E.ITEM_KINDS.map(o => `<option${o === v ? ' selected' : ''}>${o}</option>`).join('')}</select>`;
   else if (f.kind === 'items') input = `<div class="chips" id="${id}">${(v || []).map((k, i) => `<button class="chip on" data-i="${i}" title="Tap to remove">${k} ✕</button>`).join('')}<select data-add style="width:auto"><option value="">+ add item</option>${E.ITEM_KINDS.map(o => `<option>${o}</option>`).join('')}</select></div>`;
+  if (f.k === 'layout') input += `<div class="layprev" id="lp_${si}">${layPrevHTML(v || 'side', (s.data || {}).side)}</div>`;
   return `<div class="fld"><label for="${id}">${esc(f.label)}${isLang ? ` <span class="pill">${esc(ep.languages[lang].name || lang)}</span>` : ' <span class="pill">all languages</span>'}</label>${input}${ref}</div>`;
 }
+
+const LAY_NOTE = { talking: 'You, big in the middle, in a rounded frame. Title across the top.', cut: 'Only you, cut out, standing in front of the banner. No box.', soft: 'Your whole picture with edges fading into the banner. No hard box.', side: 'You on one side, the title and lines on the other.', circle: 'You in a round frame, a big title beside you.', wide: 'A large centred picture under the title.', full: 'Your picture fills the top, captions underneath.' };
+function layoutPreview(lay, side) { // small drawing of the layout, with a stand-in figure instead of the real camera picture
+  const bg = '<defs><linearGradient id="lpb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#17335c"/><stop offset="1" stop-color="#08111c"/></linearGradient><clipPath id="lpc"><circle cx="0" cy="0" r="1"/></clipPath></defs><rect width="192" height="108" fill="url(#lpb)"/><g opacity=".5" fill="#ffd166"><rect x="10" y="62" width="5" height="26"/><rect x="20" y="52" width="5" height="36"/><rect x="170" y="56" width="5" height="32"/><rect x="180" y="46" width="5" height="42"/></g>';
+  const title = (x, y, w, big) => `<rect x="${x}" y="${y}" width="${w}" height="${big ? 7 : 4}" rx="2" fill="#ffd166"/>` + (big ? `<rect x="${x}" y="${y + 11}" width="${w * .7}" height="7" rx="2" fill="#fff6dc"/>` : '');
+  const caps = '<rect x="46" y="98" width="100" height="4" rx="2" fill="#fff" opacity=".8"/>';
+  const person = (cx, base, sc, col) => `<g fill="${col || '#e9b98f'}"><circle cx="${cx}" cy="${base - 30 * sc}" r="${9 * sc}"/><path d="M${cx - 17 * sc} ${base} C${cx - 17 * sc} ${base - 16 * sc} ${cx - 8 * sc} ${base - 19 * sc} ${cx} ${base - 19 * sc} S${cx + 17 * sc} ${base - 16 * sc} ${cx + 17 * sc} ${base}Z" fill="#8aa0c0"/></g>`;
+  const box = (x, y, w, h, r) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="#3a4a63" stroke="#ffd166" stroke-width="1.2"/>`;
+  let g = '';
+  if (lay === 'talking') g = title(46, 6, 100, true) + box(48, 26, 96, 70, 4) + person(96, 96, 1.5) + caps;
+  else if (lay === 'cut') g = title(46, 6, 100, true) + person(96, 98, 2.3) + caps;
+  else if (lay === 'soft') g = title(46, 6, 100, true) + `<rect x="36" y="22" width="120" height="74" fill="#3a4a63" opacity=".55" style="filter:blur(2px)"/>` + person(96, 96, 1.7) + caps;
+  else if (lay === 'wide') g = title(56, 6, 80, false) + box(36, 22, 120, 70, 4) + person(96, 92, 1.6) + caps;
+  else if (lay === 'full') g = box(0, 0, 192, 90, 0) + person(96, 90, 1.8) + caps;
+  else if (lay === 'circle') { const l = side === 'left'; g = `<circle cx="${l ? 52 : 140}" cy="52" r="34" fill="#3a4a63" stroke="#ffd166" stroke-width="1.2"/>` + person(l ? 52 : 140, 84, 1.3) + title(l ? 96 : 14, 34, 82, true) + caps; }
+  else { const l = side === 'left'; g = box(l ? 8 : 106, 14, 78, 74, 4) + person(l ? 47 : 145, 88, 1.3) + title(l ? 98 : 12, 34, 82, true) + caps; }
+  return `<svg viewBox="0 0 192 108" role="img" aria-label="Sample of the layout">${bg}${g}</svg>`;
+}
+function layPrevHTML(lay, side) { return layoutPreview(lay, side) + `<span>${esc(LAY_NOTE[lay] || '')}</span>`; }
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
 function needHTML(s, T) {
@@ -348,7 +369,7 @@ function renderScenes() {
     const c = $('cap_' + i); if (c) c.onchange = () => { if (c.checked) delete s.captions; else s.captions = false; changed(); remountSoon(); };
     T.fields.forEach(f => {
       const id = `f_${i}_${f.k}`, n = $(id); if (!n) return;
-      const put = v => { if (f.per === 'lang') { s.lang = s.lang || {}; s.lang[lang] = s.lang[lang] || {}; s.lang[lang][f.k] = v; } else { s.data = s.data || {}; s.data[f.k] = v; } if (f.k === 'lines') { const nn = $('need_' + i); if (nn) nn.innerHTML = needHTML(s, T); lenSummary(); } changed(); remountSoon(); };
+      const put = v => { if (f.per === 'lang') { s.lang = s.lang || {}; s.lang[lang] = s.lang[lang] || {}; s.lang[lang][f.k] = v; } else { s.data = s.data || {}; s.data[f.k] = v; } if (f.k === 'layout' || f.k === 'side') { const lp = $('lp_' + i); if (lp) lp.innerHTML = layPrevHTML(s.data.layout || 'side', s.data.side); } if (f.k === 'lines') { const nn = $('need_' + i); if (nn) nn.innerHTML = needHTML(s, T); lenSummary(); } changed(); remountSoon(); };
       if (f.kind === 'items') {
         n.querySelectorAll('.chip').forEach(b => b.onclick = () => { const cur = (s.data[f.k] || T.defaults.data[f.k] || []).slice(); cur.splice(+b.dataset.i, 1); put(cur); renderScenes(); });
         const a = n.querySelector('[data-add]'); a.onchange = () => { if (!a.value) return; const cur = (s.data[f.k] || T.defaults.data[f.k] || []).slice(); if (cur.length >= 7) return msg('A basket holds up to 7 items.', 'bad'); cur.push(a.value); put(cur); renderScenes(); };
