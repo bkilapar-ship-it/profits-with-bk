@@ -36,7 +36,7 @@ body:not([data-tab=edit]) main{grid-template-columns:minmax(0,760px)}body:not([d
 .tab.on{background:var(--acc);color:#1d2a36;border-color:var(--acc);font-weight:700}
 .scene{border:1px solid var(--line);border-radius:10px;margin-bottom:10px;background:var(--card)}
 .scene>.hd{display:flex;gap:6px;align-items:center;padding:8px 10px;cursor:pointer;flex-wrap:wrap}
-.scene>.hd b{flex:1 1 auto;min-width:0}
+.scene>.hd b{flex:1 1 100%;min-width:0;order:1}.scene>.hd .pill{order:2}.scene>.hd .mv{order:3;margin-left:auto;display:flex;gap:4px}.scene>.hd .mv button{padding:4px 8px}
 .scene .bd{padding:4px 12px 12px;display:none}
 .scene.open .bd{display:block}
 .fld{margin:10px 0}
@@ -284,8 +284,8 @@ function renderScenes() {
     const T = E.SCENES[s.type]; if (!T) return `<div class="scene"><div class="hd"><b>Unknown scene type: ${esc(s.type)}</b><button class="sm" data-del="${i}">Delete</button></div></div>`;
     const o = tl.scenes.find(x => x.i === i);
     return `<div class="scene${i === openScene ? ' open' : ''}" data-i="${i}">
-      <div class="hd" data-toggle="${i}"><span class="pill">${i + 1}</span><b>${esc(T.label)}</b><span class="pill">${s.type === 'endCard' ? 'End' : i === 0 ? 'Intro' : 'Middle'}</span><span class="pill">${o ? o.start.toFixed(0) + 's' : ''}</span>
-        <button class="sm" data-top="${i}" title="Move to the very top">⤒</button><button class="sm" data-up="${i}" title="Move up">↑</button><button class="sm" data-down="${i}" title="Move down">↓</button><button class="sm" data-bottom="${i}" title="Move to the very end">⤓</button><button class="sm" data-dup="${i}" title="Duplicate">⧉</button><button class="sm" data-del="${i}" title="Delete">✕</button></div>
+      <div class="hd" data-toggle="${i}"><span class="pill">${i + 1}</span><b>${esc(T.label)}</b><span class="pill">${s.type === 'endCard' ? 'End' : i === 0 ? 'Intro' : 'Middle'}</span><span class="pill tm">${o ? o.start.toFixed(1) + 's' : ''}</span><span class="mv">
+        <button class="sm" data-top="${i}" title="Move to the very top">⤒</button><button class="sm" data-up="${i}" title="Move up">↑</button><button class="sm" data-down="${i}" title="Move down">↓</button><button class="sm" data-bottom="${i}" title="Move to the very end">⤓</button><button class="sm" data-dup="${i}" title="Duplicate">⧉</button><button class="sm" data-del="${i}" title="Delete">✕</button></span></div>
       <div class="bd">
         ${takeHTML(s, i, o)}
         <div class="fld"><label for="dur_${i}">Length in seconds when there is no recording <span class="pill">all languages</span></label><input id="dur_${i}" type="number" step="0.5" min="0.5" placeholder="Automatic" value="${s.duration ?? ''}"><div class="ref" id="need_${i}">${needHTML(s, T)}</div></div>
@@ -339,7 +339,7 @@ function remount() {
   app = E.mount($('stage'), ep, lang, { channel, preview: true });
   document.fonts.ready.then(() => { if (app) { app.refit(); app.render(tNow); } });
   tNow = Math.min(tNow, app.duration); draw();
-  const tl = app.timeline; $('scenes').querySelectorAll('.scene').forEach(n => { const o = tl.scenes.find(x => x.i === +n.dataset.i); const p = n.querySelector('.hd .pill:nth-of-type(2)'); if (p && o) p.textContent = o.start.toFixed(1) + 's'; });
+  const tl = app.timeline; $('scenes').querySelectorAll('.scene').forEach(n => { const o = tl.scenes.find(x => x.i === +n.dataset.i); const p = n.querySelector('.hd .pill.tm'); if (p && o) p.textContent = o.start.toFixed(1) + 's'; });
 }
 function draw() {
   if (!app) return;
