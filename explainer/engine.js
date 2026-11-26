@@ -656,6 +656,9 @@
       });
       const arrows = S.data.arrows !== 'no' ? cards.slice(1).map(c => { const a = el('g', {}, g); el('path', { d: `M${c.cx - gap + 18} ${top + ch / 2 - 24} l${gap - 36} 24 l-${gap - 36} 24`, fill: 'none', stroke: '#ffd166', 'stroke-width': 10, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, a); return a; }) : [];
       txt(g, 960, 912, S.L.note || '', 30, 500, '#8fa6bd', { max: 1700, attrs: { 'font-style': 'italic' } });
+      const br = el('g', {}, g); // the channel logo at the top of every middle scene
+      el('rect', { x: 40, y: 24, width: 440, height: 80, rx: 40, fill: '#0b1522', opacity: .88, stroke: '#ffd166', 'stroke-width': 2 }, br);
+      bulb(br, 92, 68, .85, false); txt(br, 138, 81, ctx.channelName, 40, 800, '#fff6dc', { anchor: 'start', max: 320 });
       return u => {
         const ts = u * this.base; head.setAttribute('opacity', ease(prog(ts, 0, .5)));
         cards.forEach((c, i) => {
@@ -664,6 +667,87 @@
           c.root.setAttribute('transform', `translate(${cxm},${cym}) scale(${k}) translate(${-cxm},${-cym})`);
           if (arrows[i - 1]) arrows[i - 1].setAttribute('opacity', ease(prog(ts, a - .1, a + .3)));
         });
+      };
+    },
+  };
+
+  // ---------------------------------------------------------------- animated like / share / subscribe end scene
+  SCENES.outro = {
+    label: 'Like, share, subscribe (animated end scene)', base: 10, captions: true,
+    fields: [
+      { k: 'heading', per: 'lang', kind: 'text', label: 'Heading' },
+      { k: 'likeLabel', per: 'lang', kind: 'text', label: 'Word under the like button' },
+      { k: 'shareLabel', per: 'lang', kind: 'text', label: 'Word under the share button' },
+      { k: 'subLabel', per: 'lang', kind: 'text', label: 'Subscribe button word' },
+      { k: 'subbedLabel', per: 'lang', kind: 'text', label: 'Word after it is tapped' },
+      { k: 'small', per: 'lang', kind: 'text', label: 'Small print at the bottom' },
+      { k: 'lines', per: 'lang', kind: 'lines', label: 'What you say' },
+    ],
+    defaults: { data: {}, lang: { heading: 'Want complex things in simple language?', likeLabel: 'Like', shareLabel: 'Share', subLabel: 'Subscribe', subbedLabel: 'Subscribed', small: '', lines: ['Please like, share and subscribe.'] } },
+    build(g, S, ctx) {
+      const grd = el('linearGradient', { id: 'og' + ctx.uid, x1: 0, y1: 0, x2: 1, y2: 1 }, ctx.defs);
+      el('stop', { offset: 0, 'stop-color': '#0d1b2a' }, grd); el('stop', { offset: 1, 'stop-color': '#10294a' }, grd);
+      el('rect', { width: W, height: H, fill: `url(#og${ctx.uid})` }, g);
+      const dots = el('g', { opacity: .14 }, g); for (let i = 0; i < 26; i++) el('circle', { cx: (i * 337) % W, cy: (i * 211) % H, r: 3 + (i % 4) * 2, fill: '#ffd166' }, dots);
+      const brand = el('g', {}, g);
+      const lg = bulb(brand, 760, 150, 1.5, true);
+      txt(brand, 840, 178, ctx.channelName, 96, 800, '#fff6dc', { anchor: 'start', max: 960 });
+      const head = txt(g, 960, 330, S.L.heading || '', 62, 700, '#cfe3ff', { max: 1700 });
+      const gold = '#ffd166', ink = '#0d1b2a', cy = 600;
+      // like
+      const like = el('g', {}, g), likeIn = el('g', {}, like);
+      el('circle', { r: 112, fill: '#13263b', stroke: gold, 'stroke-width': 7 }, likeIn);
+      const thumb = el('g', { transform: 'scale(1.55)' }, likeIn);
+      el('rect', { x: -60, y: -8, width: 28, height: 62, rx: 7, fill: gold }, thumb);
+      el('path', { d: 'M-24 54 V-4 L6 -52 Q20 -62 28 -46 L20 -12 H54 Q66 -10 62 4 L52 44 Q48 56 36 56 H-24 Z', fill: gold }, thumb);
+      txt(like, 0, 186, S.L.likeLabel || '', 46, 800, '#fff', { max: 260 });
+      const burst = el('g', {}, like), rays = []; for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; rays.push(el('line', { x1: 0, y1: 0, x2: 0, y2: 0, stroke: gold, 'stroke-width': 8, 'stroke-linecap': 'round', 'data-a': a }, burst)); }
+      const plus = txt(like, 80, -90, '+1', 52, 800, '#52b788');
+      // share
+      const share = el('g', {}, g), shareIn = el('g', {}, share);
+      el('circle', { r: 112, fill: '#13263b', stroke: gold, 'stroke-width': 7 }, shareIn);
+      const nodes = [[-46, 0], [40, -50], [40, 50]];
+      nodes.slice(1).forEach(([x, y]) => el('line', { x1: nodes[0][0], y1: nodes[0][1], x2: x, y2: y, stroke: '#8ecae6', 'stroke-width': 8 }, shareIn));
+      nodes.forEach(([x, y]) => el('circle', { cx: x, cy: y, r: 20, fill: gold }, shareIn));
+      const travel = nodes.slice(1).map(() => el('circle', { r: 9, fill: '#fff' }, shareIn));
+      txt(share, 0, 186, S.L.shareLabel || '', 46, 800, '#fff', { max: 260 });
+      // subscribe button and bell
+      const sub = el('g', {}, g), subBtn = el('rect', { x: -220, y: -64, width: 440, height: 128, rx: 64, fill: '#e62117' }, sub);
+      const subTxt = txt(sub, 0, 22, S.L.subLabel || '', 62, 800, '#fff', { max: 380 });
+      const bell = el('g', {}, g);
+      el('circle', { r: 112, fill: '#13263b', stroke: gold, 'stroke-width': 7 }, bell);
+      const bellIn = el('g', {}, bell);
+      const bb = el('g', { transform: 'translate(0,6) scale(1.5)' }, bellIn);
+      el('path', { d: 'M0 -50 q-34 0 -34 40 v22 l-12 16 h92 l-12 -16 v-22 q0 -40 -34 -40 z', fill: gold, transform: 'translate(-0,0)' }, bb);
+      el('circle', { cx: 0, cy: 36, r: 9, fill: gold, transform: 'translate(0,12)' }, bb);
+      const arcs = [0, 1].map(i => [el('path', { d: `M${-50 - i * 14} -22 q-${8 + i * 6} 22 0 44`, fill: 'none', stroke: '#fff', 'stroke-width': 6, 'stroke-linecap': 'round' }, bell), el('path', { d: `M${50 + i * 14} -22 q${8 + i * 6} 22 0 44`, fill: 'none', stroke: '#fff', 'stroke-width': 6, 'stroke-linecap': 'round' }, bell)]);
+      const cur = el('g', {}, g); el('path', { d: 'M0 0 L0 44 L12 34 L21 54 L31 49 L22 30 L38 30 Z', fill: '#fff', stroke: '#05101c', 'stroke-width': 3, 'stroke-linejoin': 'round' }, cur);
+      const spark = el('g', {}, g), sp = []; for (let i = 0; i < 6; i++) sp.push(el('path', { d: 'M0 -16 l4 12 l12 4 l-12 4 l-4 12 l-4 -12 l-12 -4 l12 -4z', fill: '#fff6dc' }, spark));
+      txt(g, 960, 880, S.L.small || '', 28, 500, '#8fa6bd', { max: 1700 });
+      const LX = 330, SX = 640, BX = 1190, BLX = 1560;
+      return u => {
+        const ts = u * this.base, ez = ease, b = bounce;
+        brand.setAttribute('opacity', ez(prog(ts, 0, .6))); lg.setAttribute('transform', `translate(760,${150 + Math.sin(ts * 3) * 5}) scale(${1.5 + .04 * Math.sin(ts * 3)})`);
+        head.setAttribute('opacity', ez(prog(ts, .4, 1.2)));
+        // like: pops in, thumb tilts, rays burst, +1 floats up
+        const lp = prog(ts, 3.9, 4.5); like.setAttribute('opacity', ez(lp)); like.setAttribute('transform', `translate(${LX},${cy}) scale(${lerp(.3, 1, b(lp))})`);
+        const tilt = ts > 4.3 && ts < 5.2 ? -22 * Math.sin(prog(ts, 4.3, 5.2) * Math.PI) : 0; thumb.setAttribute('transform', `scale(1.55) rotate(${tilt})`);
+        const bu = prog(ts, 4.4, 5.3); rays.forEach(r => { const a = +r.getAttribute('data-a'), r0 = 130 + bu * 20, r1 = r0 + 36 * Math.sin(bu * Math.PI); r.setAttribute('x1', Math.cos(a) * r0); r.setAttribute('y1', Math.sin(a) * r0); r.setAttribute('x2', Math.cos(a) * (r0 + r1 - r0)); r.setAttribute('y2', Math.sin(a) * (r0 + r1 - r0)); r.setAttribute('opacity', bu > 0 && bu < 1 ? 1 - bu * .6 : 0); });
+        const pl = prog(ts, 4.5, 5.6); plus.setAttribute('opacity', pl > 0 && pl < 1 ? Math.sin(pl * Math.PI) : 0); plus.setAttribute('transform', `translate(0,${-pl * 60})`);
+        // share: pops in, dots travel from the left node to the two others
+        const sp0 = prog(ts, 4.8, 5.4); share.setAttribute('opacity', ez(sp0)); share.setAttribute('transform', `translate(${SX},${cy}) scale(${lerp(.3, 1, b(sp0))})`);
+        travel.forEach((d, i) => { const q = prog((ts - i * .25) % 1.1, 0, .8), on = ts > 5.4 && ts < 8.6; d.setAttribute('cx', lerp(nodes[0][0], nodes[i + 1][0], q)); d.setAttribute('cy', lerp(nodes[0][1], nodes[i + 1][1], q)); d.setAttribute('opacity', on ? 1 : 0); });
+        // subscribe: slides up, a cursor taps it, it turns grey, then the bell pops and rings
+        const bp = prog(ts, 5.6, 6.3); sub.setAttribute('opacity', ez(bp));
+        const tap = prog(ts, 7.05, 7.3), pressed = ts >= 7.15, sc = ts > 7.05 && ts < 7.4 ? 1 - .06 * Math.sin(prog(ts, 7.05, 7.4) * Math.PI) : 1;
+        sub.setAttribute('transform', `translate(${BX},${cy + lerp(60, 0, b(bp))}) scale(${sc})`);
+        subBtn.setAttribute('fill', pressed ? '#33475f' : '#e62117'); const want = pressed ? (S.L.subbedLabel || '') : (S.L.subLabel || ''); if (subTxt.textContent !== want) { subTxt.textContent = want; fit(subTxt, 380); }
+        const cp = prog(ts, 6.35, 7.05); cur.setAttribute('opacity', ez(prog(ts, 6.35, 6.6)) * (1 - ez(prog(ts, 7.6, 8.0))));
+        cur.setAttribute('transform', `translate(${lerp(BX + 520, BX + 60, ez(cp))},${lerp(cy + 330, cy + 30, ez(cp)) + (tap > 0 && tap < 1 ? 6 : 0)})`);
+        const bl = prog(ts, 7.25, 7.8); bell.setAttribute('opacity', ez(bl)); bell.setAttribute('transform', `translate(${BLX},${cy}) scale(${lerp(.3, 1, b(bl))})`);
+        const ring = ts > 7.5 ? 24 * Math.exp(-(ts - 7.5) * 1.1) * Math.sin((ts - 7.5) * 16) : 0; bellIn.setAttribute('transform', `rotate(${ring} 0 -50)`);
+        arcs.forEach((pair, i) => pair.forEach(a => a.setAttribute('opacity', ts > 7.5 && ts < 9.8 ? .5 + .5 * Math.sin((ts - 7.5) * 16 - i) : 0)));
+        sp.forEach((e, i) => { const a = i * 1.05 + 1, q = prog(ts, 7.2 + i * .06, 8.4 + i * .06), r = 150 + q * 90; e.setAttribute('opacity', q > 0 && q < 1 ? Math.sin(q * Math.PI) : 0); e.setAttribute('transform', `translate(${BX + Math.cos(a) * r * 1.6},${cy + Math.sin(a) * r * .8}) scale(${.5 + .5 * Math.sin(q * Math.PI)})`); });
       };
     },
   };

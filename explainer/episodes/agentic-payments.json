@@ -238,12 +238,15 @@
    }
   },
   {
-   "type": "endCard",
+   "type": "outro",
    "data": {},
    "lang": {
     "en": {
-     "kicker": "AGENTIC PAYMENTS",
-     "main": "Software that shops and pays for you.",
+     "heading": "Want complex things in simple language?",
+     "likeLabel": "Like",
+     "shareLabel": "Share",
+     "subLabel": "Subscribe",
+     "subbedLabel": "Subscribed",
      "small": "Education only, not financial advice. Example prices are made up.",
      "lines": [
       "If you want to know the complex things in simple language, please like, share, and hit the bell button to subscribe."

@@ -73,7 +73,7 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 23:05 new-banner</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 23:25 trim-outro</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -173,9 +173,9 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=2305"></script>
+<script src="engine.js?v=2325"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=2305"></script>
+<script src="cutout.js?v=2325"></script>
 <script>
 (() => {
 'use strict';
@@ -977,26 +977,35 @@ function shUpCard() {
     <p class="muted">Needs the Google client ID in the Configuration tab (once). A vertical video under 3 minutes with #Shorts is filed as a Short.</p></div>`;
 }
 function shUpload() { return ytUpload({ btn: 'shUp', blob: mk.blob, title: 'shT', desc: 'shD', priv: 'shPriv', st: 'shUpSt', bar: 'shBar' }); }
-// ---- the Shorts card: suggested Shorts and your own picks
-const shPicked = new Set();
+// ---- the Shorts card: suggested Shorts, your own picks, and the start and end of each picked scene
+const shPicked = new Set(); let shTrim = {};
+function shDur() { const d = {}; E.timeline(ep, lang).scenes.forEach(o => { d[o.i] = o.dur; }); return d; }
+function shRange(i, d) { const n = d[i] || 0, tr = shTrim[i] || [0, n]; const a = Math.max(0, Math.min(n - .5, tr[0])), b = Math.max(a + .5, Math.min(n, tr[1])); return [a, b]; }
 function shTotal() {
-  const tl = E.timeline(ep, lang), d = {}; tl.scenes.forEach(o => { d[o.i] = o.dur; });
-  const idx = [...shPicked].filter(i => d[i] != null), t = idx.reduce((a, i) => a + d[i], 0);
-  $('shTot').innerHTML = idx.length ? `Total ${Math.round(t)} s` + (t > 180 ? ' <span class="warn">over 3 minutes: untick something</span>' : t > 60 ? ' (over 60 s: it still works, but under 60 s tends to do better)' : ' (a good length for a Short)') : 'Tick at least one scene.';
+  const d = shDur(), idx = [...shPicked].filter(i => d[i] != null), t = idx.reduce((a, i) => { const r = shRange(i, d); return a + (r[1] - r[0]); }, 0);
+  $('shTot').innerHTML = idx.length ? `Total ${Math.round(t)} s` + (t > 180 ? ' <span class="warn">over 3 minutes: untick something or shorten a scene</span>' : t > 60 ? ' (over 60 s: it still works, but under 60 s tends to do better)' : ' (a good length for a Short)') : 'Tick at least one scene.';
   $('shGo').disabled = !idx.length || mk.busy;
 }
 function shRender() {
   const box = $('shPick'); if (!box) return;
-  const tl = E.timeline(ep, lang), d = {}; tl.scenes.forEach(o => { d[o.i] = o.dur; });
+  const d = shDur();
   $('shLang').textContent = (ep.languages[lang] || {}).name || lang;
   [...shPicked].forEach(i => { if (!ep.scenes[i]) shPicked.delete(i); });
   $('shSug').innerHTML = (ep.shorts || []).map((x, k) => { const secs = Math.round(x.scenes.reduce((a, i) => a + (d[i] || 0), 0)); return `<button class="sm" data-sug="${k}" style="display:block;width:100%;text-align:left;margin:0 0 6px">Short ${k + 1}: ${esc((x.title || {})[lang] || (x.title || {}).en || '')} <span class="muted">(scenes ${x.scenes.map(i => i + 1).join(', ')}, ${secs} s)</span></button>`; }).join('');
-  box.innerHTML = ep.scenes.map((sc, i) => { const T = E.SCENES[sc.type]; if (!T) return ''; const L = E.sceneLang(sc, lang), first = ((L.lines || [])[0] || '').slice(0, 46); return `<label style="display:flex;gap:8px;align-items:flex-start;margin:4px 0"><input type="checkbox" value="${i}" ${shPicked.has(i) ? 'checked' : ''} style="width:auto;margin-top:3px"><span><b>${i + 1}</b> ${esc(first || T.label)} <span class="muted">${d[i] != null ? Math.round(d[i]) + ' s' : ''}</span></span></label>`; }).join('');
-  box.querySelectorAll('input').forEach(x => { x.onchange = () => { x.checked ? shPicked.add(+x.value) : shPicked.delete(+x.value); shTotal(); }; });
-  $('shSug').querySelectorAll('[data-sug]').forEach(b => { b.onclick = () => { const x = ep.shorts[+b.dataset.sug]; shPicked.clear(); x.scenes.forEach(i => shPicked.add(i)); $('shTitle').value = ((x.title || {})[lang] || (x.title || {}).en || ''); shRender(); }; });
+  box.innerHTML = ep.scenes.map((sc, i) => {
+    const T = E.SCENES[sc.type]; if (!T) return ''; const L = E.sceneLang(sc, lang), first = ((L.lines || [])[0] || '').slice(0, 46), n = d[i] || 0, on = shPicked.has(i), [a, b] = shRange(i, d);
+    const trim = on && n > 1 ? `<div style="margin:2px 0 8px 26px"><div class="row" style="align-items:center;gap:8px"><span class="muted" style="width:44px">Start</span><input type="range" data-ta="${i}" min="0" max="${n.toFixed(1)}" step="0.5" value="${a}" style="flex:1"><b data-tav="${i}" style="width:48px;text-align:right">${a.toFixed(1)}s</b></div><div class="row" style="align-items:center;gap:8px"><span class="muted" style="width:44px">End</span><input type="range" data-tb="${i}" min="0" max="${n.toFixed(1)}" step="0.5" value="${b}" style="flex:1"><b data-tbv="${i}" style="width:48px;text-align:right">${b.toFixed(1)}s</b></div></div>` : '';
+    return `<div><label style="display:flex;gap:8px;align-items:flex-start;margin:4px 0"><input type="checkbox" value="${i}" ${on ? 'checked' : ''} style="width:auto;margin-top:3px"><span><b>${i + 1}</b> ${esc(first || T.label)} <span class="muted">${n ? Math.round(n) + ' s' : ''}</span></span></label>${trim}</div>`;
+  }).join('');
+  box.querySelectorAll('input[type=checkbox]').forEach(x => { x.onchange = () => { x.checked ? shPicked.add(+x.value) : shPicked.delete(+x.value); shRender(); }; });
+  box.querySelectorAll('input[data-ta],input[data-tb]').forEach(x => { x.oninput = () => {
+    const i = +(x.dataset.ta || x.dataset.tb), r = shRange(i, d).slice(); if (x.dataset.ta) r[0] = Math.min(+x.value, r[1] - .5); else r[1] = Math.max(+x.value, r[0] + .5);
+    shTrim[i] = r; x.value = x.dataset.ta ? r[0] : r[1];
+    const va = box.querySelector(`[data-tav="${i}"]`), vb = box.querySelector(`[data-tbv="${i}"]`); if (va) va.textContent = r[0].toFixed(1) + 's'; if (vb) vb.textContent = r[1].toFixed(1) + 's'; shTotal(); }; });
+  $('shSug').querySelectorAll('[data-sug]').forEach(b => { b.onclick = () => { const x = ep.shorts[+b.dataset.sug]; shPicked.clear(); shTrim = {}; x.scenes.forEach(i => shPicked.add(i)); $('shTitle').value = ((x.title || {})[lang] || (x.title || {}).en || ''); shRender(); }; });
   shTotal();
 }
-$('shGo').onclick = () => { const idx = [...shPicked].sort((a, b) => a - b); if (!idx.length) return; const title = $('shTitle').value.trim() || ((ep.title || {})[lang] || ep.id); makeOnDevice({ short: { scenes: idx, title } }); };
+$('shGo').onclick = () => { const idx = [...shPicked].sort((a, b) => a - b); if (!idx.length) return; const title = $('shTitle').value.trim() || ((ep.title || {})[lang] || ep.id); const d = shDur(), trims = {}; idx.forEach(i => { const r = shRange(i, d); if (r[0] > 0 || r[1] < (d[i] || 0)) trims[i] = r; }); makeOnDevice({ short: { scenes: idx, title, trims } }); };
 function ytCard() {
   const L = ep.languages[lang] || {}, lines = []; ep.scenes.forEach(sc => ((sc.lang || {})[lang] || {}).lines && lines.push(...sc.lang[lang].lines.filter(x => String(x).trim())));
   const tag = ((channel.taglines || {})[lang] || (channel.taglines || {}).en || ''), name = ((channel.names || {})[lang] || (channel.names || {}).en || 'Oh, I Get It');
@@ -1065,6 +1074,13 @@ function shortCaption(c, tl, t, W2, fam) {
   lines.forEach((l, i) => { c.lineWidth = size * .2; c.strokeStyle = '#05101c'; c.strokeText(l, W2 / 2, top + i * lh); c.fillStyle = '#fff'; c.fillText(l, W2 / 2, top + i * lh); });
   c.restore();
 }
+/** Which stretches of the episode go into the output: the whole thing, or for a Short the chosen start and end of each ticked scene. */
+function mkSegs(tl, SHORT) {
+  if (!SHORT) return [{ a: 0, b: tl.duration, off: 0 }];
+  const out = []; let off = 0;
+  tl.scenes.forEach(o => { const tr = (SHORT.trims || {})[SHORT.scenes[o.i]] || [0, o.dur], a = Math.max(0, Math.min(o.dur - .5, +tr[0] || 0)), b = Math.max(a + .5, Math.min(o.dur, +tr[1] || o.dur)); out.push({ a: o.start + a, b: o.start + b, off }); off += b - a; });
+  return out;
+}
 async function makeOnDevice(opts) {
   if (mk.busy) return; const SHORT = opts && opts.short ? opts.short : null; mk.ids = SHORT ? { st: 'shSt', bar: 'shBar', cv: 'shCanvas', out: 'shOut' } : { st: 'mkSt', bar: 'mkBar', cv: 'mkCanvas', out: 'mkOut' }; mk.shTitle = SHORT ? SHORT.title || '' : '';
   const IDS = mk.ids, epU = SHORT ? Object.assign({}, ep, { scenes: SHORT.scenes.map(i => ep.scenes[i]).filter(Boolean) }) : ep;
@@ -1073,8 +1089,8 @@ async function makeOnDevice(opts) {
   try {
     if (!window.VideoEncoder || !window.VideoFrame || !window.AudioEncoder || !window.AudioData) throw new Error('This browser cannot make videos on the device. On iPhone you need iOS 17 or newer in Safari; on Android use a recent Chrome. You can use "Use the GitHub build instead".');
     if (!window.Mp4Muxer) throw new Error('The video tool did not load. Reload the page and try again.');
-    const tl = E.timeline(epU, lang), DUR = tl.duration, FPS = 30, N = Math.round(DUR * FPS), [W2, H2] = SHORT ? (matchMedia('(pointer:coarse)').matches ? [720, 1280] : [1080, 1920]) : mkFrame(), SR = 48000, U = W2 / 1080, Y0 = SHORT ? Math.round(380 * U) : 0, HS = SHORT ? Math.round(W2 * 9 / 16) : H2;
-    if (SHORT && (DUR > 180 || !N)) throw new Error('A Short can be up to 3 minutes. Untick a scene or two.');
+    const tl = E.timeline(epU, lang), DUR = tl.duration, FPS = 30, segs = mkSegs(tl, SHORT), SD = segs.reduce((a, x) => a + (x.b - x.a), 0), N = Math.round(SD * FPS), [W2, H2] = SHORT ? (matchMedia('(pointer:coarse)').matches ? [720, 1280] : [1080, 1920]) : mkFrame(), SR = 48000, U = W2 / 1080, Y0 = SHORT ? Math.round(380 * U) : 0, HS = SHORT ? Math.round(W2 * 9 / 16) : H2;
+    if (SHORT && (SD > 180 || !N)) throw new Error('A Short can be up to 3 minutes. Untick a scene or two.');
     if (SHORT && !tl.scenes.some(o => o.take)) throw new Error('Record the scenes of this Short first (Scenes tab). A Short needs your voice.');
     const A = window.AudioContext || window.webkitAudioContext; ac = new A();
     // 1. what this browser can encode
@@ -1118,9 +1134,10 @@ async function makeOnDevice(opts) {
     }
     // 3. the soundtrack, mixed in one go
     mkSt('Mixing the sound…');
-    const off = new OfflineAudioContext(2, Math.ceil(DUR * SR), SR);
-    for (const k of takes) { const s = off.createBufferSource(), g = off.createGain(); s.buffer = k.buf; g.gain.value = k.gain; s.connect(g); g.connect(off.destination); s.start(Math.max(0, k.at), k.t.in, Math.max(.05, k.t.out - k.t.in)); }
-    for (const c of tl.cues.filter(x => x.sound === 'beep')) { const os = off.createOscillator(), g = off.createGain(); os.frequency.value = 1800; g.gain.setValueAtTime(0, c.t); g.gain.linearRampToValueAtTime(.35, c.t + .01); g.gain.setValueAtTime(.35, c.t + .14); g.gain.linearRampToValueAtTime(0, c.t + .16); os.connect(g); g.connect(off.destination); os.start(c.t); os.stop(c.t + .2); }
+    const off = new OfflineAudioContext(2, Math.ceil(SD * SR), SR);
+    for (const k of takes) { const kEnd = k.at + (k.t.out - k.t.in); for (const sg of segs) { const lo = Math.max(k.at, sg.a), hi = Math.min(kEnd, sg.b); if (hi - lo < .05) continue; const s = off.createBufferSource(), g = off.createGain(); s.buffer = k.buf; g.gain.value = k.gain; s.connect(g); g.connect(off.destination); s.start(sg.off + (lo - sg.a), k.t.in + (lo - k.at), hi - lo); } } // each kept stretch of the episode, placed where it lands in the output
+    const beeps = []; tl.cues.filter(x => x.sound === 'beep').forEach(c => segs.forEach(sg => { if (c.t >= sg.a && c.t < sg.b) beeps.push({ t: sg.off + c.t - sg.a }); }));
+    for (const c of beeps) { const os = off.createOscillator(), g = off.createGain(); os.frequency.value = 1800; g.gain.setValueAtTime(0, c.t); g.gain.linearRampToValueAtTime(.35, c.t + .01); g.gain.setValueAtTime(.35, c.t + .14); g.gain.linearRampToValueAtTime(0, c.t + .16); os.connect(g); g.connect(off.destination); os.start(c.t); os.stop(c.t + .2); }
     const mixed = await off.startRendering();
     // 4. encoder and file
     let encErr = null; const target = new Mp4Muxer.ArrayBufferTarget();
@@ -1156,7 +1173,7 @@ async function makeOnDevice(opts) {
     const F = E.FADE, lastScene = tl.scenes.length ? tl.scenes[tl.scenes.length - 1].i : -1, tStart = performance.now();
     for (let f = 0; f < N; f++) {
       if (encErr) throw new Error('The video encoder stopped: ' + (encErr.message || encErr));
-      const t = f / FPS; app.render(t); await raster();
+      const tOut = f / FPS, sg = segs.find(x => tOut < x.off + (x.b - x.a)) || segs[segs.length - 1], t = sg.a + (tOut - sg.off); app.render(t); await raster();
       for (const k of takes) {
         if (!k.slot || !k.el) continue; const st = k.o.start, en = k.o.end;
         if (!(t >= st - F / 2 && t < en + F / 2)) continue;
@@ -1197,7 +1214,7 @@ async function makeOnDevice(opts) {
       if (!b) chk = ' Sound check: this browser could not read the sound back from the file.';
       else { const d = b.getChannelData(0); let sq = 0, cnt = 0; for (let i = 0; i < d.length; i += 7) { sq += d[i] * d[i]; cnt++; } const db = Math.round(20 * Math.log10(Math.sqrt(sq / Math.max(1, cnt)) || 1e-6)); chk = db < -55 ? ` ⚠ THE SOUND IS SILENT IN THE FINISHED FILE (${db} dB, ${aStat.n} sound blocks${aStat.desc ? '' : ', no format header'}). Tell me this message.` : ` Sound in the file: ${db} dB.`; }
     } catch (err) { chk = ' Sound check failed.'; }
-    mkResult(outBlob, 'video/mp4', SHORT ? `${epU.id}-short-${SHORT.scenes.map(x => x + 1).join('-')}-${lang}.mp4` : `${epU.id}-${lang}.mp4`, `${DUR.toFixed(0)} seconds, ${W2}x${H2}.${cutNote} Sound: ${aname === 'aac' ? 'AAC' : aname.toUpperCase() + ' (iPhone Photos may not play this; try Files or another player)'}; ${voiceNote.join(', ')}.${chk} [audio: ${aStat.n} blocks, first ${aStat.first}${aStat.adts ? ', fixed ADTS' : ''}${aStat.madeAsc ? ', added header' : ''}]`);
+    mkResult(outBlob, 'video/mp4', SHORT ? `${epU.id}-short-${SHORT.scenes.map(x => x + 1).join('-')}-${lang}.mp4` : `${epU.id}-${lang}.mp4`, `${SD.toFixed(0)} seconds, ${W2}x${H2}.${cutNote} Sound: ${aname === 'aac' ? 'AAC' : aname.toUpperCase() + ' (iPhone Photos may not play this; try Files or another player)'}; ${voiceNote.join(', ')}.${chk} [audio: ${aStat.n} blocks, first ${aStat.first}${aStat.adts ? ', fixed ADTS' : ''}${aStat.madeAsc ? ', added header' : ''}]`);
   } catch (e) { mkSt(e.message || String(e), 'bad'); console.error(e); }
   finally {
     try { wake && wake.release(); } catch (e) {} try { els.forEach(x => x.remove()); } catch (e) {}

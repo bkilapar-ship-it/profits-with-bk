@@ -8,7 +8,7 @@
   function ready() {
     if (loading) return loading;
     return (loading = (async () => {
-      await loadScript(base + 'vendor/selfie/selfie_segmentation.js?v=2305');
+      await loadScript(base + 'vendor/selfie/selfie_segmentation.js?v=2325');
       if (!root.SelfieSegmentation) throw new Error('The cut-out tool did not start.');
       const s = new root.SelfieSegmentation({ locateFile: f => base + 'vendor/selfie/' + f });
       s.setOptions({ modelSelection: 1, selfieMode: false });
