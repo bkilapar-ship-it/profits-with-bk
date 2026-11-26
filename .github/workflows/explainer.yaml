@@ -8,7 +8,7 @@ name: Explainer videos
 on:
   push:
     branches: [main]
-    paths: ['explainer/**']
+    paths: ['explainer/**', '!explainer/takes/**']   # a new recording on its own builds nothing; saving the episode that uses it does
   workflow_dispatch:
     inputs:
       episode:

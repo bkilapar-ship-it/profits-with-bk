@@ -7,12 +7,18 @@
  *   { id, title:{lang:..}, languages:{ en:{name,currency,locale,decimals}, te:{...} },
  *     scenes:[ { type, duration, data:{...same in every language}, lang:{ en:{lines:[..], ...}, te:{...} } } ] }
  *
+ * Recordings: scene.lang.<lang>.take = { file:'takes/<episode>/<lang>/<name>.webm', kind:'video'|'voice', dur, in, out }
+ *   (in/out = where the voice starts and ends, in seconds). That language's scene then follows the voice length.
+ *
  * Each scene type below lists its editable fields, so the editor can build its form automatically.
  * Adding a new kind of scene = adding one entry to SCENES. Changing words, prices, order or timing = editing the episode file only.
  */
 (function (root) {
   'use strict';
   const NS = 'http://www.w3.org/2000/svg', W = 1920, H = 1080, FADE = 0.45;
+  // Recordings ("takes"): a scene with a recording in a language lasts as long as the voice, plus a short
+  // lead-in before the voice starts and a pause after it ends. The animation stretches to fit.
+  const LEAD = 0.3, TAIL = 0.5;
   const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
   const lerp = (a, b, u) => a + (b - a) * u;
   const ease = u => (u < .5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2);
@@ -115,7 +121,9 @@
   const SCENES = {};
 
   SCENES.presenter = {
-    label: 'Presenter (you on camera, branded background)', base: 5, captions: true,
+    label: 'Presenter (you on camera, branded background)', base: 5, captions: true, camera: true,
+    /** Where your camera picture sits on screen (it is cropped to fill this box). */
+    slot(data) { const side = (data || {}).side; return side === 'center' ? { x: 610, y: 150, w: 700, h: 600, r: 36 } : { x: side === 'left' ? 110 : 1110, y: 150, w: 700, h: 760, r: 36 }; },
     fields: [
       { k: 'title', per: 'lang', kind: 'text', label: 'Title shown at the bottom' },
       { k: 'lines', per: 'lang', kind: 'lines', label: 'What you say (one line per caption)' },
@@ -136,9 +144,22 @@
       const third = el('g', {}, g);
       const tx = S.data.side === 'left' ? 1800 : 120, anchor = S.data.side === 'left' ? 'end' : 'start';
       const bar = el('rect', { x: S.data.side === 'left' ? 1810 : 110, y: 790, width: 10, height: 90, rx: 5, fill: '#ffd166' }, third);
-      const tt = txt(third, S.data.side === 'left' ? 1785 : 145, 856, S.L.title || '', 60, 800, '#fff', { anchor, max: 1150 });
-      let ph = null;
-      if (ctx.preview) { // where your camera picture goes (preview only, never rendered into the video)
+      const cam = S.L.take && S.L.take.kind === 'video' ? S.L.take : null;
+      const tt = txt(third, S.data.side === 'left' ? 1785 : 145, 856, S.L.title || '', 60, 800, '#fff', { anchor, max: cam ? 900 : 1150 });
+      let ph = null, img = null, camG = null;
+      if (cam) { // your recorded video, in a rounded frame. In the editor the video plays on top of this box.
+        const r = this.slot(S.data);
+        camG = el('g', {}, g);
+        const clip = el('clipPath', { id: 'pc' + ctx.uid }, ctx.defs);
+        el('rect', { x: r.x, y: r.y, width: r.w, height: r.h, rx: r.r }, clip);
+        el('rect', { x: r.x - 10, y: r.y - 10, width: r.w + 20, height: r.h + 20, rx: r.r + 10, fill: '#ffd166', opacity: .9 }, camG);
+        el('rect', { x: r.x, y: r.y, width: r.w, height: r.h, rx: r.r, fill: '#13263b' }, camG);
+        if (cam.frames) {
+          img = el('image', { x: r.x, y: r.y, width: r.w, height: r.h, preserveAspectRatio: 'xMidYMid slice', 'clip-path': `url(#pc${ctx.uid})` }, camG);
+          img.addEventListener('load', () => img.removeAttribute('data-pending'));
+          img.addEventListener('error', () => img.removeAttribute('data-pending'));
+        }
+      } else if (ctx.preview) { // where your camera picture goes (preview only, never rendered into the video)
         const cx = S.data.side === 'left' ? 520 : S.data.side === 'center' ? 960 : 1400;
         ph = el('g', { opacity: .35 }, g);
         el('circle', { cx, cy: 380, r: 120, fill: 'none', stroke: '#fff', 'stroke-width': 4, 'stroke-dasharray': '14 10' }, ph);
@@ -151,6 +172,12 @@
         third.setAttribute('transform', `translate(${(S.data.side === 'left' ? 1 : -1) * (1 - a) * 60},0)`); third.setAttribute('opacity', a);
         brand.setAttribute('opacity', ease(prog(ts, 0, .5)));
         dots.setAttribute('transform', `translate(0,${-ts * 6})`);
+        if (camG) camG.setAttribute('opacity', ease(prog(u * ctx.dur, 0, .35)));
+        if (img) { // video frames prepared by render.js: frame number = time since the voice started
+          const f = cam.frames, n = clamp(Math.floor((u * ctx.dur - LEAD) * f.fps), 0, f.count - 1) + 1;
+          const href = `${f.url}/${String(n).padStart(5, '0')}.jpg`;
+          if (img.getAttribute('href') !== href) { img.setAttribute('data-pending', '1'); img.setAttribute('href', href); }
+        }
       };
     },
   };
@@ -498,16 +525,29 @@
   function sceneLang(scene, lang) {
     const def = (SCENES[scene.type] || {}).defaults || { lang: {} };
     const l = scene.lang || {};
-    return Object.assign({}, def.lang, l.en || {}, l[lang] || {});
+    const out = Object.assign({}, def.lang, l.en || {}, l[lang] || {});
+    out.take = takeOf(scene, lang); // a recording belongs to one language only: never borrowed from English
+    if (!out.take) delete out.take;
+    return out;
   }
+  /** This language's recording for a scene, if it has a usable one. */
+  function takeOf(scene, lang) {
+    const t = ((scene.lang || {})[lang] || {}).take;
+    if (!t || !t.file) return null;
+    const dur = +t.dur || 0, a = Math.max(0, +t.in || 0), b = Math.min(dur || Infinity, t.out == null ? dur : +t.out);
+    return b - a > 0.2 ? Object.assign({}, t, { in: a, out: b }) : null;
+  }
+  /** Scene length when it follows a recording. */
+  const takeLength = t => (t.out - t.in) + LEAD + TAIL;
   function sceneData(scene) { const def = (SCENES[scene.type] || {}).defaults || { data: {} }; return Object.assign({}, def.data, scene.data || {}); }
 
   /** Start/end of every scene, and caption timings. */
   function timeline(ep, lang) {
     let t = 0;
-    const scenes = (ep.scenes || []).filter(s => SCENES[s.type]).map((s, i) => {
-      const dur = Math.max(.5, +s.duration || SCENES[s.type].base);
-      const o = { i, scene: s, start: t, end: t + dur, dur };
+    const scenes = (ep.scenes || []).map((s, i) => ({ s, i })).filter(x => SCENES[x.s.type]).map(({ s, i }) => {
+      const take = takeOf(s, lang);
+      const dur = take ? takeLength(take) : Math.max(.5, +s.duration || SCENES[s.type].base);
+      const o = { i, scene: s, start: t, end: t + dur, dur, take };
       t += dur; return o;
     });
     const caps = [], cues = [];
@@ -517,10 +557,12 @@
       (T.cues || []).forEach(c => { if (c.sound) cues.push({ t: o.start + c.at * k, sound: c.sound }); });
       if (!lines.length) return;
       const lc = (T.cues || []).filter(c => c.line != null);
+      // with a recording, the lines are spread over the time you are speaking (longer lines get more time)
+      const from = o.take ? o.start + LEAD - .15 : o.start, span = o.take ? o.take.out - o.take.in : o.dur, endAt = o.take ? from + span + .35 : o.end;
       let starts;
-      if (lc.length === lines.length) starts = lc.map(c => o.start + c.at * k);
-      else { const tot = lines.reduce((a, s) => a + Math.max(12, s.length), 0); let acc = o.start; starts = lines.map(s => { const st = acc; acc += o.dur * Math.max(12, s.length) / tot; return st; }); }
-      lines.forEach((s, j) => caps.push({ start: starts[j] + .15, end: (j + 1 < lines.length ? starts[j + 1] : o.end) - .1, text: s, show: T.captions !== false && o.scene.captions !== false }));
+      if (!o.take && lc.length === lines.length) starts = lc.map(c => o.start + c.at * k);
+      else { const tot = lines.reduce((a, s) => a + Math.max(12, s.length), 0); let acc = from; starts = lines.map(s => { const st = acc; acc += span * Math.max(12, s.length) / tot; return st; }); }
+      lines.forEach((s, j) => caps.push({ start: starts[j] + .15, end: (j + 1 < lines.length ? starts[j + 1] : endAt) - .1, text: s, show: T.captions !== false && o.scene.captions !== false }));
     });
     return { scenes, captions: caps, cues, duration: t };
   }
@@ -539,7 +581,7 @@
     const built = tl.scenes.map((o, idx) => {
       const g = el('g', { opacity: 0 }, svg);
       const S = { data: sceneData(o.scene), L: sceneLang(o.scene, lang) };
-      const ctx = { uid: 's' + idx, defs, L, lang, money, preview: !!opts.preview, channelName, tagline };
+      const ctx = { uid: 's' + idx, defs, L, lang, money, preview: !!opts.preview, channelName, tagline, dur: o.dur };
       let draw = () => {};
       try { draw = SCENES[o.scene.type].build.call(SCENES[o.scene.type], g, S, ctx); } catch (e) { console.error('Scene', idx, o.scene.type, e); txt(g, 960, 540, 'Scene error: ' + e.message, 40, 700, '#d62828'); }
       fitAll(g);
@@ -582,7 +624,7 @@
     const tl = timeline(ep, lang), out = [`${(ep.title || {})[lang] || (ep.title || {}).en || ep.id}  (${langOf(ep, lang).name})`, ''];
     tl.scenes.forEach((o, i) => {
       const L = sceneLang(o.scene, lang);
-      out.push(`[Scene ${i + 1}: ${SCENES[o.scene.type].label}, ${o.start.toFixed(1)}s to ${o.end.toFixed(1)}s]`);
+      out.push(`[Scene ${i + 1}: ${SCENES[o.scene.type].label}, ${o.start.toFixed(1)}s to ${o.end.toFixed(1)}s${o.take ? ', follows your recording' : ''}]`);
       (L.lines || []).forEach(l => out.push(l));
       out.push('');
     });
@@ -595,5 +637,5 @@
     return s;
   }
 
-  root.Explainer = { SCENES, ITEM_KINDS, mount, timeline, srt, script, newScene, sceneLang, sceneData, langOf, W, H };
+  root.Explainer = { SCENES, ITEM_KINDS, mount, timeline, srt, script, newScene, sceneLang, sceneData, langOf, takeOf, W, H, LEAD, TAIL };
 })(typeof window !== 'undefined' ? window : globalThis);

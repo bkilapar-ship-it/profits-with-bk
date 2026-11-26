@@ -6,5 +6,5 @@ Episodes: explainer/episodes/*.json. Scene library and engine: explainer/engine.
 Rules specific to this channel:
 - All prices and numbers are illustrative; keep the "illustrative" notes on screen unless using checked official data.
 - No investment recommendations or stock picks here. Keep it clearly separate from the studio channel.
-- Not done yet: recording the owner into presenter scenes; scenes stretching to recorded voice.
+- Recordings ("takes"): scene.lang.<lang>.take, files in explainer/takes/. A scene with a take follows the voice length (engine.js timeline); render.js mixes the voice in and shows presenter video. See README Notes for what is still open.
 When finishing a task, update explainer/README.md (Notes section).

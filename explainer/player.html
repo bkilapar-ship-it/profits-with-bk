@@ -15,6 +15,14 @@
   await document.fonts.ready;
   const app = Explainer.mount(document.getElementById('v'), ep, lang, { channel });
   window.DUR = app.duration; window.render = app.render; window.CUES = app.timeline.cues;
+  // recordings: which scenes have voice, and where it starts (render.js mixes the sound in)
+  window.TAKES = app.timeline.scenes.filter(o => o.take).map(o => ({ i: o.i, at: o.start + Explainer.LEAD, take: o.take }));
+  // draws time t and waits until any camera frames on screen have loaded
+  const svg = document.getElementById('v');
+  window.renderAsync = async t => {
+    app.render(t);
+    for (let k = 0; k < 400 && svg.querySelector('image[data-pending]'); k++) await new Promise(r => setTimeout(r, 5));
+  };
   window.SRT = Explainer.srt(ep, lang); window.SCRIPT = Explainer.script(ep, lang);
   window.READY = true;
 })().catch(e => { window.ERROR = String(e && e.stack || e); });
