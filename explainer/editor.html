@@ -54,7 +54,7 @@ details summary{cursor:pointer;font-weight:700}
 .stage{position:relative}
 .camv{position:absolute;object-fit:cover;display:none;background:#13263b}
 .camv.free{background:transparent}
-canvas.camv{object-fit:fill}
+canvas.camv{object-fit:contain}
 .take{border:1px dashed var(--line);border-radius:10px;padding:8px 10px}
 .take .st{font-size:13px;margin:4px 0}
 .modal{position:fixed;inset:0;z-index:20;background:rgba(0,0,0,.72);display:none;align-items:center;justify-content:center;padding:10px}
@@ -72,7 +72,7 @@ canvas.camv{object-fit:fill}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 19:35 aac-repair</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 20:05 picture-fit</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -567,7 +567,7 @@ function syncMedia(o) {
   if (cur.tagName === 'VIDEO') {
     const r = E.SCENES[o.scene.type].slot(E.sceneData(o.scene)), sw = $('stageBox').clientWidth / E.W;
     Object.assign(cur.style, { display: 'block', left: r.x * sw + 'px', top: r.y * sw + 'px', width: r.w * sw + 'px', height: r.h * sw + 'px', borderRadius: r.r * sw + 'px' });
-    const free = r.mode === 'soft' || r.mode === 'cut'; cur.classList.toggle('free', !!free);
+    const free = r.mode === 'soft' || r.mode === 'cut'; cur.classList.toggle('free', !!free); cur.style.objectFit = free ? 'contain' : '';
     const mk2 = free ? FEATHER_CSS : 'none'; cur.style.webkitMaskImage = cur.style.maskImage = mk2; cur.style.webkitMaskComposite = 'source-in'; cur.style.maskComposite = 'intersect';
     cur.dataset.cut = r.mode === 'cut' ? '1' : ''; if (r.mode !== 'cut') cur.style.opacity = '';
     if (r.mode === 'cut') cutPreview(cur, r, sw);
@@ -1008,6 +1008,10 @@ async function makeOnDevice() {
         await new Promise(res => { v.onloadeddata = res; v.onerror = res; setTimeout(res, 5000); });
         try { await Promise.race([v.play(), new Promise(r => setTimeout(r, 1500))]); } catch (e) {} v.pause(); k.el = v;
         if (!v.videoWidth) throw new Error(`This browser could not open the camera picture of scene ${n}.`);
+        // the true size of the picture as it is shown (phones can report a turned picture's size the wrong way round, which squashes your face)
+        k.vw = v.videoWidth; k.vh = v.videoHeight;
+        try { const vf0 = new VideoFrame(v); if (vf0.displayWidth && vf0.displayHeight) { k.vw = vf0.displayWidth; k.vh = vf0.displayHeight; } vf0.close(); } catch (err) {}
+        voiceNote.push(`scene ${n} camera ${k.vw}x${k.vh}${k.vw !== v.videoWidth ? ' (reported ' + v.videoWidth + 'x' + v.videoHeight + ')' : ''}`);
       }
       takes.push(k);
     }
@@ -1056,15 +1060,15 @@ async function makeOnDevice() {
         const op = (k.o === tl.scenes[0] ? 1 : mkEase(mkProg(t, st - F / 2, st + F / 2))) * (k.o.i === lastScene ? 1 : 1 - mkEase(mkProg(t, en - F / 2, en + F / 2))) * mkEase(mkProg(t - st, 0, .35));
         if (op <= 0) continue;
         await seekTo(k.el, Math.min(k.t.out - .04, k.t.in + Math.max(0, t - k.at)));
-        const v = k.el, r = k.slot, sc = W2 / E.W, x = r.x * sc, y = r.y * sc, w = r.w * sc, h = r.h * sc, s2 = Math.max(w / v.videoWidth, h / v.videoHeight), dw = v.videoWidth * s2, dh = v.videoHeight * s2;
+        const v = k.el, r = k.slot, sc = W2 / E.W, x = r.x * sc, y = r.y * sc, w = r.w * sc, h = r.h * sc, s2 = Math.max(w / k.vw, h / k.vh), dw = k.vw * s2, dh = k.vh * s2;
         if (r.mode === 'cut' && cutOK) { // only you, cut out of your picture, standing on the banner scene
-          try { await Cutout.cut(v, cutCv); } catch (err) { cutOK = false; cutNote = ' (the cut-out stopped working part-way, so the rest uses soft edges)'; }
-          if (cutOK) { c.save(); c.globalAlpha = op; c.drawImage(cutCv, x, y, w, h); c.restore(); continue; }
+          try { await Cutout.cut(v, cutCv, { w: k.vw, h: k.vh }); } catch (err) { cutOK = false; cutNote = ' (the cut-out stopped working part-way, so the rest uses soft edges)'; }
+          if (cutOK) { const s4 = Math.min(w / cutCv.width, h / cutCv.height); c.save(); c.globalAlpha = op; c.beginPath(); c.rect(x, y, w, h); c.clip(); c.drawImage(cutCv, x + (w - cutCv.width * s4) / 2, y + (h - cutCv.height * s4) / 2, cutCv.width * s4, cutCv.height * s4); c.restore(); continue; }
         }
         if (r.mode === 'soft' || r.mode === 'cut') { // no box: the picture's edges fade into the banner
           const fw = Math.round(w), fh = Math.round(h); if (feather.width !== fw || feather.height !== fh) { feather.width = fw; feather.height = fh; }
-          const f = feather.getContext('2d'), s3 = Math.max(fw / v.videoWidth, fh / v.videoHeight); f.globalCompositeOperation = 'source-over'; f.clearRect(0, 0, fw, fh);
-          f.drawImage(v, (fw - v.videoWidth * s3) / 2, (fh - v.videoHeight * s3) / 2, v.videoWidth * s3, v.videoHeight * s3);
+          const f = feather.getContext('2d'), s3 = Math.min(fw / k.vw, fh / k.vh); f.globalCompositeOperation = 'source-over'; f.clearRect(0, 0, fw, fh);
+          f.drawImage(v, (fw - k.vw * s3) / 2, (fh - k.vh * s3) / 2, k.vw * s3, k.vh * s3);
           f.globalCompositeOperation = 'destination-in';
           let g = f.createLinearGradient(0, 0, fw, 0); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(.1, '#000'); g.addColorStop(.9, '#000'); g.addColorStop(1, 'rgba(0,0,0,0)'); f.fillStyle = g; f.fillRect(0, 0, fw, fh);
           g = f.createLinearGradient(0, 0, 0, fh); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(.1, '#000'); g.addColorStop(.9, '#000'); g.addColorStop(1, 'rgba(0,0,0,0)'); f.fillStyle = g; f.fillRect(0, 0, fw, fh);
