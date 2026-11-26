@@ -73,7 +73,7 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 23:40 popups</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 00:05 speed</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -146,6 +146,7 @@ canvas.camv{object-fit:contain}
       <div id="shSug"></div>
       <div id="shPick" style="margin:8px 0"></div>
       <div id="shTot" class="muted"></div>
+      <div class="fld"><label for="shSpeed">Speed (voice keeps its normal pitch)</label><select id="shSpeed"><option value="1">Normal speed (1×)</option><option value="1.1">1.1× faster</option><option value="1.2">1.2× faster</option><option value="1.3">1.3× faster</option><option value="1.5">1.5× faster</option></select></div>
       <div class="fld"><label for="shTitle">Title shown at the top of the Short</label><input id="shTitle"></div>
       <button class="pri" id="shGo">📱 Make this Short on this device</button>
       <canvas id="shCanvas" style="display:none;width:60%;max-width:300px;border-radius:8px;margin-top:8px;background:#000"></canvas>
@@ -173,9 +174,9 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=2340"></script>
+<script src="engine.js?v=0005"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=2340"></script>
+<script src="cutout.js?v=0005"></script>
 <script>
 (() => {
 'use strict';
@@ -982,8 +983,9 @@ const shPicked = new Set(); let shTrim = {};
 function shDur() { const d = {}; E.timeline(ep, lang).scenes.forEach(o => { d[o.i] = o.dur; }); return d; }
 function shRange(i, d) { const n = d[i] || 0, tr = shTrim[i] || [0, n]; const a = Math.max(0, Math.min(n - .5, tr[0])), b = Math.max(a + .5, Math.min(n, tr[1])); return [a, b]; }
 function shTotal() {
-  const d = shDur(), idx = [...shPicked].filter(i => d[i] != null), t = idx.reduce((a, i) => { const r = shRange(i, d); return a + (r[1] - r[0]); }, 0);
-  $('shTot').innerHTML = idx.length ? `Total ${Math.round(t)} s` + (t > 180 ? ' <span class="warn">over 3 minutes: untick something or shorten a scene</span>' : t > 60 ? ' (over 60 s: it still works, but under 60 s tends to do better)' : ' (a good length for a Short)') : 'Tick at least one scene.';
+  const d = shDur(), idx = [...shPicked].filter(i => d[i] != null), t0 = idx.reduce((a, i) => { const r = shRange(i, d); return a + (r[1] - r[0]); }, 0), sp = +$('shSpeed').value || 1, t = t0 / sp;
+  const lens = [1, 1.2, 1.5].map(x => `<b>${x}×</b> ${Math.round(t0 / x)} s`).join(' &nbsp;·&nbsp; ');
+  $('shTot').innerHTML = idx.length ? `Length now: <b>${Math.round(t)} s</b>${sp !== 1 ? ' (at ' + sp + '×)' : ''}. At other speeds: ${lens}` + (t > 180 ? ' <span class="warn">over 3 minutes: untick something or shorten a scene</span>' : t > 60 ? '<br>Over 60 s: it still works, but under 60 s tends to do better.' : '<br>A good length for a Short.') : 'Tick at least one scene.';
   $('shGo').disabled = !idx.length || mk.busy;
 }
 function shRender() {
@@ -991,7 +993,7 @@ function shRender() {
   const d = shDur();
   $('shLang').textContent = (ep.languages[lang] || {}).name || lang;
   [...shPicked].forEach(i => { if (!ep.scenes[i]) shPicked.delete(i); });
-  $('shSug').innerHTML = (ep.shorts || []).map((x, k) => { const secs = Math.round(x.scenes.reduce((a, i) => a + (d[i] || 0), 0)); return `<button class="sm" data-sug="${k}" style="display:block;width:100%;text-align:left;margin:0 0 6px">Short ${k + 1}: ${esc((x.title || {})[lang] || (x.title || {}).en || '')} <span class="muted">(scenes ${x.scenes.map(i => i + 1).join(', ')}, ${secs} s)</span></button>`; }).join('');
+  $('shSug').innerHTML = (ep.shorts || []).map((x, k) => { const secs = Math.round(x.scenes.reduce((a, i) => a + (d[i] || 0), 0)); return `<button class="sm" data-sug="${k}" style="display:block;width:100%;text-align:left;margin:0 0 6px">Short ${k + 1}: ${esc((x.title || {})[lang] || (x.title || {}).en || '')} <span class="muted">(scenes ${x.scenes.map(i => i + 1).join(', ')}, ${secs} s; ${Math.round(secs / 1.2)} s at 1.2×; ${Math.round(secs / 1.5)} s at 1.5×)</span></button>`; }).join('');
   box.innerHTML = ep.scenes.map((sc, i) => {
     const T = E.SCENES[sc.type]; if (!T) return ''; const L = E.sceneLang(sc, lang), first = ((L.lines || [])[0] || '').slice(0, 46), n = d[i] || 0, on = shPicked.has(i), [a, b] = shRange(i, d);
     const trim = on && n > 1 ? `<div style="margin:2px 0 8px 26px"><div class="row" style="align-items:center;gap:8px"><span class="muted" style="width:44px">Start</span><input type="range" data-ta="${i}" min="0" max="${n.toFixed(1)}" step="0.5" value="${a}" style="flex:1"><b data-tav="${i}" style="width:48px;text-align:right">${a.toFixed(1)}s</b></div><div class="row" style="align-items:center;gap:8px"><span class="muted" style="width:44px">End</span><input type="range" data-tb="${i}" min="0" max="${n.toFixed(1)}" step="0.5" value="${b}" style="flex:1"><b data-tbv="${i}" style="width:48px;text-align:right">${b.toFixed(1)}s</b></div></div>` : '';
@@ -1005,7 +1007,9 @@ function shRender() {
   $('shSug').querySelectorAll('[data-sug]').forEach(b => { b.onclick = () => { const x = ep.shorts[+b.dataset.sug]; shPicked.clear(); shTrim = {}; x.scenes.forEach(i => shPicked.add(i)); $('shTitle').value = ((x.title || {})[lang] || (x.title || {}).en || ''); shRender(); }; });
   shTotal();
 }
-$('shGo').onclick = () => { const idx = [...shPicked].sort((a, b) => a - b); if (!idx.length) return; const title = $('shTitle').value.trim() || ((ep.title || {})[lang] || ep.id); const d = shDur(), trims = {}; idx.forEach(i => { const r = shRange(i, d); if (r[0] > 0 || r[1] < (d[i] || 0)) trims[i] = r; }); makeOnDevice({ short: { scenes: idx, title, trims } }); };
+try { $('shSpeed').value = localStorage.getItem('exShSpeed') || '1'; } catch (e) {}
+$('shSpeed').onchange = () => { try { localStorage.setItem('exShSpeed', $('shSpeed').value); } catch (e) {} shTotal(); };
+$('shGo').onclick = () => { const idx = [...shPicked].sort((a, b) => a - b); if (!idx.length) return; const title = $('shTitle').value.trim() || ((ep.title || {})[lang] || ep.id); const d = shDur(), trims = {}; idx.forEach(i => { const r = shRange(i, d); if (r[0] > 0 || r[1] < (d[i] || 0)) trims[i] = r; }); makeOnDevice({ short: { scenes: idx, title, trims, speed: +$('shSpeed').value || 1 } }); };
 function ytCard() {
   const L = ep.languages[lang] || {}, lines = []; ep.scenes.forEach(sc => ((sc.lang || {})[lang] || {}).lines && lines.push(...sc.lang[lang].lines.filter(x => String(x).trim())));
   const tag = ((channel.taglines || {})[lang] || (channel.taglines || {}).en || ''), name = ((channel.names || {})[lang] || (channel.names || {}).en || 'Oh, I Get It');
@@ -1074,6 +1078,24 @@ function shortCaption(c, tl, t, W2, fam) {
   lines.forEach((l, i) => { c.lineWidth = size * .2; c.strokeStyle = '#05101c'; c.strokeText(l, W2 / 2, top + i * lh); c.fillStyle = '#fff'; c.fillText(l, W2 / 2, top + i * lh); });
   c.restore();
 }
+/** Speeds speech up without raising its pitch (overlap-add with the best-matching overlap, "WSOLA"). Returns a new, shorter AudioBuffer. */
+async function speedUp(buf, rate, ac) {
+  const sr = buf.sampleRate, nch = buf.numberOfChannels, n = buf.length, N = Math.round(sr * .04) & ~1, H = N / 2, tol = Math.round(sr * .012), D = 4, outLen = Math.floor(n / rate);
+  const chs = []; for (let c = 0; c < nch; c++) chs.push(buf.getChannelData(c));
+  const mono = chs[0], outs = chs.map(() => new Float32Array(outLen)), norm = new Float32Array(outLen), win = new Float32Array(N);
+  for (let i = 0; i < N; i++) win[i] = .5 - .5 * Math.cos(2 * Math.PI * i / N);
+  let prev = 0;
+  for (let k = 0; k * H < outLen; k++) {
+    const ideal = Math.round(k * H * rate); let pos = Math.min(ideal, Math.max(0, n - N));
+    if (k > 0) { const ref = prev + H; let best = -Infinity;
+      for (let cand = ideal - tol; cand <= ideal + tol; cand += 2) { if (cand < 0 || cand + N > n || ref + H > n) continue; let c = 0; for (let i = 0; i < H; i += D) c += mono[ref + i] * mono[cand + i]; if (c > best) { best = c; pos = cand; } } }
+    for (let i = 0; i < N; i++) { const idx = k * H + i; if (idx >= outLen) break; const w = win[i]; norm[idx] += w; if (pos + i < n) for (let c = 0; c < nch; c++) outs[c][idx] += chs[c][pos + i] * w; }
+    prev = pos; if (k % 150 === 0) await new Promise(r => setTimeout(r));
+  }
+  const out = ac.createBuffer(nch, Math.max(1, outLen), sr);
+  for (let c = 0; c < nch; c++) { const o = outs[c]; for (let i = 0; i < outLen; i++) o[i] /= Math.max(norm[i], .25); out.copyToChannel(o, c); }
+  return out;
+}
 /** Which stretches of the episode go into the output: the whole thing, or for a Short the chosen start and end of each ticked scene. */
 function mkSegs(tl, SHORT) {
   if (!SHORT) return [{ a: 0, b: tl.duration, off: 0 }];
@@ -1089,8 +1111,8 @@ async function makeOnDevice(opts) {
   try {
     if (!window.VideoEncoder || !window.VideoFrame || !window.AudioEncoder || !window.AudioData) throw new Error('This browser cannot make videos on the device. On iPhone you need iOS 17 or newer in Safari; on Android use a recent Chrome. You can use "Use the GitHub build instead".');
     if (!window.Mp4Muxer) throw new Error('The video tool did not load. Reload the page and try again.');
-    const tl = E.timeline(epU, lang), DUR = tl.duration, FPS = 30, segs = mkSegs(tl, SHORT), SD = segs.reduce((a, x) => a + (x.b - x.a), 0), N = Math.round(SD * FPS), [W2, H2] = SHORT ? (matchMedia('(pointer:coarse)').matches ? [720, 1280] : [1080, 1920]) : mkFrame(), SR = 48000, U = W2 / 1080, Y0 = SHORT ? Math.round(380 * U) : 0, HS = SHORT ? Math.round(W2 * 9 / 16) : H2;
-    if (SHORT && (SD > 180 || !N)) throw new Error('A Short can be up to 3 minutes. Untick a scene or two.');
+    const tl = E.timeline(epU, lang), DUR = tl.duration, FPS = 30, segs = mkSegs(tl, SHORT), SD = segs.reduce((a, x) => a + (x.b - x.a), 0), SPEED = SHORT && SHORT.speed > 1 ? SHORT.speed : 1, OUTD = SD / SPEED, N = Math.round(OUTD * FPS), [W2, H2] = SHORT ? (matchMedia('(pointer:coarse)').matches ? [720, 1280] : [1080, 1920]) : mkFrame(), SR = 48000, U = W2 / 1080, Y0 = SHORT ? Math.round(380 * U) : 0, HS = SHORT ? Math.round(W2 * 9 / 16) : H2;
+    if (SHORT && (OUTD > 180 || !N)) throw new Error('A Short can be up to 3 minutes. Untick a scene or two.');
     if (SHORT && !tl.scenes.some(o => o.take)) throw new Error('Record the scenes of this Short first (Scenes tab). A Short needs your voice.');
     const A = window.AudioContext || window.webkitAudioContext; ac = new A();
     // 1. what this browser can encode
@@ -1138,7 +1160,8 @@ async function makeOnDevice(opts) {
     for (const k of takes) { const kEnd = k.at + (k.t.out - k.t.in); for (const sg of segs) { const lo = Math.max(k.at, sg.a), hi = Math.min(kEnd, sg.b); if (hi - lo < .05) continue; const s = off.createBufferSource(), g = off.createGain(); s.buffer = k.buf; g.gain.value = k.gain; s.connect(g); g.connect(off.destination); s.start(sg.off + (lo - sg.a), k.t.in + (lo - k.at), hi - lo); } } // each kept stretch of the episode, placed where it lands in the output
     const beeps = []; tl.cues.filter(x => x.sound === 'beep').forEach(c => segs.forEach(sg => { if (c.t >= sg.a && c.t < sg.b) beeps.push({ t: sg.off + c.t - sg.a }); }));
     for (const c of beeps) { const os = off.createOscillator(), g = off.createGain(); os.frequency.value = 1800; g.gain.setValueAtTime(0, c.t); g.gain.linearRampToValueAtTime(.35, c.t + .01); g.gain.setValueAtTime(.35, c.t + .14); g.gain.linearRampToValueAtTime(0, c.t + .16); os.connect(g); g.connect(off.destination); os.start(c.t); os.stop(c.t + .2); }
-    const mixed = await off.startRendering();
+    let mixed = await off.startRendering();
+    if (SPEED !== 1) { mkSt(`Speeding the voice up to ${SPEED}× (keeping its pitch)…`); mixed = await speedUp(mixed, SPEED, ac); }
     // 4. encoder and file
     let encErr = null; const target = new Mp4Muxer.ArrayBufferTarget();
     const muxer = new Mp4Muxer.Muxer({ target, video: { codec: vname, width: W2, height: H2 }, audio: { codec: aname, sampleRate: SR, numberOfChannels: 2 }, fastStart: 'in-memory', firstTimestampBehavior: 'offset' });
@@ -1173,7 +1196,7 @@ async function makeOnDevice(opts) {
     const F = E.FADE, lastScene = tl.scenes.length ? tl.scenes[tl.scenes.length - 1].i : -1, tStart = performance.now();
     for (let f = 0; f < N; f++) {
       if (encErr) throw new Error('The video encoder stopped: ' + (encErr.message || encErr));
-      const tOut = f / FPS, sg = segs.find(x => tOut < x.off + (x.b - x.a)) || segs[segs.length - 1], t = sg.a + (tOut - sg.off); app.render(t); await raster();
+      const tOut = f / FPS * SPEED, sg = segs.find(x => tOut < x.off + (x.b - x.a)) || segs[segs.length - 1], t = sg.a + (tOut - sg.off); app.render(t); await raster();
       for (const k of takes) {
         if (!k.slot || !k.el) continue; const st = k.o.start, en = k.o.end;
         if (!(t >= st - F / 2 && t < en + F / 2)) continue;
@@ -1214,7 +1237,7 @@ async function makeOnDevice(opts) {
       if (!b) chk = ' Sound check: this browser could not read the sound back from the file.';
       else { const d = b.getChannelData(0); let sq = 0, cnt = 0; for (let i = 0; i < d.length; i += 7) { sq += d[i] * d[i]; cnt++; } const db = Math.round(20 * Math.log10(Math.sqrt(sq / Math.max(1, cnt)) || 1e-6)); chk = db < -55 ? ` ⚠ THE SOUND IS SILENT IN THE FINISHED FILE (${db} dB, ${aStat.n} sound blocks${aStat.desc ? '' : ', no format header'}). Tell me this message.` : ` Sound in the file: ${db} dB.`; }
     } catch (err) { chk = ' Sound check failed.'; }
-    mkResult(outBlob, 'video/mp4', SHORT ? `${epU.id}-short-${SHORT.scenes.map(x => x + 1).join('-')}-${lang}.mp4` : `${epU.id}-${lang}.mp4`, `${SD.toFixed(0)} seconds, ${W2}x${H2}.${cutNote} Sound: ${aname === 'aac' ? 'AAC' : aname.toUpperCase() + ' (iPhone Photos may not play this; try Files or another player)'}; ${voiceNote.join(', ')}.${chk} [audio: ${aStat.n} blocks, first ${aStat.first}${aStat.adts ? ', fixed ADTS' : ''}${aStat.madeAsc ? ', added header' : ''}]`);
+    mkResult(outBlob, 'video/mp4', SHORT ? `${epU.id}-short-${SHORT.scenes.map(x => x + 1).join('-')}-${lang}.mp4` : `${epU.id}-${lang}.mp4`, `${OUTD.toFixed(0)} seconds${SPEED !== 1 ? ' (at ' + SPEED + '×)' : ''}, ${W2}x${H2}.${cutNote} Sound: ${aname === 'aac' ? 'AAC' : aname.toUpperCase() + ' (iPhone Photos may not play this; try Files or another player)'}; ${voiceNote.join(', ')}.${chk} [audio: ${aStat.n} blocks, first ${aStat.first}${aStat.adts ? ', fixed ADTS' : ''}${aStat.madeAsc ? ', added header' : ''}]`);
   } catch (e) { mkSt(e.message || String(e), 'bad'); console.error(e); }
   finally {
     try { wake && wake.release(); } catch (e) {} try { els.forEach(x => x.remove()); } catch (e) {}
