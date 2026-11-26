@@ -601,11 +601,17 @@
   function sceneData(scene) { const def = (SCENES[scene.type] || {}).defaults || { data: {} }; return Object.assign({}, def.data, scene.data || {}); }
 
   /** Start/end of every scene, and caption timings. */
+  /** Seconds needed to read a scene's lines aloud at a relaxed pace (about 150 words a minute) plus the lead-in and tail. */
+  function speechNeed(s, lang) {
+    const lines = (sceneLang(s, lang).lines || []).filter(x => String(x).trim());
+    const words = lines.reduce((a, x) => a + String(x).trim().split(/\s+/).length, 0);
+    return words ? Math.ceil((words * .4 + LEAD + TAIL + .4) * 2) / 2 : 0;
+  }
   function timeline(ep, lang) {
     let t = 0;
     const scenes = (ep.scenes || []).map((s, i) => ({ s, i })).filter(x => SCENES[x.s.type]).map(({ s, i }) => {
       const take = takeOf(s, lang);
-      const dur = take ? takeLength(take) : Math.max(.5, +s.duration || SCENES[s.type].base);
+      const dur = take ? takeLength(take) : Math.max(.5, +s.duration || Math.max(SCENES[s.type].base, speechNeed(s, lang)));
       const o = { i, scene: s, start: t, end: t + dur, dur, take };
       t += dur; return o;
     });
@@ -691,10 +697,10 @@
   }
   /** Makes a new scene from a library type, with default content copied into every language. */
   function newScene(type, langs) {
-    const T = SCENES[type], s = { type, duration: T.base, data: JSON.parse(JSON.stringify(T.defaults.data || {})), lang: {} };
+    const T = SCENES[type], s = { type, data: JSON.parse(JSON.stringify(T.defaults.data || {})), lang: {} };
     (langs || ['en']).forEach(l => { s.lang[l] = JSON.parse(JSON.stringify(T.defaults.lang || {})); });
     return s;
   }
 
-  root.Explainer = { SCENES, ITEM_KINDS, mount, timeline, srt, script, newScene, sceneLang, sceneData, langOf, takeOf, takeSig, W, H, LEAD, TAIL, FADE };
+  root.Explainer = { SCENES, ITEM_KINDS, mount, timeline, speechNeed, srt, script, newScene, sceneLang, sceneData, langOf, takeOf, takeSig, W, H, LEAD, TAIL, FADE };
 })(typeof window !== 'undefined' ? window : globalThis);

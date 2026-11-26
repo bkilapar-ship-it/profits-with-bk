@@ -13,6 +13,8 @@ header h1{font-size:17px;margin:0 8px 0 0;display:flex;align-items:center;gap:8p
 select,input,textarea,button{font:inherit;color:inherit}
 select,input,textarea{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:7px 9px;width:100%}
 textarea{min-height:64px;resize:vertical}
+textarea.lines{min-height:150px;font-size:17px;line-height:1.5;padding:10px 12px}
+.sum{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0}.sum .seg{border-radius:8px;padding:5px 9px;font-size:13px;background:var(--bg);border:1px solid var(--line)}.sum .seg.i{border-color:#2a9d8f}.sum .seg.m{border-color:#ffd166}.sum .seg.e{border-color:#7d8aa0}.warn{color:#ffb347}
 button{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer}
 button.pri{background:var(--acc2);color:#fff;border-color:var(--acc2)}
 button.sm{padding:4px 8px;font-size:13px}
@@ -57,13 +59,13 @@ details summary{cursor:pointer;font-weight:700}
 .modal.on{display:flex}
 .mbox{background:var(--card);border-radius:14px;padding:12px;width:min(760px,100%);max-height:100%;overflow:auto}
 .rstage{position:relative;background:#0d1b2a;border-radius:10px;overflow:hidden;display:flex;align-items:center;justify-content:center;min-height:120px}
-.rstage video{width:100%;max-height:46vh;display:block;object-fit:contain}
+.rstage video{width:100%;max-height:30vh;display:block;object-fit:contain}
 .rstage video.mirror{transform:scaleX(-1)}
 #recCount{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:120px;font-weight:800;color:#ffd166;text-shadow:0 4px 20px #000;pointer-events:none}
 #recDot{position:absolute;top:10px;left:10px;background:#c0392b;color:#fff;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:700;display:none}
 #recMeter{position:absolute;left:10px;right:10px;bottom:10px;height:8px;border-radius:4px;background:rgba(255,255,255,.15)}
 #recMeter i{display:block;height:100%;width:0;border-radius:4px;background:#2a9d8f}
-.pbox{position:relative;height:30vh;min-height:150px;overflow:hidden;background:#0d1b2a;border-radius:10px;margin:10px 0;padding:0 12px}.pbox .pl{font-size:clamp(20px,4.4vw,32px);line-height:1.3;font-weight:700;padding:8px 0;color:#7d8aa0;transition:color .2s}.pbox .pl.now{color:#ffd166;font-size:calc(clamp(20px,4.4vw,32px) + 3px)}.pbox .pl.next{color:#e8eef7}.pbox .pl.done{color:#46536a}.pbox .pad{height:12vh}.pbox:after{content:'';position:absolute;left:0;right:0;bottom:0;height:34px;background:linear-gradient(transparent,#0d1b2a);pointer-events:none}#recAnim{width:100%;max-height:26vh;border-radius:8px;background:#0d1b2a;display:block}.prompter{font-size:clamp(20px,4.2vw,30px);line-height:1.35;font-weight:700;margin:12px 2px;white-space:pre-wrap}
+.pbox{position:relative;height:48vh;min-height:240px;overflow:hidden;background:#0d1b2a;border-radius:10px;margin:10px 0;padding:0 12px}.pbox .pl{font-size:calc(var(--ps,1) * clamp(24px,5.4vw,40px));line-height:1.3;font-weight:700;padding:8px 0;color:#7d8aa0;transition:color .2s}.pbox .pl.now{color:#ffd166;font-size:calc(var(--ps,1) * clamp(24px,5.4vw,40px) + 3px)}.pbox .pl.next{color:#e8eef7}.pbox .pl.done{color:#46536a}.pbox .pad{height:12vh}.pbox:after{content:'';position:absolute;left:0;right:0;bottom:0;height:34px;background:linear-gradient(transparent,#0d1b2a);pointer-events:none}#recAnim{width:100%;max-height:18vh;border-radius:8px;background:#0d1b2a;display:block}.prompter{font-size:clamp(20px,4.2vw,30px);line-height:1.35;font-weight:700;margin:12px 2px;white-space:pre-wrap}
 </style></head>
 <body>
 <header>
@@ -86,6 +88,7 @@ details summary{cursor:pointer;font-weight:700}
         <div class="row" style="margin-top:8px"><button id="delLang" class="sm">Remove this language</button></div>
       </details>
     </div>
+    <div class="box" data-tab="edit" id="lenSum"></div>
     <div id="scenes" data-tab="edit"></div>
     <div class="box row" data-tab="edit">
       <select id="addType" class="grow" style="width:auto"></select>
@@ -143,7 +146,7 @@ details summary{cursor:pointer;font-weight:700}
   <div class="row"><b class="grow" id="recTitle">Record</b><button class="sm" id="recClose">✕ Close</button></div>
   <div class="rstage" style="margin-top:8px"><video id="recCam" playsinline muted autoplay class="mirror"></video><div id="recCount"></div><div id="recDot">● REC <span id="recTime">0.0s</span></div><div id="recMeter"><i></i></div></div>
   <div class="pbox" id="recScript"></div>
-  <div class="row" style="align-items:center;gap:8px"><span>Pace</span><input type="range" id="recPace" min="60" max="160" value="100" style="flex:1"><b id="recPaceV" style="min-width:44px">1.0×</b><label style="white-space:nowrap;font-size:13px"><input type="checkbox" id="recShowAnim" checked> Anim</label></div>
+  <div class="row" style="align-items:center;gap:8px"><span>Text</span><input type="range" id="recSize" min="80" max="170" value="100" style="width:90px"><span>Pace</span><input type="range" id="recPace" min="60" max="160" value="100" style="flex:1"><b id="recPaceV" style="min-width:44px">1.0×</b><label style="white-space:nowrap;font-size:13px"><input type="checkbox" id="recShowAnim" checked> Anim</label></div>
   <svg id="recAnim" style="margin-top:8px"></svg>
   <div class="row">
     <button class="pri" id="recGo">● Start recording</button>
@@ -236,7 +239,7 @@ function fieldHTML(f, si) {
   const ref = refL !== undefined ? `<div class="ref">English: ${esc(Array.isArray(refL) ? refL.join('\n') : String(refL))}</div>` : '';
   let input = '';
   if (f.kind === 'text') input = `<input id="${id}" value="${esc(v ?? '')}">`;
-  else if (f.kind === 'lines') input = `<textarea id="${id}" rows="${Math.max(2, (v || []).length + 1)}">${esc((v || []).join('\n'))}</textarea>`;
+  else if (f.kind === 'lines') input = `<textarea class="lines" id="${id}" rows="${Math.max(4, (v || []).length + 2)}">${esc((v || []).join('\n'))}</textarea>`;
   else if (f.kind === 'number') input = `<input id="${id}" type="number" step="any" value="${v ?? ''}">`;
   else if (f.kind === 'money') input = `<div class="money"><span>${esc(ep.languages[lang].currency || '')}</span><input id="${id}" type="number" step="any" value="${v ?? ''}"></div>`;
   else if (f.kind === 'select') input = `<select id="${id}">${f.options.map(o => { const a2 = Array.isArray(o) ? o : [o, o]; return `<option value="${esc(a2[0])}"${a2[0] === v ? ' selected' : ''}>${esc(a2[1])}</option>`; }).join('')}</select>`;
@@ -246,17 +249,30 @@ function fieldHTML(f, si) {
 }
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
+function needHTML(s, T) {
+  const need = E.speechNeed(s, lang), words = need ? Math.round((need - 1.2) / .4) : 0;
+  if (!need) return `Automatic: ${T.base}s. Add your lines and the length follows your script.`;
+  const eff = +s.duration || Math.max(T.base, need);
+  return `Your script is about ${words} words, which takes about ${need}s to read. ${s.duration ? (+s.duration < need - .5 ? `<span class="warn">This length is shorter than your script needs, so the prompter will run fast. Clear the box to let it follow your script.</span>` : 'Fixed length.') : `Automatic length: ${eff}s. Type a number to fix it instead.`} A language with a recording follows your voice instead.`;
+}
+function lenSummary() {
+  const tl = E.timeline(ep, lang), n = tl.scenes.length; let mid = 0;
+  const segs = tl.scenes.map((o, k) => { const end = ep.scenes[o.i].type === 'endCard', intro = k === 0 && !end, name = end ? 'End' : intro ? 'Intro' : 'Middle ' + (++mid); return `<span class="seg ${end ? 'e' : intro ? 'i' : 'm'}">${name} <b>${o.dur.toFixed(0)}s</b></span>`; }).join('');
+  const t = tl.duration, tip = t < 30 ? 'Very short. Fine for a single idea.' : t <= 90 ? 'A good length for one idea.' : t <= 150 ? 'Getting long. Consider splitting into two episodes.' : 'Long for this channel. Try splitting it.';
+  $('lenSum').innerHTML = `<b>Episode: ${Math.floor(t / 60)}:${String(Math.round(t % 60)).padStart(2, '0')}</b> <span class="muted">${n} scene${n === 1 ? '' : 's'}. ${tip}</span><div class="sum">${segs}</div><div class="muted">Structure: one Intro, as many Middle scenes as the idea needs, then the End card. Scenes grow with your script; the target is 45 to 90 seconds.</div>`;
+}
 function renderScenes() {
+  lenSummary();
   const tl = E.timeline(ep, lang);
   $('scenes').innerHTML = ep.scenes.map((s, i) => {
     const T = E.SCENES[s.type]; if (!T) return `<div class="scene"><div class="hd"><b>Unknown scene type: ${esc(s.type)}</b><button class="sm" data-del="${i}">Delete</button></div></div>`;
     const o = tl.scenes.find(x => x.i === i);
     return `<div class="scene${i === openScene ? ' open' : ''}" data-i="${i}">
-      <div class="hd" data-toggle="${i}"><span class="pill">${i + 1}</span><b>${esc(T.label)}</b><span class="pill">${o ? o.start.toFixed(1) + 's' : ''}</span>
+      <div class="hd" data-toggle="${i}"><span class="pill">${i + 1}</span><b>${esc(T.label)}</b><span class="pill">${s.type === 'endCard' ? 'End' : i === 0 ? 'Intro' : 'Middle'}</span><span class="pill">${o ? o.start.toFixed(0) + 's' : ''}</span>
         <button class="sm" data-top="${i}" title="Move to the very top">⤒</button><button class="sm" data-up="${i}" title="Move up">↑</button><button class="sm" data-down="${i}" title="Move down">↓</button><button class="sm" data-bottom="${i}" title="Move to the very end">⤓</button><button class="sm" data-dup="${i}" title="Duplicate">⧉</button><button class="sm" data-del="${i}" title="Delete">✕</button></div>
       <div class="bd">
         ${takeHTML(s, i, o)}
-        <div class="fld"><label for="dur_${i}">Length in seconds when there is no recording <span class="pill">all languages</span></label><input id="dur_${i}" type="number" step="0.1" min="0.5" value="${s.duration ?? T.base}"><div class="ref">Designed for ${T.base}s. The animation stretches to fit. A language with a recording follows your voice instead.</div></div>
+        <div class="fld"><label for="dur_${i}">Length in seconds when there is no recording <span class="pill">all languages</span></label><input id="dur_${i}" type="number" step="0.5" min="0.5" placeholder="Automatic" value="${s.duration ?? ''}"><div class="ref" id="need_${i}">${needHTML(s, T)}</div></div>
         <div class="fld"><label><input type="checkbox" id="cap_${i}" style="width:auto"${s.captions === false ? '' : ' checked'}> Show captions on screen</label></div>
         ${T.fields.map(f => fieldHTML(f, i)).join('')}
       </div></div>`;
@@ -272,12 +288,12 @@ function renderScenes() {
   act('[data-del]', i => { if (confirm('Delete this scene in every language?')) ep.scenes.splice(i, 1); });
   ep.scenes.forEach((s, i) => {
     const T = E.SCENES[s.type]; if (!T) return;
-    const d = $('dur_' + i); if (d) d.oninput = () => { s.duration = Math.max(.5, +d.value || T.base); changed(); remountSoon(); };
+    const d = $('dur_' + i); if (d) d.oninput = () => { if (d.value === '') delete s.duration; else s.duration = Math.max(.5, +d.value || T.base); $('need_' + i).innerHTML = needHTML(s, T); lenSummary(); changed(); remountSoon(); };
     wireTake(s, i);
     const c = $('cap_' + i); if (c) c.onchange = () => { if (c.checked) delete s.captions; else s.captions = false; changed(); remountSoon(); };
     T.fields.forEach(f => {
       const id = `f_${i}_${f.k}`, n = $(id); if (!n) return;
-      const put = v => { if (f.per === 'lang') { s.lang = s.lang || {}; s.lang[lang] = s.lang[lang] || {}; s.lang[lang][f.k] = v; } else { s.data = s.data || {}; s.data[f.k] = v; } changed(); remountSoon(); };
+      const put = v => { if (f.per === 'lang') { s.lang = s.lang || {}; s.lang[lang] = s.lang[lang] || {}; s.lang[lang][f.k] = v; } else { s.data = s.data || {}; s.data[f.k] = v; } if (f.k === 'lines') { const nn = $('need_' + i); if (nn) nn.innerHTML = needHTML(s, T); lenSummary(); } changed(); remountSoon(); };
       if (f.kind === 'items') {
         n.querySelectorAll('.chip').forEach(b => b.onclick = () => { const cur = (s.data[f.k] || T.defaults.data[f.k] || []).slice(); cur.splice(+b.dataset.i, 1); put(cur); renderScenes(); });
         const a = n.querySelector('[data-add]'); a.onchange = () => { if (!a.value) return; const cur = (s.data[f.k] || T.defaults.data[f.k] || []).slice(); if (cur.length >= 7) return msg('A basket holds up to 7 items.', 'bad'); cur.push(a.value); put(cur); renderScenes(); };
@@ -538,6 +554,8 @@ function promptRun() { // starts when recording starts
   P.raf = requestAnimationFrame(tick);
 }
 $('recPace').oninput = () => { P.pace = +$('recPace').value / 100; $('recPaceV').textContent = P.pace.toFixed(1) + '×'; try { localStorage.setItem('exPace', P.pace); } catch (e) {} };
+try { const z = +localStorage.getItem('exSize') || 100; $('recSize').value = z; $('rec').style.setProperty('--ps', z / 100); } catch (e) {}
+$('recSize').oninput = () => { $('rec').style.setProperty('--ps', $('recSize').value / 100); try { localStorage.setItem('exSize', $('recSize').value); } catch (e) {} };
 $('recShowAnim').onchange = () => { $('recAnim').style.display = $('recShowAnim').checked && P.app ? 'block' : 'none'; };
 async function openRecorder(i) {
   stop();
