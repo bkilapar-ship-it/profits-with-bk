@@ -72,7 +72,7 @@ canvas.camv{object-fit:fill}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 19:20 sound-check</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 19:35 aac-repair</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -951,6 +951,23 @@ function mkResult(blob, type, name, info) {
   };
   mkSt(`Done: ${(blob.size / 1048576).toFixed(1)} MB. ${info || ''}`, 'good');
 }
+/** Some phones hand the muxer AAC with ADTS headers or without the decoder description, and the video then plays silent. This repairs both. */
+function aacChunk(c, m, st, muxer, aname, SR) {
+  st.n++;
+  if (aname !== 'aac') { st.desc = !!(m && m.decoderConfig && m.decoderConfig.description); return muxer.addAudioChunk(c, m); }
+  const raw = new Uint8Array(c.byteLength); c.copyTo(raw);
+  if (st.n === 1) st.first = Array.from(raw.subarray(0, 4)).map(x => x.toString(16).padStart(2, '0')).join('') + '/' + raw.length + (m && m.decoderConfig && m.decoderConfig.description ? '/desc' + (m.decoderConfig.description.byteLength || m.decoderConfig.description.length) : '/nodesc');
+  let data = raw, asc = m && m.decoderConfig && m.decoderConfig.description ? m.decoderConfig.description : null;
+  if (raw.length > 7 && raw[0] === 0xFF && (raw[1] & 0xF0) === 0xF0) { // ADTS: strip the 7 (or 9) byte header and build the 2 byte AudioSpecificConfig from it
+    const hl = (raw[1] & 1) ? 7 : 9, aot = ((raw[2] >> 6) & 3) + 1, sfi = (raw[2] >> 2) & 15, ch = ((raw[2] & 1) << 2) | (raw[3] >> 6);
+    data = raw.subarray(hl); st.adts = true;
+    if (!asc) { const v = (aot << 11) | (sfi << 7) | (ch << 3); asc = new Uint8Array([v >> 8, v & 255]); }
+  }
+  if (!asc) { asc = new Uint8Array([0x11, 0x90]); st.madeAsc = true; } // AAC-LC, 48000 Hz, stereo
+  st.desc = true;
+  const chunk = new EncodedAudioChunk({ type: c.type, timestamp: c.timestamp, duration: c.duration || undefined, data });
+  muxer.addAudioChunk(chunk, { decoderConfig: { codec: 'mp4a.40.2', sampleRate: SR, numberOfChannels: 2, description: asc } });
+}
 async function makeOnDevice() {
   if (mk.busy) return; mk.busy = true; $('mkGo').disabled = true; $('mkGo2').disabled = true; $('mkOut').innerHTML = ''; stop();
   let wake = null, svg = null, encV = null, encA = null, ac = null; const urls = [], els = [];
@@ -969,7 +986,7 @@ async function makeOnDevice() {
     for (const c of [{ codec: 'mp4a.40.2', name: 'aac', extra: { aac: { format: 'aac' } } }, { codec: 'mp4a.40.2', name: 'aac' }, { codec: 'opus', name: 'opus' }]) { const cfg = Object.assign({ codec: c.codec, sampleRate: SR, numberOfChannels: 2, bitrate: 160000 }, c.extra || {}); try { const r = await AudioEncoder.isConfigSupported(cfg); if (r && r.supported) { acfg = Object.assign({}, cfg, r.config || {}); aname = c.name; break; } } catch (e) {} }
     if (!acfg) throw new Error('This browser cannot encode sound.');
     // 2. your recordings: the voice of each take, and the camera picture
-    const takes = [], voiceNote = [], aStat = { n: 0, desc: false };
+    const takes = [], voiceNote = [], aStat = { n: 0, desc: false, first: '', adts: false, madeAsc: false };
     for (const o of tl.scenes.filter(x => x.take)) {
       const t = o.take, T = E.SCENES[o.scene.type], n = o.i + 1;
       const main = await loadBlob(t.file); if (!main) throw new Error(`The recording for scene ${n} is not on this device. Record it again here.`);
@@ -1004,7 +1021,7 @@ async function makeOnDevice() {
     let encErr = null; const target = new Mp4Muxer.ArrayBufferTarget();
     const muxer = new Mp4Muxer.Muxer({ target, video: { codec: vname, width: W2, height: H2 }, audio: { codec: aname, sampleRate: SR, numberOfChannels: 2 }, fastStart: 'in-memory', firstTimestampBehavior: 'offset' });
     encV = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: e => { encErr = e; } }); encV.configure(vcfg);
-    encA = new AudioEncoder({ output: (c, m) => { aStat.n++; if (m && m.decoderConfig && m.decoderConfig.description) aStat.desc = true; muxer.addAudioChunk(c, m); }, error: e => { encErr = e; } }); encA.configure(acfg);
+    encA = new AudioEncoder({ output: (c, m) => { aacChunk(c, m, aStat, muxer, aname, SR); }, error: e => { encErr = e; } }); encA.configure(acfg);
     { const L = mixed.getChannelData(0), R2 = mixed.numberOfChannels > 1 ? mixed.getChannelData(1) : L, step = 4800;
       for (let i = 0; i < L.length; i += step) { const n = Math.min(step, L.length - i), data = new Float32Array(n * 2); data.set(L.subarray(i, i + n), 0); data.set(R2.subarray(i, i + n), n);
         const ad = new AudioData({ format: 'f32-planar', sampleRate: SR, numberOfFrames: n, numberOfChannels: 2, timestamp: Math.round(i * 1e6 / SR), data }); encA.encode(ad); ad.close(); }
@@ -1072,7 +1089,7 @@ async function makeOnDevice() {
       if (!b) chk = ' Sound check: this browser could not read the sound back from the file.';
       else { const d = b.getChannelData(0); let sq = 0, cnt = 0; for (let i = 0; i < d.length; i += 7) { sq += d[i] * d[i]; cnt++; } const db = Math.round(20 * Math.log10(Math.sqrt(sq / Math.max(1, cnt)) || 1e-6)); chk = db < -55 ? ` ⚠ THE SOUND IS SILENT IN THE FINISHED FILE (${db} dB, ${aStat.n} sound blocks${aStat.desc ? '' : ', no format header'}). Tell me this message.` : ` Sound in the file: ${db} dB.`; }
     } catch (err) { chk = ' Sound check failed.'; }
-    mkResult(outBlob, 'video/mp4', `${ep.id}-${lang}.mp4`, `${DUR.toFixed(0)} seconds, ${W2}x${H2}.${cutNote} Sound: ${aname === 'aac' ? 'AAC' : aname.toUpperCase() + ' (iPhone Photos may not play this; try Files or another player)'}; ${voiceNote.join(', ')}.${chk}`);
+    mkResult(outBlob, 'video/mp4', `${ep.id}-${lang}.mp4`, `${DUR.toFixed(0)} seconds, ${W2}x${H2}.${cutNote} Sound: ${aname === 'aac' ? 'AAC' : aname.toUpperCase() + ' (iPhone Photos may not play this; try Files or another player)'}; ${voiceNote.join(', ')}.${chk} [audio: ${aStat.n} blocks, first ${aStat.first}${aStat.adts ? ', fixed ADTS' : ''}${aStat.madeAsc ? ', added header' : ''}]`);
   } catch (e) { mkSt(e.message || String(e), 'bad'); console.error(e); }
   finally {
     try { wake && wake.release(); } catch (e) {} try { els.forEach(x => x.remove()); } catch (e) {}
