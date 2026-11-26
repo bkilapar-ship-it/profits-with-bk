@@ -95,7 +95,7 @@ details summary{cursor:pointer;font-weight:700}
       <select id="addAt" style="width:auto"><option value="beforeEnd">before the end card</option><option value="top">at the very top</option><option value="end">at the very end</option></select>
       <button id="addScene" class="sm">Add scene</button>
     </div>
-    <div class="box" data-tab="config"><b>Episodes</b> <p class="muted" style="margin:4px 0 8px">Pick an episode at the top of the page. To start a new one, choose a layout below and tap the button. This does not change the episode you have open.</p><select id="newTpl" style="margin-bottom:8px"></select><button id="newEp" class="sm">Create a new episode with this layout</button></div>
+    <div class="box" data-tab="config"><b>Episodes</b> <p class="muted" style="margin:4px 0 8px">Pick an episode at the top of the page. To start a new one, choose a layout below and tap the button. This does not change the episode you have open.</p><select id="newTpl" style="margin-bottom:8px"></select><button id="newEp" class="sm">Create a new episode with this layout</button><div style="margin-top:14px"><b>Manage episodes</b><div id="epList"></div></div></div>
     <details class="box" data-tab="config" open><summary><b>Channel names and taglines</b></summary>
       <div id="chanBox"></div>
       <p class="muted">These appear on the presenter background and the end card. Saved to channel.json.</p>
@@ -173,6 +173,7 @@ const clone = o => JSON.parse(JSON.stringify(o));
 async function getJSON(url) { const r = await fetch(url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now()); if (!r.ok) throw new Error(url + ': ' + r.status); return r.json(); }
 async function boot() {
   try { index = (await getJSON('episodes/index.json')).episodes || []; } catch (e) { index = []; }
+  { const gone = store.get('ex.deleted', []); index = index.filter(x => !gone.includes(x)); }
   try { channel = await getJSON('channel.json'); } catch (e) {}
   const gh = store.get('ex.gh', {}); $('ghRepo').value = gh.repo || 'bkilapar-ship-it/profits-with-bk'; $('ghTok').value = gh.tok || '';
   const last = store.get('ex.last', index[0]);
@@ -194,6 +195,38 @@ async function loadEpisode(id) {
   lang = Object.keys(ep.languages || { en: 1 })[0];
   dirty = false; openScene = 0; tNow = 1.2;
   renderAll();
+}
+function renderEpList() {
+  const box = $('epList'); if (!box) return;
+  box.innerHTML = index.map(id => `<div class="row" style="align-items:center;gap:8px;margin-top:6px"><span class="grow">${esc(id)}${ep && ep.id === id ? ' <span class="pill">open</span>' : ''}</span><button class="sm" data-open="${esc(id)}">Open</button><button class="sm" data-rm="${esc(id)}" style="color:var(--bad)">Delete</button></div>`).join('') || '<div class="muted">No episodes yet.</div>';
+  box.querySelectorAll('[data-open]').forEach(b => b.onclick = async () => { if (dirty && !confirm('Switch episode? Unsaved changes stay on this device as a draft.')) return; fillEpSel(b.dataset.open); await loadEpisode(b.dataset.open); showTab('edit'); });
+  box.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => deleteEpisode(b.dataset.rm));
+}
+async function deleteEpisode(id) {
+  if (index.length <= 1) return msg('Keep at least one episode. Create a new one first, then delete this one.', 'bad');
+  const hasGH = $('ghRepo').value.trim() && $('ghTok').value.trim();
+  if (!confirm(`Delete the episode "${id}"?\n\nThis removes its scenes, its unsaved draft and the recordings kept on this device.${hasGH ? ' It is also deleted from GitHub.' : ' It stays on GitHub (you are not connected), so it is only hidden on this device.'}\n\nThis cannot be undone.`)) return;
+  // recordings on this device (best effort: find the file names from the saved episode or the draft)
+  try {
+    let src = null; const draft = store.get('ex.draft.' + id, null);
+    if (ep && ep.id === id) src = ep; else if (draft && draft.ep) src = draft.ep; else { try { src = await getJSON('episodes/' + id + '.json'); } catch (e) {} }
+    const files = new Set(); ((src && src.scenes) || []).forEach(s => Object.values(s.lang || {}).forEach(L => { if (L && L.take && L.take.file) { files.add(L.take.file); files.add(L.take.file + '.aud'); } }));
+    for (const f of files) { try { await DB.del(f); } catch (e) {} delete blobs[f]; }
+  } catch (e) {}
+  store.set('ex.draft.' + id, null);
+  let note = '';
+  if (hasGH) {
+    try {
+      const cur = await gh(`explainer/episodes/${id}.json?ref=main`);
+      if (cur) await gh(`explainer/episodes/${id}.json`, 'DELETE', { message: `Episode ${id}: deleted in the episode editor`, sha: cur.sha, branch: 'main' });
+      const ix = await gh('explainer/episodes/index.json?ref=main');
+      if (ix) { const list = (JSON.parse(unb64(ix.content)).episodes || []).filter(x => x !== id); await putFile('explainer/episodes/index.json', JSON.stringify({ episodes: list }, null, 1) + '\n', `Episode list: remove ${id}`); }
+    } catch (e) { note = ' GitHub said: ' + e.message; }
+  }
+  if (!hasGH || note) store.set('ex.deleted', [...store.get('ex.deleted', []), id]);
+  index = index.filter(x => x !== id);
+  if (ep && ep.id === id) { fillEpSel(index[0]); await loadEpisode(index[0]); } else { fillEpSel(ep && ep.id); renderEpList(); }
+  msg(`Deleted "${id}".` + note, note ? 'bad' : 'good');
 }
 const TEMPLATES = {
   quick: { label: 'Quick (aims at 30s): Intro, 1 Middle, End', mid: 1 },
@@ -217,7 +250,7 @@ function blankEpisode(id, tpl) {
 }
 
 // ---------- UI ----------
-function renderAll() { renderLangTabs(); renderLangSettings(); renderScenes(); renderChannel(); remount(); }
+function renderAll() { renderEpList(); renderLangTabs(); renderLangSettings(); renderScenes(); renderChannel(); remount(); }
 function renderLangTabs() {
   const L = ep.languages; $('mkLang').textContent = (L[lang] || {}).name || lang;
   $('langTabs').innerHTML = Object.keys(L).map(k => `<button class="tab${k === lang ? ' on' : ''}" data-l="${k}">${L[k].name || k}</button>`).join('') + `<button class="tab" id="addLang">+ Add language</button>`;
@@ -383,7 +416,7 @@ $('newEp').onclick = () => {
   const name = (prompt('Short name for the new episode (letters, numbers and dashes, for example "how-ai-learns"):') || '').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
   if (!name) return;
   if (index.includes(name)) return msg('An episode with that name already exists.', 'bad');
-  ep = blankEpisode(name, $('newTpl').value); index.push(name); fillEpSel(name); lang = 'en'; openScene = 0; tNow = 0; changed(); renderAll();
+  store.set('ex.deleted', store.get('ex.deleted', []).filter(x => x !== name)); ep = blankEpisode(name, $('newTpl').value); index.push(name); fillEpSel(name); lang = 'en'; openScene = 0; tNow = 0; changed(); renderAll();
 };
 $('copyScript').onclick = async () => { const s = E.script(ep, lang); try { await navigator.clipboard.writeText(s); msg('Script copied.', 'good'); } catch (e) { prompt('Copy the script:', s); } };
 $('dl').onclick = () => {
