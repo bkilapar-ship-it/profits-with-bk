@@ -1,0 +1,294 @@
+{
+ "id": "agentic-payments",
+ "title": {
+  "en": "Agentic payments: how an AI could shop and pay for you"
+ },
+ "languages": {
+  "en": {
+   "name": "English",
+   "currency": "£",
+   "locale": "en-GB",
+   "decimals": 2
+  }
+ },
+ "scenes": [
+  {
+   "type": "presenter",
+   "data": {
+    "layout": "cut",
+    "side": "right"
+   },
+   "lang": {
+    "en": {
+     "title": "Agentic payments: software that shops and pays for you",
+     "lines": [
+      "Hello, and welcome to Oh, I Get It! Complex things, explained with everyday life.",
+      "Today's topic is agentic payments: software that shops and pays for you.",
+      "I know which shop is cheapest for detergent and soap. I also know where milk and cheese are the best quality.",
+      "But we're a bit lazy. Visiting two shops for two kinds of items is a hassle, so we end up compromising.",
+      "What if an AI agent did the checking, and even made the payment for us?",
+      "Here's how that could work."
+     ]
+    }
+   }
+  },
+  {
+   "type": "cards",
+   "data": {
+    "arrows": "yes"
+   },
+   "lang": {
+    "en": {
+     "heading": "Step 1: Set up once",
+     "items": [
+      "phone | Add your card | Like adding a card to your phone wallet",
+      "fingerprint | Bank checks it's you | Fingerprint or a code",
+      "card | Agent gets a stand-in | Not your real card",
+      "list | You set the rules | Milk and cheese: M&S / Limit: £25"
+     ],
+     "note": "",
+     "lines": [
+      "Step one: a one-time setup.",
+      "You register your card with the agent, a bit like adding a card to your phone wallet.",
+      "Your bank checks it's really you, with a fingerprint or a code.",
+      "The agent is then designed to hold a digital stand-in for your card, not the card itself.",
+      "Then you set the rules: milk and cheese must come from M&S, for quality, and no more than £25 in total."
+     ]
+    }
+   }
+  },
+  {
+   "type": "cards",
+   "data": {
+    "arrows": "yes"
+   },
+   "lang": {
+    "en": {
+     "heading": "Step 2: Ask for quotes",
+     "items": [
+      "list | Your shopping list | Detergent, soap, / milk, cheese",
+      "shop | Shop A | Sends a quote",
+      "shop | Shop B | Sends a quote",
+      "shop | M&S | Sends a quote"
+     ],
+     "note": "A request for quote is called an RFQ.",
+     "lines": [
+      "Step two: ask.",
+      "Just like getting three quotes for a kitchen, the agent sends your shopping list to every supermarket in town.",
+      "In business, that's called a request for quote, or RFQ.",
+      "Detergent, soap, milk and cheese."
+     ]
+    }
+   }
+  },
+  {
+   "type": "cards",
+   "data": {
+    "arrows": "yes"
+   },
+   "lang": {
+    "en": {
+     "heading": "Step 3: Compare the totals",
+     "items": [
+      "lock | Your rule is locked in | Milk and cheese: M&S",
+      "scales | Compare the totals | Detergent and soap, / one total per shop",
+      "tick! | Lowest total wins | The rest of the basket / goes there"
+     ],
+     "note": "",
+     "lines": [
+      "Step three: compare.",
+      "The quotes come back, and the agent adds up the total for each shop.",
+      "It follows your rule: milk and cheese are locked to M&S.",
+      "The detergent and soap go to whichever shop gives the lowest total."
+     ]
+    }
+   }
+  },
+  {
+   "type": "cards",
+   "data": {
+    "arrows": "no"
+   },
+   "lang": {
+    "en": {
+     "heading": "A made-up example",
+     "items": [
+      "shop | Shop A | Detergent £3.90 / Soap £3.50 / Total £7.40",
+      "shop! | Shop B | Detergent £4.10 / Soap £3.00 / Total £7.10 / Wins on the total",
+      "lock | M&S | Milk and cheese, / locked in"
+     ],
+     "note": "Example prices, made up for this video.",
+     "lines": [
+      "In this made-up example, shop A charges £3.90 for detergent and £3.50 for soap, £7.40 in total.",
+      "Shop B charges £4.10 and £3.00, £7.10 in total.",
+      "Shop B isn't cheapest on everything, but it wins on the total.",
+      "Add the M&S milk and cheese, and the basket is complete."
+     ]
+    }
+   }
+  },
+  {
+   "type": "cards",
+   "data": {
+    "arrows": "yes"
+   },
+   "lang": {
+    "en": {
+     "heading": "Step 4: Pay",
+     "items": [
+      "agent | The agent pays | The stand-in, for just that amount and shop",
+      "shield | The shop checks | Is this a genuine agent?",
+      "network | Card network checks | Is the payment valid?",
+      "tick! | Your bank approves | Like any card payment"
+     ],
+     "note": "",
+     "lines": [
+      "Step four: pay.",
+      "For each shop, the agent uses the stand-in for just that purchase: that amount, that shop.",
+      "The shop checks two things. Is this a genuine agent? And does the card network confirm the payment is valid?",
+      "Your bank then approves it, like any card payment."
+     ]
+    }
+   }
+  },
+  {
+   "type": "cards",
+   "data": {
+    "arrows": "yes"
+   },
+   "lang": {
+    "en": {
+     "heading": "Over your limit?",
+     "items": [
+      "pound | Your limit | £25 in total",
+      "stop | The agent stops | The total is above the limit",
+      "alert | You get asked | Approve it, or say no"
+     ],
+     "note": "",
+     "lines": [
+      "If the total goes above the limit you set, the agent stops and asks you.",
+      "Same as a builder's quote coming in higher than agreed."
+     ]
+    }
+   }
+  },
+  {
+   "type": "cards",
+   "data": {
+    "arrows": "no"
+   },
+   "lang": {
+    "en": {
+     "heading": "Who is building this?",
+     "items": [
+      "shield | Permission | Example: Google's AP2",
+      "id | Identity | Examples: Visa and Mastercard agent checks",
+      "card | Payment | Examples: Visa and Mastercard"
+     ],
+     "note": "Examples only. Not an endorsement.",
+     "lines": [
+      "Visa, Mastercard, Google and others are building the parts for this: permission, identity and payment.",
+      "Treat this video as an example of what could be possible, not something you can do today."
+     ]
+    }
+   }
+  },
+  {
+   "type": "cards",
+   "data": {
+    "arrows": "no"
+   },
+   "lang": {
+    "en": {
+     "heading": "Who pays if it goes wrong?",
+     "items": [
+      "question | The open question | Is an agent's payment / counted as authorised?",
+      "bank | Your bank | Refunds an unauthorised / payment first",
+      "scales | The FCA | Firms stay responsible"
+     ],
+     "note": "Education only, not legal advice.",
+     "lines": [
+      "One question isn't settled. If the agent orders the wrong thing, who pays?",
+      "The rules say that if a payment wasn't authorised, your bank refunds you first. It can then claim the money back from the payment firm at fault.",
+      "But is a payment your agent made authorised? That's the open question.",
+      "On 24 November the FCA said firms stay responsible."
+     ]
+    }
+   }
+  },
+  {
+   "type": "cards",
+   "data": {
+    "arrows": "no"
+   },
+   "lang": {
+    "en": {
+     "heading": "Until then",
+     "items": [
+      "pound | Set a limit | Cap what it can spend",
+      "alert | Approve big buys | Ask for your OK",
+      "shield | Protect your card | Don't share card details with tools you don't understand"
+     ],
+     "note": "",
+     "lines": [
+      "Until then, set a spending limit, approve the big buys, and don't share your card details with a tool you don't understand.",
+      "This is education, not financial advice."
+     ]
+    }
+   }
+  },
+  {
+   "type": "endCard",
+   "data": {},
+   "lang": {
+    "en": {
+     "kicker": "AGENTIC PAYMENTS",
+     "main": "Software that shops and pays for you.",
+     "small": "Education only, not financial advice. Example prices are made up.",
+     "lines": [
+      "If you want to know the complex things in simple language, please like, share, and hit the bell button to subscribe."
+     ]
+    }
+   }
+  }
+ ],
+ "shorts": [
+  {
+   "title": {
+    "en": "What if an AI did your shopping and paid for it?"
+   },
+   "scenes": [
+    0
+   ]
+  },
+  {
+   "title": {
+    "en": "How an AI could find the cheapest basket"
+   },
+   "scenes": [
+    2,
+    3,
+    4
+   ]
+  },
+  {
+   "title": {
+    "en": "How an AI could pay without your card number"
+   },
+   "scenes": [
+    1,
+    5
+   ]
+  },
+  {
+   "title": {
+    "en": "Who pays if the AI gets it wrong?"
+   },
+   "scenes": [
+    6,
+    8,
+    9
+   ]
+  }
+ ]
+}

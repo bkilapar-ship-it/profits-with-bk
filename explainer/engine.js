@@ -563,6 +563,82 @@
     },
   };
 
+  // ---------------------------------------------------------------- step cards (icons + short words, appearing one by one)
+  const CARD_ICONS = ['card', 'phone', 'fingerprint', 'list', 'shop', 'basket', 'lock', 'tick', 'stop', 'bank', 'question', 'pound', 'agent', 'network', 'shield', 'id', 'alert', 'scales'];
+  function cardIcon(parent, name) { // simple flat pictures, no brand logos; drawn inside about -70..70
+    const g = el('g', {}, parent), gold = '#ffd166', ink = '#0d1b2a', blue = '#8ecae6';
+    switch (name) {
+      case 'card': el('rect', { x: -66, y: -42, width: 132, height: 84, rx: 12, fill: gold }, g); el('rect', { x: -66, y: -22, width: 132, height: 16, fill: ink, opacity: .75 }, g); el('rect', { x: -50, y: 12, width: 34, height: 12, rx: 4, fill: ink, opacity: .6 }, g); break;
+      case 'phone': el('rect', { x: -38, y: -66, width: 76, height: 132, rx: 14, fill: '#1b3a5c', stroke: gold, 'stroke-width': 6 }, g); el('rect', { x: -24, y: -30, width: 48, height: 32, rx: 6, fill: gold }, g); el('rect', { x: -24, y: 10, width: 48, height: 10, rx: 5, fill: blue }, g); el('circle', { cx: 0, cy: 48, r: 5, fill: gold }, g); break;
+      case 'fingerprint': [60, 46, 32, 18].forEach((r, i) => el('path', { d: `M${-r} ${14 - i * 3} a${r} ${r} 0 0 1 ${2 * r} 0`, fill: 'none', stroke: i % 2 ? blue : gold, 'stroke-width': 7, 'stroke-linecap': 'round', 'stroke-dasharray': i === 1 ? '70 14' : i === 2 ? '50 12' : '' }, g)); el('path', { d: 'M0 14 v40', stroke: gold, 'stroke-width': 7, 'stroke-linecap': 'round' }, g); el('path', { d: 'M-18 24 v30 M18 24 v26', stroke: blue, 'stroke-width': 7, 'stroke-linecap': 'round' }, g); break;
+      case 'list': el('rect', { x: -48, y: -64, width: 96, height: 128, rx: 12, fill: '#fff' }, g); el('rect', { x: -22, y: -72, width: 44, height: 18, rx: 6, fill: gold }, g); [-30, 0, 30].forEach(y => { el('path', { d: `M-34 ${y} l7 8 l13 -16`, stroke: '#2a9d8f', 'stroke-width': 6, fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g); el('rect', { x: -8, y: y - 5, width: 36, height: 9, rx: 4, fill: '#9fb3c8' }, g); }); break;
+      case 'shop': el('rect', { x: -56, y: -6, width: 112, height: 66, fill: '#e9f5fb' }, g); el('rect', { x: -14, y: 18, width: 28, height: 42, fill: '#1b3a5c' }, g); for (let i = 0; i < 6; i++) el('path', { d: `M${-60 + i * 20} -54 h20 l-4 46 h-20 z`, fill: i % 2 ? '#fff' : '#e76f51' }, g); el('path', { d: 'M-60 -54 h120 l8 -8 h-136 z', fill: '#bf4b30' }, g); break;
+      case 'basket': el('path', { d: 'M-62 -14 h124 l-16 66 h-92 z', fill: '#bc6c25' }, g); el('path', { d: 'M-34 -14 q34 -64 68 0', fill: 'none', stroke: '#9c5418', 'stroke-width': 8 }, g); el('line', { x1: -40, y1: 10, x2: 40, y2: 10, stroke: '#9c5418', 'stroke-width': 5 }, g); el('line', { x1: -36, y1: 32, x2: 36, y2: 32, stroke: '#9c5418', 'stroke-width': 5 }, g); break;
+      case 'lock': el('path', { d: 'M-28 -10 v-22 a28 28 0 0 1 56 0 v22', fill: 'none', stroke: '#c9d3df', 'stroke-width': 12 }, g); el('rect', { x: -48, y: -12, width: 96, height: 74, rx: 12, fill: gold }, g); el('circle', { cx: 0, cy: 22, r: 9, fill: ink }, g); el('rect', { x: -4, y: 24, width: 8, height: 22, rx: 4, fill: ink }, g); break;
+      case 'tick': el('circle', { r: 58, fill: '#2a9d8f' }, g); el('path', { d: 'M-28 2 l20 22 l38 -44', stroke: '#fff', 'stroke-width': 14, fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g); break;
+      case 'stop': el('path', { d: 'M-24 -64 h48 l40 40 v48 l-40 40 h-48 l-40 -40 v-48 z', fill: '#d62828' }, g); el('rect', { x: -36, y: -9, width: 72, height: 18, rx: 6, fill: '#fff' }, g); break;
+      case 'bank': el('path', { d: 'M-66 -20 L0 -64 L66 -20 z', fill: gold }, g); [-44, -15, 15, 44].forEach(x => el('rect', { x: x - 8, y: -14, width: 16, height: 56, fill: '#e9f5fb' }, g)); el('rect', { x: -66, y: 46, width: 132, height: 14, rx: 4, fill: '#9fb3c8' }, g); break;
+      case 'question': el('circle', { r: 58, fill: gold }, g); txt(g, 0, 32, '?', 100, 800, ink); break;
+      case 'pound': el('circle', { r: 58, fill: gold }, g); txt(g, 0, 28, '£', 84, 800, ink); break;
+      case 'agent': el('line', { x1: 0, y1: -64, x2: 0, y2: -44, stroke: gold, 'stroke-width': 6 }, g); el('circle', { cx: 0, cy: -68, r: 8, fill: gold }, g); el('rect', { x: -54, y: -44, width: 108, height: 92, rx: 24, fill: '#c9d3df' }, g); [-22, 22].forEach(x => el('circle', { cx: x, cy: -8, r: 12, fill: ink }, g)); el('path', { d: 'M-22 22 q22 16 44 0', stroke: ink, 'stroke-width': 6, fill: 'none', 'stroke-linecap': 'round' }, g); break;
+      case 'network': [[-46, 30], [46, 30], [0, -44]].forEach(([x, y], i, a) => { const q = a[(i + 1) % 3]; el('line', { x1: x, y1: y, x2: q[0], y2: q[1], stroke: blue, 'stroke-width': 6 }, g); }); [[-46, 30], [46, 30], [0, -44]].forEach(([x, y]) => el('circle', { cx: x, cy: y, r: 18, fill: gold }, g)); break;
+      case 'shield': el('path', { d: 'M0 -64 L52 -42 v36 q0 46 -52 70 q-52 -24 -52 -70 v-36 z', fill: '#2a9d8f' }, g); el('path', { d: 'M-22 -2 l16 18 l30 -34', stroke: '#fff', 'stroke-width': 11, fill: 'none', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, g); break;
+      case 'id': el('rect', { x: -64, y: -44, width: 128, height: 88, rx: 12, fill: '#e9f5fb' }, g); el('circle', { cx: -30, cy: -8, r: 14, fill: '#6b7f8e' }, g); el('path', { d: 'M-52 34 q22 -34 44 0 z', fill: '#6b7f8e' }, g); [-14, 8, 30].forEach(y => el('rect', { x: 0, y: y - 12, width: 52, height: 9, rx: 4, fill: '#9fb3c8' }, g)); break;
+      case 'alert': el('rect', { x: -38, y: -66, width: 76, height: 132, rx: 14, fill: '#1b3a5c', stroke: gold, 'stroke-width': 6 }, g); el('circle', { cx: 0, cy: -4, r: 24, fill: '#d62828' }, g); el('rect', { x: -4, y: -18, width: 8, height: 20, rx: 3, fill: '#fff' }, g); el('circle', { cx: 0, cy: 10, r: 4.5, fill: '#fff' }, g); break;
+      case 'scales': el('rect', { x: -4, y: -56, width: 8, height: 104, fill: '#c9d3df' }, g); el('rect', { x: -40, y: 44, width: 80, height: 12, rx: 5, fill: '#c9d3df' }, g); el('rect', { x: -62, y: -50, width: 124, height: 8, rx: 4, fill: gold }, g); [-52, 52].forEach(x => { el('path', { d: `M${x} -42 l-24 52 h48 z`, fill: 'none', stroke: gold, 'stroke-width': 4 }, g); el('path', { d: `M${x - 30} 10 h60 a30 22 0 0 1 -60 0 z`, fill: blue }, g); }); break;
+      default: el('circle', { r: 46, fill: gold }, g);
+    }
+    return g;
+  }
+  function wrapWords(s, size, maxW) { // rough line breaking for SVG text; "/" in the words forces a new line
+    const per = size * 0.54, maxC = Math.max(6, Math.floor(maxW / per)), out = [];
+    String(s || '').split('/').forEach(part => { let line = ''; part.trim().split(/\s+/).filter(Boolean).forEach(w => { if ((line + ' ' + w).trim().length > maxC && line) { out.push(line); line = w; } else line = (line + ' ' + w).trim(); }); if (line) out.push(line); });
+    return out;
+  }
+  SCENES.cards = {
+    label: 'Step cards (pictures with short words, shown one by one)', base: 10, captions: true,
+    fields: [
+      { k: 'heading', per: 'lang', kind: 'text', label: 'Heading on top (for example Step 1: Set up once)' },
+      { k: 'items', per: 'lang', kind: 'lines', label: 'Cards, one per line, as: picture | title | small words (use / for a new line). Pictures: ' + CARD_ICONS.join(', ') + '. Add ! after the picture to highlight a card.' },
+      { k: 'arrows', per: 'data', kind: 'select', options: [['yes', 'Arrows between the cards'], ['no', 'No arrows']], label: 'Arrows' },
+      { k: 'note', per: 'lang', kind: 'text', label: 'Small note at the bottom (for example Example prices)' },
+      { k: 'lines', per: 'lang', kind: 'lines', label: 'What you say (one line per caption)' },
+    ],
+    defaults: { data: { arrows: 'yes' }, lang: { heading: 'Step 1', items: ['card | First card | A few small words', 'tick | Second card | A few small words'], note: '', lines: ['Say what these cards show.'] } },
+    build(g, S, ctx) {
+      const grd = el('linearGradient', { id: 'cg' + ctx.uid, x1: 0, y1: 0, x2: 1, y2: 1 }, ctx.defs);
+      el('stop', { offset: 0, 'stop-color': '#0d1b2a' }, grd); el('stop', { offset: 1, 'stop-color': '#10294a' }, grd);
+      el('rect', { width: W, height: H, fill: `url(#cg${ctx.uid})` }, g);
+      const dots = el('g', { opacity: .14 }, g); for (let i = 0; i < 24; i++) el('circle', { cx: (i * 337) % W, cy: (i * 211) % H, r: 3 + (i % 4) * 2, fill: '#ffd166' }, dots);
+      const gold = el('linearGradient', { id: 'cgd' + ctx.uid, x1: 0, y1: 0, x2: 0, y2: 1 }, ctx.defs);
+      el('stop', { offset: 0, 'stop-color': '#fff3c4' }, gold); el('stop', { offset: 1, 'stop-color': '#e8c15a' }, gold);
+      const head = txt(g, 960, 170, S.L.heading || '', 84, 800, `url(#cgd${ctx.uid})`, { max: 1700, attrs: { stroke: '#0b1522', 'stroke-width': 3, 'paint-order': 'stroke' } });
+      const items = (S.L.items || []).map(x => String(x).split('|').map(p => p.trim())).filter(a => a[0]).slice(0, 4), n = Math.max(1, items.length), gap = 70;
+      const cw = Math.min(520, (1740 - gap * (n - 1)) / n), x0 = 960 - (cw * n + gap * (n - 1)) / 2, top = 250, ch = 625;
+      const cards = items.map(([ic, title, detail], i) => {
+        const hi = /!$/.test(ic), icon = ic.replace(/!$/, '').toLowerCase(), cx = x0 + i * (cw + gap);
+        const root = el('g', {}, g), box = el('g', {}, root);
+        el('rect', { x: cx, y: top, width: cw, height: ch, rx: 34, fill: hi ? '#1c3b2e' : '#13263b', stroke: hi ? '#52b788' : '#ffd166', 'stroke-width': hi ? 9 : 5 }, box);
+        const pic = el('g', { transform: `translate(${cx + cw / 2},${top + 170}) scale(1.35)` }, box); cardIcon(pic, icon);
+        txt(box, cx + cw / 2, top + 366, title || '', 50, 800, '#fff', { max: cw - 50 });
+        const size = n > 3 ? 32 : 36; wrapWords(detail || '', size, cw - 60).slice(0, 5).forEach((ln, j) => txt(box, cx + cw / 2, top + 424 + j * (size + 9), ln, size, 500, '#cfe3ff', { max: cw - 40 }));
+        if (hi) { const tk = el('g', { transform: `translate(${cx + cw - 46},${top + 46}) scale(.5)` }, box); cardIcon(tk, 'tick'); }
+        return { root, cx };
+      });
+      const arrows = S.data.arrows !== 'no' ? cards.slice(1).map(c => { const a = el('g', {}, g); el('path', { d: `M${c.cx - gap + 18} ${top + ch / 2 - 24} l${gap - 36} 24 l-${gap - 36} 24`, fill: 'none', stroke: '#ffd166', 'stroke-width': 10, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, a); return a; }) : [];
+      txt(g, 960, 912, S.L.note || '', 30, 500, '#8fa6bd', { max: 1700, attrs: { 'font-style': 'italic' } });
+      return u => {
+        const ts = u * this.base; head.setAttribute('opacity', ease(prog(ts, 0, .5)));
+        cards.forEach((c, i) => {
+          const a = .7 + i * (5.2 / n), d = prog(ts, a, a + .55), k = lerp(.8, 1, bounce(d)), cxm = c.cx + cw / 2, cym = top + ch / 2;
+          c.root.setAttribute('opacity', ease(prog(ts, a, a + .3)));
+          c.root.setAttribute('transform', `translate(${cxm},${cym}) scale(${k}) translate(${-cxm},${-cym})`);
+          if (arrows[i - 1]) arrows[i - 1].setAttribute('opacity', ease(prog(ts, a - .1, a + .3)));
+        });
+      };
+    },
+  };
+
   // ---------------------------------------------------------------- episode helpers
   function langOf(ep, lang) {
     const L = Object.assign({ name: lang, currency: '', locale: 'en-GB', decimals: 2 }, (ep.languages || {})[lang] || {});
@@ -642,7 +718,7 @@
     svg.style.fontFamily = 'var(--ex-font, sans-serif)';
     const defs = el('defs', {}, svg);
     const L = langOf(ep, lang), money = moneyFn(L);
-    const channelName = (channel.names || {})[lang] || channel.name || 'Oh, I Get It';
+    const channelName = (channel.names || {})[lang] || channel.name || 'Oh, I Get It!!';
     const tagline = (channel.taglines || {})[lang] || (channel.taglines || {}).en || '';
     const tl = timeline(ep, lang);
     const built = tl.scenes.map((o, idx) => {
@@ -668,7 +744,7 @@
         b.g.style.display = visible ? '' : 'none';
         if (visible) { try { b.draw(clamp((t - start) / (end - start))); } catch (e) { /* keep playing */ } }
       });
-      const c = tl.captions.find(c => c.show && t >= c.start && t < c.end);
+      const c = opts.noCaptions ? null : tl.captions.find(c => c.show && t >= c.start && t < c.end);
       if (!c) { capG.setAttribute('opacity', 0); return; }
       capG.setAttribute('opacity', Math.min(prog(t, c.start, c.start + .2), 1 - prog(t, c.end - .2, c.end)));
       if (lastCap !== c) {

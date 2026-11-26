@@ -73,7 +73,7 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 20:50 layout-preview</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 22:30 shorts</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -140,6 +140,19 @@ canvas.camv{object-fit:contain}
         <div class="row"><button id="dl" class="sm">Download file</button><button id="save" class="sm" title="Optional: stores the episode file on GitHub (needs the token in Configuration)">Save to GitHub (optional)</button></div>
       </div>
     </div>
+    <div class="box" id="shortsBox" data-tab="video">
+      <b>Make Shorts</b> <span class="pill" id="shLang"></span>
+      <p class="muted" style="margin:4px 0 8px">A Short is vertical (9:16): the title on top, the scene pictures in the middle, big captions underneath, and your voice. Pick a suggested Short or tick your own scenes. Under 60 seconds works best. Make the full video first, or in any order: both use the same recordings.</p>
+      <div id="shSug"></div>
+      <div id="shPick" style="margin:8px 0"></div>
+      <div id="shTot" class="muted"></div>
+      <div class="fld"><label for="shTitle">Title shown at the top of the Short</label><input id="shTitle"></div>
+      <button class="pri" id="shGo">📱 Make this Short on this device</button>
+      <canvas id="shCanvas" style="display:none;width:60%;max-width:300px;border-radius:8px;margin-top:8px;background:#000"></canvas>
+      <div id="shBar" style="height:6px;border-radius:3px;background:var(--line);margin-top:8px"><i style="display:block;height:100%;width:0;border-radius:3px;background:var(--good)"></i></div>
+      <div id="shSt" class="msg"></div>
+      <div id="shOut"></div>
+    </div>
     <div class="box muted" data-tab="edit">
       <b>How this works.</b> Change any words, prices or timings in the scene cards and the preview updates. Each language has its own words and prices; the animation is shared. "Save to GitHub" updates the episode file, and the video build then makes one video per language. Lines in the "voiceover" boxes become the captions and your teleprompter script.
     </div>
@@ -160,9 +173,9 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=2030"></script>
+<script src="engine.js?v=2230"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=2030"></script>
+<script src="cutout.js?v=2230"></script>
 <script>
 (() => {
 'use strict';
@@ -279,7 +292,7 @@ function addLanguage() {
   const from = ep.languages.en ? 'en' : Object.keys(ep.languages)[0];
   ep.title = ep.title || {}; ep.title[code] = (ep.title[from] || '');
   ep.scenes.forEach(s => { s.lang = s.lang || {}; s.lang[code] = clone(s.lang[from] || {}); delete s.lang[code].take; });
-  channel.names = channel.names || {}; if (!channel.names[code]) channel.names[code] = (channel.names.en || 'Oh, I Get It') + ' - ' + name;
+  channel.names = channel.names || {}; if (!channel.names[code]) channel.names[code] = (channel.names.en || 'Oh, I Get It!!') + ' - ' + name;
   lang = code; changed(); renderAll();
   msg(`Added ${name}. Every scene starts with a copy of the ${ep.languages[from].name} words and prices: translate them and set the prices.`, 'good');
 }
@@ -338,7 +351,7 @@ function lenSummary() {
   $('lenSum').innerHTML = `<b>Episode: ${Math.floor(t / 60)}:${String(Math.round(t % 60)).padStart(2, '0')}</b> <span class="muted">${n} scene${n === 1 ? '' : 's'}. ${tip}</span><div class="sum">${segs}</div><div class="muted">Structure: one Intro, as many Middle scenes as the idea needs, then the End card. Scenes grow with your script; the target is 45 to 90 seconds.</div>`;
 }
 function renderScenes() {
-  lenSummary();
+  lenSummary(); try { shRender(); } catch (e) {}
   const tl = E.timeline(ep, lang);
   $('scenes').innerHTML = ep.scenes.map((s, i) => {
     const T = E.SCENES[s.type]; if (!T) return `<div class="scene"><div class="hd"><b>Unknown scene type: ${esc(s.type)}</b><button class="sm" data-del="${i}">Delete</button></div></div>`;
@@ -770,8 +783,9 @@ function storeTake(i, blob, kind, dur, a, b, ext, aud) {
 
 // ---------- Make video: your voice and camera on top of the finished animation, made on this device ----------
 // Uses the soundless video and timeline.json that the build publishes to the explainer-renders branch.
-const mk = { busy: false, url: null, blob: null };
-const mkSt = (h, c) => { $('mkSt').innerHTML = h || ''; $('mkSt').className = 'msg ' + (c || ''); };
+const mk = { busy: false, url: null, blob: null, ids: { st: 'mkSt', bar: 'mkBar', cv: 'mkCanvas', out: 'mkOut' }, shTitle: '' };
+const busyUI = b => ['mkGo', 'mkGo2', 'shGo'].forEach(i => { const n = $(i); if (n) n.disabled = b; });
+const mkSt = (h, c) => { const n = $(mk.ids.st); n.innerHTML = h || ''; n.className = 'msg ' + (c || ''); };
 async function fetchRender(rel, as) {
   const repo = $('ghRepo').value.trim() || 'bkilapar-ship-it/profits-with-bk', tok = $('ghTok').value.trim();
   const h = { Accept: 'application/vnd.github.raw' }; if (tok) h.Authorization = 'Bearer ' + tok;
@@ -913,7 +927,8 @@ async function decodeSound(ac, blob) { try { return await ac.decodeAudioData(awa
 
 // ---------- Upload to YouTube straight from this device (Google sign-in, resumable upload) ----------
 let ytTok = null, ytTokExp = 0;
-const ytSt = (h, c) => { const n = $('ytSt'); if (n) { n.innerHTML = h || ''; n.className = 'msg ' + (c || ''); } };
+let ytTarget = { st: 'ytSt', bar: 'mkBar' };
+const ytSt = (h, c) => { const n = $(ytTarget.st); if (n) { n.innerHTML = h || ''; n.className = 'msg ' + (c || ''); } };
 function ytAuth(cid) {
   return new Promise((res, rej) => {
     if (ytTok && Date.now() < ytTokExp) return res(ytTok);
@@ -925,31 +940,63 @@ function ytAuth(cid) {
 function ytPut(url, blob, type) {
   return new Promise((res, rej) => {
     const x = new XMLHttpRequest(); x.open('PUT', url); x.setRequestHeader('Content-Type', type);
-    x.upload.onprogress = e => { if (e.lengthComputable) { $('mkBar').firstChild.style.width = (100 * e.loaded / e.total) + '%'; ytSt(`Uploading ${(e.loaded / 1048576).toFixed(0)} of ${(e.total / 1048576).toFixed(0)} MB. Keep this page open.`); } };
+    x.upload.onprogress = e => { if (e.lengthComputable) { $(ytTarget.bar).firstChild.style.width = (100 * e.loaded / e.total) + '%'; ytSt(`Uploading ${(e.loaded / 1048576).toFixed(0)} of ${(e.total / 1048576).toFixed(0)} MB. Keep this page open.`); } };
     x.onload = () => (x.status >= 200 && x.status < 300 ? res(JSON.parse(x.responseText)) : rej(new Error('YouTube said ' + x.status + ': ' + x.responseText.slice(0, 200))));
     x.onerror = () => rej(new Error('The upload connection dropped. Tap Upload again to retry.')); x.send(blob);
   });
 }
-async function ytUpload() {
-  const btn = $('ytGo'); btn.disabled = true;
+async function ytUpload(o) {
+  o = Object.assign({ btn: 'ytGo', blob: mk.blob, title: 'ytT', desc: 'ytD', priv: 'ytPriv', st: 'ytSt', bar: 'mkBar' }, o || {});
+  ytTarget = { st: o.st, bar: o.bar };
+  const btn = $(o.btn); btn.disabled = true;
   try {
-    if (!mk.blob) throw new Error('Make the video first.');
+    if (!o.blob) throw new Error('Make the video first.');
     const cid = $('ytId').value.trim();
     if (!/\.apps\.googleusercontent\.com$/.test(cid)) throw new Error('Paste your Google OAuth client ID first (the same one the studio page uses; see the one-time setup below).');
     try { localStorage.setItem('bkstudio-ytid', cid); } catch (e) {}
-    const title = $('ytT').value.trim().slice(0, 100); if (!title) throw new Error('Add a title.');
-    const desc = $('ytD').value.slice(0, 4900), type = mk.blob.type || 'video/mp4';
+    const title = $(o.title).value.trim().slice(0, 100); if (!title) throw new Error('Add a title.');
+    const desc = $(o.desc).value.slice(0, 4900), type = o.blob.type || 'video/mp4';
     ytSt('Signing in with Google…'); const tok = await ytAuth(cid);
     ytSt('Starting the upload…');
-    const r = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status', { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json; charset=UTF-8', 'X-Upload-Content-Type': type, 'X-Upload-Content-Length': String(mk.blob.size) },
-      body: JSON.stringify({ snippet: { title, description: desc, categoryId: '27', defaultLanguage: lang, defaultAudioLanguage: lang }, status: { privacyStatus: $('ytPriv').value, selfDeclaredMadeForKids: false } }) });
+    const r = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status', { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json; charset=UTF-8', 'X-Upload-Content-Type': type, 'X-Upload-Content-Length': String(o.blob.size) },
+      body: JSON.stringify({ snippet: { title, description: desc, categoryId: '27', defaultLanguage: lang, defaultAudioLanguage: lang }, status: { privacyStatus: $(o.priv).value, selfDeclaredMadeForKids: false } }) });
     if (!r.ok) throw new Error('YouTube refused to start the upload (' + r.status + '): ' + (await r.text()).slice(0, 200));
     const loc = r.headers.get('Location'); if (!loc) throw new Error('YouTube did not return an upload address.');
-    const v = await ytPut(loc, mk.blob, type);
-    ytSt(`Uploaded as ${$('ytPriv').value}. <a href="https://studio.youtube.com/video/${v.id}/edit" target="_blank" rel="noopener">Open it in YouTube Studio</a>`, 'good');
+    const v = await ytPut(loc, o.blob, type);
+    ytSt(`Uploaded as ${$(o.priv).value}. <a href="https://studio.youtube.com/video/${v.id}/edit" target="_blank" rel="noopener">Open it in YouTube Studio</a>`, 'good');
   } catch (e) { ytSt(esc(e.message || String(e)), 'bad'); }
   finally { btn.disabled = false; }
 }
+function shUpCard() {
+  const name = ((channel.names || {})[lang] || (channel.names || {}).en || 'Oh, I Get It!!'), t = (mk.shTitle || ((ep.title || {})[lang] || ep.id)).slice(0, 88);
+  return `<div class="box" style="margin-top:10px"><b>Upload this Short to YouTube</b> <span class="pill">${esc(name)}</span>
+    <div class="fld"><label>Title</label><input id="shT" value="${esc(t + ' #Shorts')}"></div>
+    <div class="fld"><label>Description</label><textarea id="shD" rows="4">${esc('Watch the full video on the channel: ' + name + '\n\nAll prices in this video are illustrative.\n\n#Shorts #OhIGetIt')}</textarea></div>
+    <div class="row"><select id="shPriv" style="width:auto"><option value="private">Private</option><option value="unlisted">Unlisted</option></select><button class="pri" id="shUp">⬆ Upload this Short</button></div>
+    <div id="shUpSt" class="msg"></div>
+    <p class="muted">Needs the Google client ID in the Configuration tab (once). A vertical video under 3 minutes with #Shorts is filed as a Short.</p></div>`;
+}
+function shUpload() { return ytUpload({ btn: 'shUp', blob: mk.blob, title: 'shT', desc: 'shD', priv: 'shPriv', st: 'shUpSt', bar: 'shBar' }); }
+// ---- the Shorts card: suggested Shorts and your own picks
+const shPicked = new Set();
+function shTotal() {
+  const tl = E.timeline(ep, lang), d = {}; tl.scenes.forEach(o => { d[o.i] = o.dur; });
+  const idx = [...shPicked].filter(i => d[i] != null), t = idx.reduce((a, i) => a + d[i], 0);
+  $('shTot').innerHTML = idx.length ? `Total ${Math.round(t)} s` + (t > 180 ? ' <span class="warn">over 3 minutes: untick something</span>' : t > 60 ? ' (over 60 s: it still works, but under 60 s tends to do better)' : ' (a good length for a Short)') : 'Tick at least one scene.';
+  $('shGo').disabled = !idx.length || mk.busy;
+}
+function shRender() {
+  const box = $('shPick'); if (!box) return;
+  const tl = E.timeline(ep, lang), d = {}; tl.scenes.forEach(o => { d[o.i] = o.dur; });
+  $('shLang').textContent = (ep.languages[lang] || {}).name || lang;
+  [...shPicked].forEach(i => { if (!ep.scenes[i]) shPicked.delete(i); });
+  $('shSug').innerHTML = (ep.shorts || []).map((x, k) => { const secs = Math.round(x.scenes.reduce((a, i) => a + (d[i] || 0), 0)); return `<button class="sm" data-sug="${k}" style="display:block;width:100%;text-align:left;margin:0 0 6px">Short ${k + 1}: ${esc((x.title || {})[lang] || (x.title || {}).en || '')} <span class="muted">(scenes ${x.scenes.map(i => i + 1).join(', ')}, ${secs} s)</span></button>`; }).join('');
+  box.innerHTML = ep.scenes.map((sc, i) => { const T = E.SCENES[sc.type]; if (!T) return ''; const L = E.sceneLang(sc, lang), first = ((L.lines || [])[0] || '').slice(0, 46); return `<label style="display:flex;gap:8px;align-items:flex-start;margin:4px 0"><input type="checkbox" value="${i}" ${shPicked.has(i) ? 'checked' : ''} style="width:auto;margin-top:3px"><span><b>${i + 1}</b> ${esc(first || T.label)} <span class="muted">${d[i] != null ? Math.round(d[i]) + ' s' : ''}</span></span></label>`; }).join('');
+  box.querySelectorAll('input').forEach(x => { x.onchange = () => { x.checked ? shPicked.add(+x.value) : shPicked.delete(+x.value); shTotal(); }; });
+  $('shSug').querySelectorAll('[data-sug]').forEach(b => { b.onclick = () => { const x = ep.shorts[+b.dataset.sug]; shPicked.clear(); x.scenes.forEach(i => shPicked.add(i)); $('shTitle').value = ((x.title || {})[lang] || (x.title || {}).en || ''); shRender(); }; });
+  shTotal();
+}
+$('shGo').onclick = () => { const idx = [...shPicked].sort((a, b) => a - b); if (!idx.length) return; const title = $('shTitle').value.trim() || ((ep.title || {})[lang] || ep.id); makeOnDevice({ short: { scenes: idx, title } }); };
 function ytCard() {
   const L = ep.languages[lang] || {}, lines = []; ep.scenes.forEach(sc => ((sc.lang || {})[lang] || {}).lines && lines.push(...sc.lang[lang].lines.filter(x => String(x).trim())));
   const tag = ((channel.taglines || {})[lang] || (channel.taglines || {}).en || ''), name = ((channel.names || {})[lang] || (channel.names || {}).en || 'Oh, I Get It');
@@ -963,11 +1010,12 @@ function ytCard() {
 }
 function mkResult(blob, type, name, info) {
   mk.blob = blob; if (mk.url) URL.revokeObjectURL(mk.url); mk.url = URL.createObjectURL(blob);
-  $('mkOut').innerHTML = `<video controls playsinline src="${mk.url}" style="width:100%;border-radius:8px;margin-top:8px"></video>
-    <div class="row" style="margin-top:8px"><a class="sm" href="${mk.url}" download="${name}" style="padding:7px 12px;border:1px solid var(--line);border-radius:8px;text-decoration:none;color:inherit">⬇ Save the video</a>
+  const isSh = mk.ids.out === 'shOut';
+  $(mk.ids.out).innerHTML = `<video controls playsinline src="${mk.url}" style="${isSh ? 'max-height:60vh;' : 'width:100%;'}border-radius:8px;margin-top:8px"></video>
+    <div class="row" style="margin-top:8px"><a class="sm" href="${mk.url}" download="${name}" style="padding:7px 12px;border:1px solid var(--line);border-radius:8px;text-decoration:none;color:inherit">⬇ Save the ${isSh ? 'Short' : 'video'}</a>
     <button class="sm pri" id="mkShare">Share… (Save Video, YouTube, WhatsApp)</button></div>
-    <p class="muted">Watch it once before publishing. If Save does nothing on iPhone, tap Share and choose Save Video.</p>${ytCard()}`;
-  $('ytGo').onclick = ytUpload;
+    <p class="muted">Watch it once before publishing. If Save does nothing on iPhone, tap Share and choose Save Video.</p>${isSh ? shUpCard() : ytCard()}`;
+  if (isSh) $('shUp').onclick = shUpload; else $('ytGo').onclick = () => ytUpload();
   $('mkShare').onclick = async () => {
     const f = new File([blob], name, { type });
     if (navigator.canShare && navigator.canShare({ files: [f] })) { try { await navigator.share({ files: [f], title: (ep.title || {})[lang] || ep.id }); } catch (e) {} }
@@ -992,13 +1040,42 @@ function aacChunk(c, m, st, muxer, aname, SR) {
   const chunk = new EncodedAudioChunk({ type: c.type, timestamp: c.timestamp, duration: c.duration || undefined, data });
   muxer.addAudioChunk(chunk, { decoderConfig: { codec: 'mp4a.40.2', sampleRate: SR, numberOfChannels: 2, description: asc } });
 }
-async function makeOnDevice() {
-  if (mk.busy) return; mk.busy = true; $('mkGo').disabled = true; $('mkGo2').disabled = true; $('mkOut').innerHTML = ''; stop();
+
+// ---- Shorts (vertical 9:16): backdrop with title and footer, and big captions drawn over the frame
+function fitFont(x, text, weight, size, maxW, fam) { let f = size; x.font = `${weight} ${f}px ${fam}`; while (x.measureText(text).width > maxW && f > 12) { f -= 1; x.font = `${weight} ${f}px ${fam}`; } return f; }
+function wrapCanvas(x, text, maxW) { const out = []; let line = ''; String(text || '').split(/\s+/).filter(Boolean).forEach(w => { const t = line ? line + ' ' + w : w; if (x.measureText(t).width > maxW && line) { out.push(line); line = w; } else line = t; }); if (line) out.push(line); return out; }
+function shortBackdrop(W2, H2, fam, title, name) {
+  const b = document.createElement('canvas'); b.width = W2; b.height = H2; const x = b.getContext('2d'), U = W2 / 1080;
+  const g = x.createLinearGradient(0, 0, W2, H2); g.addColorStop(0, '#0d1b2a'); g.addColorStop(1, '#10294a'); x.fillStyle = g; x.fillRect(0, 0, W2, H2);
+  x.fillStyle = 'rgba(255,209,102,.13)'; for (let i = 0; i < 30; i++) { x.beginPath(); x.arc(((i * 337) % 1080) * U, ((i * 211) % 1920) * U, (3 + (i % 4) * 2) * U, 0, 7); x.fill(); }
+  x.textAlign = 'center'; x.textBaseline = 'alphabetic';
+  const gg = x.createLinearGradient(0, 60 * U, 0, 150 * U); gg.addColorStop(0, '#fff3c4'); gg.addColorStop(1, '#e8c15a');
+  x.font = `800 ${fitFont(x, name.toUpperCase(), 800, 92 * U, 960 * U, fam)}px ${fam}`; x.lineWidth = 6 * U; x.strokeStyle = '#0b1522'; x.lineJoin = 'round'; x.strokeText(name.toUpperCase(), W2 / 2, 140 * U); x.fillStyle = gg; x.fillText(name.toUpperCase(), W2 / 2, 140 * U);
+  x.font = `800 ${54 * U}px ${fam}`; x.fillStyle = '#cfe3ff'; const tl2 = wrapCanvas(x, title, 940 * U).slice(0, 3); tl2.forEach((l, i) => x.fillText(l, W2 / 2, (225 + i * 66) * U));
+  x.font = `800 ${54 * U}px ${fam}`; x.fillStyle = '#ffd166'; x.fillText('Like · Share · Subscribe', W2 / 2, 1790 * U);
+  x.font = `500 ${36 * U}px ${fam}`; x.fillStyle = '#8fa6bd'; x.fillText('The full video is on the channel', W2 / 2, 1850 * U);
+  return b;
+}
+function shortCaption(c, tl, t, W2, fam) {
+  const U = W2 / 1080, cap = tl.captions.find(k => k.show && t >= k.start && t < k.end); if (!cap) return;
+  const a = Math.min(mkProg(t, cap.start, cap.start + .2), 1 - mkProg(t, cap.end - .2, cap.end)); if (a <= 0) return;
+  c.save(); c.globalAlpha = a; c.textAlign = 'center'; c.textBaseline = 'alphabetic'; c.lineJoin = 'round';
+  let size = 70 * U, lines; for (; ;) { c.font = `800 ${size}px ${fam}`; lines = wrapCanvas(c, cap.text, 940 * U); if (lines.length * size * 1.22 <= 560 * U || size < 40 * U) break; size -= 2 * U; }
+  const lh = size * 1.22, top = 1040 * U + (560 * U - lines.length * lh) / 2 + size * .85;
+  lines.forEach((l, i) => { c.lineWidth = size * .2; c.strokeStyle = '#05101c'; c.strokeText(l, W2 / 2, top + i * lh); c.fillStyle = '#fff'; c.fillText(l, W2 / 2, top + i * lh); });
+  c.restore();
+}
+async function makeOnDevice(opts) {
+  if (mk.busy) return; const SHORT = opts && opts.short ? opts.short : null; mk.ids = SHORT ? { st: 'shSt', bar: 'shBar', cv: 'shCanvas', out: 'shOut' } : { st: 'mkSt', bar: 'mkBar', cv: 'mkCanvas', out: 'mkOut' }; mk.shTitle = SHORT ? SHORT.title || '' : '';
+  const IDS = mk.ids, epU = SHORT ? Object.assign({}, ep, { scenes: SHORT.scenes.map(i => ep.scenes[i]).filter(Boolean) }) : ep;
+  mk.busy = true; busyUI(true); $(IDS.out).innerHTML = ''; stop();
   let wake = null, svg = null, encV = null, encA = null, ac = null; const urls = [], els = [];
   try {
     if (!window.VideoEncoder || !window.VideoFrame || !window.AudioEncoder || !window.AudioData) throw new Error('This browser cannot make videos on the device. On iPhone you need iOS 17 or newer in Safari; on Android use a recent Chrome. You can use "Use the GitHub build instead".');
     if (!window.Mp4Muxer) throw new Error('The video tool did not load. Reload the page and try again.');
-    const tl = E.timeline(ep, lang), DUR = tl.duration, FPS = 30, N = Math.round(DUR * FPS), [W2, H2] = mkFrame(), SR = 48000;
+    const tl = E.timeline(epU, lang), DUR = tl.duration, FPS = 30, N = Math.round(DUR * FPS), [W2, H2] = SHORT ? (matchMedia('(pointer:coarse)').matches ? [720, 1280] : [1080, 1920]) : mkFrame(), SR = 48000, U = W2 / 1080, Y0 = SHORT ? Math.round(380 * U) : 0, HS = SHORT ? Math.round(W2 * 9 / 16) : H2;
+    if (SHORT && (DUR > 180 || !N)) throw new Error('A Short can be up to 3 minutes. Untick a scene or two.');
+    if (SHORT && !tl.scenes.some(o => o.take)) throw new Error('Record the scenes of this Short first (Scenes tab). A Short needs your voice.');
     const A = window.AudioContext || window.webkitAudioContext; ac = new A();
     // 1. what this browser can encode
     mkSt('Checking this device…');
@@ -1056,17 +1133,19 @@ async function makeOnDevice() {
       await encA.flush(); }
     // 5. the picture
     mkSt('Preparing the picture…');
-    const text = JSON.stringify(ep.scenes.map(s => (s.lang || {})[lang])) + JSON.stringify((ep.title || {})[lang]) + JSON.stringify(ep.languages[lang] || {}) + JSON.stringify((channel.names || {})[lang]) + JSON.stringify((channel.taglines || {})[lang]);
+    const text = JSON.stringify(epU.scenes.map(s => (s.lang || {})[lang])) + JSON.stringify((epU.title || {})[lang]) + JSON.stringify(epU.languages[lang] || {}) + JSON.stringify((channel.names || {})[lang]) + JSON.stringify((channel.taglines || {})[lang]) + (SHORT ? JSON.stringify(SHORT.title) + 'Like Share Subscribe Full video on the channel' : '');
     const fontCss = await fontCssFor(text), fam = getComputedStyle(document.documentElement).getPropertyValue('--ex-font').trim() || 'sans-serif';
     await Promise.all(['400', '700', '800'].map(w => document.fonts.load(`${w} 40px ${fam}`, text).catch(() => {}))); await document.fonts.ready;
     const hold = document.createElement('div'); hold.style.cssText = 'position:fixed;left:-99999px;top:0;width:1920px;height:1080px;overflow:hidden'; document.body.appendChild(hold); els.push(hold);
     svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('width', 1920); svg.setAttribute('height', 1080); hold.appendChild(svg);
-    const app = E.mount(svg, ep, lang, { channel, preview: false }); svg.style.cssText = 'font-family:' + fam.replace(/"/g, "'") + ';';
+    const app = E.mount(svg, epU, lang, { channel, preview: false, noCaptions: !!SHORT }); svg.style.cssText = 'font-family:' + fam.replace(/"/g, "'") + ';';
     const ser = new XMLSerializer(), styleTag = `<defs><style>${fontCss}</style></defs>`;
-    const cv = $('mkCanvas'); cv.width = W2; cv.height = H2; cv.style.display = 'block'; const c = cv.getContext('2d');
+    const cv = $(IDS.cv); cv.width = W2; cv.height = H2; cv.style.display = 'block'; const c = cv.getContext('2d');
+    const shBg = SHORT ? shortBackdrop(W2, H2, fam, SHORT.title, ((channel.names || {})[lang] || (channel.names || {}).en || 'Oh, I Get It!!')) : null;
     const raster = async () => {
+      if (shBg) c.drawImage(shBg, 0, 0);
       const str = ser.serializeToString(svg).replace(/^<svg[^>]*>/, m => m + styleTag), u = URL.createObjectURL(new Blob([str], { type: 'image/svg+xml;charset=utf-8' }));
-      try { const im = new Image(); im.src = u; try { await im.decode(); } catch (e) { await new Promise((res, rej) => { im.onload = res; im.onerror = () => rej(new Error('The browser could not draw a frame.')); }); } c.drawImage(im, 0, 0, W2, H2); }
+      try { const im = new Image(); im.src = u; try { await im.decode(); } catch (e) { await new Promise((res, rej) => { im.onload = res; im.onerror = () => rej(new Error('The browser could not draw a frame.')); }); } c.drawImage(im, 0, Y0, W2, HS); }
       finally { URL.revokeObjectURL(u); }
     };
     const cutCv = document.createElement('canvas'), feather = document.createElement('canvas'); let cutOK = false, cutNote = '';
@@ -1084,7 +1163,7 @@ async function makeOnDevice() {
         const op = (k.o === tl.scenes[0] ? 1 : mkEase(mkProg(t, st - F / 2, st + F / 2))) * (k.o.i === lastScene ? 1 : 1 - mkEase(mkProg(t, en - F / 2, en + F / 2))) * mkEase(mkProg(t - st, 0, .35));
         if (op <= 0) continue;
         await seekTo(k.el, Math.min(k.t.out - .04, k.t.in + Math.max(0, t - k.at)));
-        const v = k.el, r = k.slot, sc = W2 / E.W, x = r.x * sc, y = r.y * sc, w = r.w * sc, h = r.h * sc, s2 = Math.max(w / k.vw, h / k.vh), dw = k.vw * s2, dh = k.vh * s2;
+        const v = k.el, r = k.slot, sc = W2 / E.W, x = r.x * sc, y = Y0 + r.y * sc, w = r.w * sc, h = r.h * sc, s2 = Math.max(w / k.vw, h / k.vh), dw = k.vw * s2, dh = k.vh * s2;
         if (r.mode === 'cut' && cutOK) { // only you, cut out of your picture, standing on the banner scene
           try { await Cutout.cut(v, cutCv, { w: k.vw, h: k.vh }); } catch (err) { cutOK = false; cutNote = ' (the cut-out stopped part-way: ' + String((err && err.message) || err).slice(0, 140) + '. The rest uses soft edges)'; }
           if (cutOK) { const s4 = Math.min(w / cutCv.width, h / cutCv.height); cutNote = ' (cut-out mask: ' + Cutout.maskMode + ')'; c.save(); c.globalAlpha = op; c.beginPath(); c.rect(x, y, w, h); c.clip(); c.drawImage(cutCv, x + (w - cutCv.width * s4) / 2, y + (h - cutCv.height * s4) / 2, cutCv.width * s4, cutCv.height * s4); c.restore(); continue; }
@@ -1100,30 +1179,31 @@ async function makeOnDevice() {
         }
         c.save(); c.globalAlpha = op; rrect(c, x, y, w, h, r.r * sc); c.clip(); c.drawImage(v, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh); c.restore();
       }
+      if (SHORT) shortCaption(c, tl, t, W2, fam);
       const vf = new VideoFrame(cv, { timestamp: Math.round(f * 1e6 / FPS), duration: Math.round(1e6 / FPS) }); encV.encode(vf, { keyFrame: f % (FPS * 2) === 0 }); vf.close();
       while (encV.encodeQueueSize > 8) await new Promise(r => setTimeout(r, 5));
       if (f % 6 === 0) {
-        $('mkBar').firstChild.style.width = (100 * f / N).toFixed(1) + '%';
+        $(IDS.bar).firstChild.style.width = (100 * f / N).toFixed(1) + '%';
         const el = (performance.now() - tStart) / 1000, eta = f ? el / f * (N - f) : 0;
         mkSt(`Making the video… ${Math.round(100 * f / N)}%${f > 30 ? ', about ' + Math.max(1, Math.round(eta / 60)) + ' min left' : ''}. Keep this page open and the screen on.`);
         await new Promise(r => setTimeout(r));
       }
     }
     mkSt('Finishing the file…'); await encV.flush(); muxer.finalize();
-    $('mkBar').firstChild.style.width = '100%';
+    $(IDS.bar).firstChild.style.width = '100%';
     const outBlob = new Blob([target.buffer], { type: 'video/mp4' }); let chk = '';
     try { // listen to the finished file once, so a silent result is reported instead of discovered later
       const b = await decodeSound(ac, outBlob);
       if (!b) chk = ' Sound check: this browser could not read the sound back from the file.';
       else { const d = b.getChannelData(0); let sq = 0, cnt = 0; for (let i = 0; i < d.length; i += 7) { sq += d[i] * d[i]; cnt++; } const db = Math.round(20 * Math.log10(Math.sqrt(sq / Math.max(1, cnt)) || 1e-6)); chk = db < -55 ? ` ⚠ THE SOUND IS SILENT IN THE FINISHED FILE (${db} dB, ${aStat.n} sound blocks${aStat.desc ? '' : ', no format header'}). Tell me this message.` : ` Sound in the file: ${db} dB.`; }
     } catch (err) { chk = ' Sound check failed.'; }
-    mkResult(outBlob, 'video/mp4', `${ep.id}-${lang}.mp4`, `${DUR.toFixed(0)} seconds, ${W2}x${H2}.${cutNote} Sound: ${aname === 'aac' ? 'AAC' : aname.toUpperCase() + ' (iPhone Photos may not play this; try Files or another player)'}; ${voiceNote.join(', ')}.${chk} [audio: ${aStat.n} blocks, first ${aStat.first}${aStat.adts ? ', fixed ADTS' : ''}${aStat.madeAsc ? ', added header' : ''}]`);
+    mkResult(outBlob, 'video/mp4', SHORT ? `${epU.id}-short-${SHORT.scenes.map(x => x + 1).join('-')}-${lang}.mp4` : `${epU.id}-${lang}.mp4`, `${DUR.toFixed(0)} seconds, ${W2}x${H2}.${cutNote} Sound: ${aname === 'aac' ? 'AAC' : aname.toUpperCase() + ' (iPhone Photos may not play this; try Files or another player)'}; ${voiceNote.join(', ')}.${chk} [audio: ${aStat.n} blocks, first ${aStat.first}${aStat.adts ? ', fixed ADTS' : ''}${aStat.madeAsc ? ', added header' : ''}]`);
   } catch (e) { mkSt(e.message || String(e), 'bad'); console.error(e); }
   finally {
     try { wake && wake.release(); } catch (e) {} try { els.forEach(x => x.remove()); } catch (e) {}
     try { encV && encV.state !== 'closed' && encV.close(); } catch (e) {} try { encA && encA.state !== 'closed' && encA.close(); } catch (e) {}
     urls.forEach(u => URL.revokeObjectURL(u)); try { ac && ac.close(); } catch (e) {}
-    mk.busy = false; $('mkGo').disabled = false; $('mkGo2').disabled = false; $('mkCanvas').style.display = 'none';
+    mk.busy = false; busyUI(false); $(IDS.cv).style.display = 'none'; mk.ids = { st: 'mkSt', bar: 'mkBar', cv: 'mkCanvas', out: 'mkOut' };
   }
 }
 try { $('ytId').value = localStorage.getItem('bkstudio-ytid') || ''; } catch (e) {}
@@ -1133,7 +1213,7 @@ $('ytId').onchange = () => { try { localStorage.setItem('bkstudio-ytid', $('ytId
 function showTab(t) { document.body.dataset.tab = t; document.querySelectorAll('#mainTabs [data-main]').forEach(b => b.classList.toggle('on', b.dataset.main === t)); try { sessionStorage.setItem('exTab', t); } catch (e) {} window.scrollTo({ top: 0 }); }
 document.querySelectorAll('#mainTabs [data-main]').forEach(b => { b.onclick = () => showTab(b.dataset.main); });
 showTab('edit');
-$('mkGo').onclick = makeOnDevice; $('mkGo2').onclick = makeVideo;
+$('mkGo').onclick = () => makeOnDevice(); $('mkGo2').onclick = makeVideo;
 
 function check() {
   const out = [];
