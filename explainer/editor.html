@@ -72,7 +72,7 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 20:05 picture-fit</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 20:20 cutout-notes</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -1046,7 +1046,7 @@ async function makeOnDevice() {
       finally { URL.revokeObjectURL(u); }
     };
     const cutCv = document.createElement('canvas'), feather = document.createElement('canvas'); let cutOK = false, cutNote = '';
-    if (takes.some(k => k.slot && k.slot.mode === 'cut')) { mkSt('Loading the cut-out tool (a few MB, first time only)…'); try { await Cutout.ready(); cutOK = true; } catch (err) { cutNote = ' (the cut-out tool could not start on this device, so soft edges were used instead)'; } }
+    if (takes.some(k => k.slot && k.slot.mode === 'cut')) { mkSt('Loading the cut-out tool (a few MB, first time only)…'); try { await Cutout.ready(); cutOK = true; } catch (err) { cutNote = ' (the cut-out tool could not start on this device: ' + String((err && err.message) || err).slice(0, 140) + '. Soft edges were used instead)'; } }
     app.render(0); for (let i = 0; i < 3; i++) { await raster(); await new Promise(r => setTimeout(r, 120)); } // lets the fonts settle before the first real frame
     const seekTo = (v, t) => new Promise(res => { if (Math.abs(v.currentTime - t) < .002) return res(); let done = false; const f = () => { if (!done) { done = true; v.removeEventListener('seeked', f); res(); } }; v.addEventListener('seeked', f); try { v.currentTime = t; } catch (e) { f(); } setTimeout(f, 800); });
     try { if (navigator.wakeLock) wake = await navigator.wakeLock.request('screen'); } catch (e) {}
@@ -1062,17 +1062,17 @@ async function makeOnDevice() {
         await seekTo(k.el, Math.min(k.t.out - .04, k.t.in + Math.max(0, t - k.at)));
         const v = k.el, r = k.slot, sc = W2 / E.W, x = r.x * sc, y = r.y * sc, w = r.w * sc, h = r.h * sc, s2 = Math.max(w / k.vw, h / k.vh), dw = k.vw * s2, dh = k.vh * s2;
         if (r.mode === 'cut' && cutOK) { // only you, cut out of your picture, standing on the banner scene
-          try { await Cutout.cut(v, cutCv, { w: k.vw, h: k.vh }); } catch (err) { cutOK = false; cutNote = ' (the cut-out stopped working part-way, so the rest uses soft edges)'; }
+          try { await Cutout.cut(v, cutCv, { w: k.vw, h: k.vh }); } catch (err) { cutOK = false; cutNote = ' (the cut-out stopped part-way: ' + String((err && err.message) || err).slice(0, 140) + '. The rest uses soft edges)'; }
           if (cutOK) { const s4 = Math.min(w / cutCv.width, h / cutCv.height); c.save(); c.globalAlpha = op; c.beginPath(); c.rect(x, y, w, h); c.clip(); c.drawImage(cutCv, x + (w - cutCv.width * s4) / 2, y + (h - cutCv.height * s4) / 2, cutCv.width * s4, cutCv.height * s4); c.restore(); continue; }
         }
         if (r.mode === 'soft' || r.mode === 'cut') { // no box: the picture's edges fade into the banner
-          const fw = Math.round(w), fh = Math.round(h); if (feather.width !== fw || feather.height !== fh) { feather.width = fw; feather.height = fh; }
-          const f = feather.getContext('2d'), s3 = Math.min(fw / k.vw, fh / k.vh); f.globalCompositeOperation = 'source-over'; f.clearRect(0, 0, fw, fh);
-          f.drawImage(v, (fw - k.vw * s3) / 2, (fh - k.vh * s3) / 2, k.vw * s3, k.vh * s3);
+          const s3 = Math.min(w / k.vw, h / k.vh), fw = Math.round(k.vw * s3), fh = Math.round(k.vh * s3); if (feather.width !== fw || feather.height !== fh) { feather.width = fw; feather.height = fh; }
+          const f = feather.getContext('2d'); f.globalCompositeOperation = 'source-over'; f.clearRect(0, 0, fw, fh);
+          f.drawImage(v, 0, 0, fw, fh);
           f.globalCompositeOperation = 'destination-in';
-          let g = f.createLinearGradient(0, 0, fw, 0); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(.1, '#000'); g.addColorStop(.9, '#000'); g.addColorStop(1, 'rgba(0,0,0,0)'); f.fillStyle = g; f.fillRect(0, 0, fw, fh);
-          g = f.createLinearGradient(0, 0, 0, fh); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(.1, '#000'); g.addColorStop(.9, '#000'); g.addColorStop(1, 'rgba(0,0,0,0)'); f.fillStyle = g; f.fillRect(0, 0, fw, fh);
-          c.save(); c.globalAlpha = op; c.drawImage(feather, x, y, w, h); c.restore(); continue;
+          let g = f.createLinearGradient(0, 0, fw, 0); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(.12, '#000'); g.addColorStop(.88, '#000'); g.addColorStop(1, 'rgba(0,0,0,0)'); f.fillStyle = g; f.fillRect(0, 0, fw, fh);
+          g = f.createLinearGradient(0, 0, 0, fh); g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(.08, '#000'); g.addColorStop(.92, '#000'); g.addColorStop(1, 'rgba(0,0,0,0)'); f.fillStyle = g; f.fillRect(0, 0, fw, fh);
+          c.save(); c.globalAlpha = op; c.drawImage(feather, x + (w - fw) / 2, y + (h - fh) / 2, fw, fh); c.restore(); continue;
         }
         c.save(); c.globalAlpha = op; rrect(c, x, y, w, h, r.r * sc); c.clip(); c.drawImage(v, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh); c.restore();
       }
