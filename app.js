@@ -3414,9 +3414,10 @@ function paperHistory(P, st) {
   t = [...t].sort((a, b) => (a.exitDate < b.exitDate ? 1 : a.exitDate > b.exitDate ? -1 : a.entryDate < b.entryDate ? 1 : a.entryDate > b.entryDate ? -1 : String(a.ticker).localeCompare(String(b.ticker))));
   const shown = t.slice(0, state.paperLimit);
   const chip = (group, key, label) => `<button type="button" class="chip${f[group] === key ? ' active' : ''}" data-paper-filter="${group}:${key}" aria-pressed="${f[group] === key}">${label}</button>`;
-  const how = { target: ['Target', 'good'], stop: ['Stop', 'bad'], time: ['Day-3 exit', ''] };
+  const how = { target: ['Target', 'good'], stop: ['Stop', 'bad'], time: ['Day-3 exit', ''], manual: ['Closed by hand', ''] };
+  const howOf = k => how[k] || [String(k || 'Closed'), ''];
   const tr = x => `<div class="track-row">
-      <div><div class="prow start"><b>${escapeHtml(x.ticker)}</b><span class="tag ${how[x.how][1]}">${how[x.how][0]}</span>${tagBadge(x.tag)}${poolBadge(x)}</div>
+      <div><div class="prow start"><b>${escapeHtml(x.ticker)}</b><span class="tag ${howOf(x.how)[1]}">${howOf(x.how)[0]}</span>${tagBadge(x.tag)}${poolBadge(x)}</div>
       <small>${escapeHtml(STRAT_NAME[x.strategy])}, ${escapeHtml(fmtSession(x.entryDate))} to ${escapeHtml(fmtSession(x.exitDate))}</small></div>
       <div class="right"><b class="${cls(x.pct)}">${signedPct(x.pct)}</b><small class="${cls(x.usd)}">${money(x.usd, true)}</small></div>
     </div>`;
