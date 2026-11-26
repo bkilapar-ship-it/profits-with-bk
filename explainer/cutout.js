@@ -17,6 +17,17 @@
       seg = s;
     })().catch(e => { loading = null; throw e; }));
   }
+  const mcv = document.createElement('canvas');
+  /** The mask comes back as alpha on some browsers and as a red-on-opaque picture on others (iPhone). Returns a small canvas where alpha = person. */
+  function maskAlpha(m) {
+    const mw = m.width || 256, mh = m.height || 144; mcv.width = mw; mcv.height = mh;
+    const x = mcv.getContext('2d', { willReadFrequently: true }); x.clearRect(0, 0, mw, mh); x.globalCompositeOperation = 'source-over'; x.drawImage(m, 0, 0, mw, mh);
+    const id = x.getImageData(0, 0, mw, mh), d = id.data; let amin = 255;
+    for (let i = 3; i < d.length; i += 4) if (d[i] < amin) amin = d[i];
+    api.maskMode = amin > 200 ? 'red' : 'alpha';
+    if (amin > 200) { for (let i = 0; i < d.length; i += 4) { d[i + 3] = d[i]; d[i] = d[i + 1] = d[i + 2] = 255; } x.putImageData(id, 0, 0); }
+    return mcv;
+  }
   function cut(video, out, dims) {
     const job = busy.then(async () => {
       await ready();
@@ -26,7 +37,7 @@
       last = null; await seg.send({ image: video });
       const c = out.getContext('2d'); c.clearRect(0, 0, w, h);
       if (!last || !last.segmentationMask) return out;
-      c.globalCompositeOperation = 'source-over'; c.drawImage(last.segmentationMask, 0, 0, w, h);
+      c.globalCompositeOperation = 'source-over'; c.drawImage(maskAlpha(last.segmentationMask), 0, 0, w, h);
       c.globalCompositeOperation = 'source-in'; c.drawImage(video, 0, 0, w, h);
       c.globalCompositeOperation = 'source-over';
       return out;
@@ -34,5 +45,6 @@
     busy = job.catch(() => {});
     return job;
   }
-  root.Cutout = { ready, cut };
+  const api = { ready, cut, maskMode: '', _maskAlpha: maskAlpha };
+  root.Cutout = api;
 })(window);
