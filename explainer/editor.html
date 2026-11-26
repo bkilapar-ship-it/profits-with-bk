@@ -116,8 +116,9 @@ details summary{cursor:pointer;font-weight:700}
     </div>
     <div class="box" id="makeBox">
       <b>Make the final video</b> <span class="pill" id="mkLang"></span>
-      <p class="muted" style="margin:4px 0 8px">Adds your recorded voice and camera to the latest build, right here on this device. Your recordings never leave it. Save to GitHub first and wait for the build (about 5 to 10 minutes). It plays through once in real time, so keep the page open and the screen on.</p>
-      <button class="pri" id="mkGo">🎬 Make video</button>
+      <p class="muted" style="margin:4px 0 8px">Makes the finished video right here on your phone: the animation, your voice and your camera. No GitHub and no waiting for a build. Keep this page open and the screen on until it is done (a minute of video takes a few minutes). Then save it, share it, or upload it.</p>
+      <button class="pri" id="mkGo">🎬 Make video on this device</button>
+      <button class="sm" id="mkGo2" style="margin-left:6px" title="The older method: needs Save to GitHub and a finished build">Use the GitHub build instead</button>
       <canvas id="mkCanvas" style="display:none;width:100%;border-radius:8px;margin-top:8px;background:#000"></canvas>
       <div id="mkBar" style="height:6px;border-radius:3px;background:var(--line);margin-top:8px"><i style="display:block;height:100%;width:0;border-radius:3px;background:var(--good)"></i></div>
       <div id="mkSt" class="msg"></div>
@@ -144,6 +145,7 @@ details summary{cursor:pointer;font-weight:700}
   <div class="msg" id="recMsg"></div>
 </div></div>
 <script src="engine.js"></script>
+<script src="vendor/mp4-muxer.js"></script>
 <script>
 (() => {
 'use strict';
@@ -449,7 +451,7 @@ function wireTake(s, i) {
     if (navigator.canShare && navigator.canShare({ files: [f] })) { try { await navigator.share({ files: [f], title: name }); return; } catch (x) { if (x && x.name === 'AbortError') return; } }
     const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); a.remove(); msg('If nothing downloaded on iPhone, open "Preview my recording" and use the share button there, or try Share from Safari.', '');
   };
-  const d = q('tdel'); if (d) d.onclick = e => { e.stopPropagation(); if (!confirm('Discard this recording completely? The scene goes back to its fixed length, and the file is deleted from this device.')) return; const f = (s.lang[lang].take || {}).file; delete s.lang[lang].take; if (f) { delete blobs[f]; if (media[f]) { try { media[f].pause(); } catch (x) {} delete media[f]; } deviceKeys.delete(f); DB.del(f).catch(() => {}); } changed(); renderScenes(); remount(); };
+  const d = q('tdel'); if (d) d.onclick = e => { e.stopPropagation(); if (!confirm('Discard this recording completely? The scene goes back to its fixed length, and the file is deleted from this device.')) return; const f = (s.lang[lang].take || {}).file; delete s.lang[lang].take; if (f) { delete blobs[f]; delete blobs[f + '.aud']; if (media[f]) { try { media[f].pause(); } catch (x) {} delete media[f]; } deviceKeys.delete(f); DB.del(f).catch(() => {}); DB.del(f + '.aud').catch(() => {}); } changed(); renderScenes(); remount(); };
 }
 
 // preview playback: your recording plays in step with the animation
@@ -573,7 +575,15 @@ $('recGo').onclick = async () => {
   const stream = R.kind === 'video' ? R.stream : new MediaStream(R.stream.getAudioTracks());
   try { R.rec = new MediaRecorder(stream, Object.assign(R.mime ? { mimeType: R.mime } : {}, R.kind === 'video' ? { videoBitsPerSecond: 2500000, audioBitsPerSecond: 128000 } : { audioBitsPerSecond: 128000 })); }
   catch (e) { R.rec = new MediaRecorder(stream); R.mime = ''; }
-  R.chunks = []; R.first = R.last = null;
+  R.chunks = []; R.first = R.last = null; R.arec = null; R.ablob = null; R.achunks = [];
+  if (R.kind === 'video') { // a second, voice-only copy: phones read it far more reliably than the sound inside a video file
+    try {
+      const am = pickMime(['audio/mp4', 'audio/webm;codecs=opus', 'audio/webm', 'audio/ogg;codecs=opus']);
+      R.arec = new MediaRecorder(new MediaStream(R.stream.getAudioTracks()), am ? { mimeType: am, audioBitsPerSecond: 128000 } : {});
+      R.arec.ondataavailable = e => { if (e.data && e.data.size) R.achunks.push(e.data); };
+      R.arec.onstop = () => { R.ablob = new Blob(R.achunks, { type: (R.arec.mimeType || am || 'audio/webm').split(';')[0] }); };
+    } catch (e) { R.arec = null; }
+  }
   R.rec.ondataavailable = e => { if (e.data && e.data.size) R.chunks.push(e.data); };
   R.rec.onstop = () => {
     R.dur = (performance.now() - R.t0) / 1000;
@@ -584,19 +594,19 @@ $('recGo').onclick = async () => {
     if (R.first == null) recMsg('I could not hear any speaking in that take. Check the microphone and try again, or use it anyway.', 'bad');
     else recMsg(`You spoke for about ${(R.last - R.first + .4).toFixed(1)}s. Play it back above, then keep it or try again.`, 'good');
   };
-  R.rec.start(250); R.t0 = performance.now(); R.state = 'recording'; recButtons('recording'); promptRun();
+  R.rec.start(250); if (R.arec) { try { R.arec.start(250); } catch (e) { R.arec = null; } } R.t0 = performance.now(); R.state = 'recording'; recButtons('recording'); promptRun();
 };
-$('recStop').onclick = () => { if (R.rec && R.rec.state !== 'inactive') R.rec.stop(); };
+$('recStop').onclick = () => { if (R.arec && R.arec.state !== 'inactive') { try { R.arec.stop(); } catch (e) {} } if (R.rec && R.rec.state !== 'inactive') R.rec.stop(); };
 $('recAgain').onclick = () => { R.blob = null; R.state = 'ready'; recButtons('ready'); showLive(); promptFrame(0); recMsg('Ready when you are.'); };
-$('recClose').onclick = () => { if (R.state === 'review' && R.blob && !confirm('Close without keeping this take?')) return; if (R.rec && R.rec.state !== 'inactive') { R.rec.onstop = null; R.rec.stop(); } R.state = 'ready'; closeRecorder(); };
+$('recClose').onclick = () => { if (R.state === 'review' && R.blob && !confirm('Close without keeping this take?')) return; if (R.arec && R.arec.state !== 'inactive') { R.arec.onstop = null; try { R.arec.stop(); } catch (e) {} } if (R.rec && R.rec.state !== 'inactive') { R.rec.onstop = null; R.rec.stop(); } R.state = 'ready'; closeRecorder(); };
 $('recKeep').onclick = () => { keepTake(); closeRecorder(); };
 $('recNext').onclick = () => { const n = R.i + 1; keepTake(); openScene = n; renderScenes(); openRecorder(n); };
 function closeStream() { if (R.stream) R.stream.getTracks().forEach(t => t.stop()); R.stream = null; R.kind = null; }
 function closeRecorder() { cancelAnimationFrame(P.raf); clearInterval(R.meter); closeStream(); const v = $('recCam'); v.srcObject = null; v.removeAttribute('src'); $('rec').classList.remove('on'); }
 function keepTake() {
   const dur = R.dur, a = R.first == null ? 0 : Math.max(0, R.first - .25), b = R.last == null ? dur : Math.min(dur, R.last + .35);
-  const blob = R.blob; R.blob = null; R.state = 'ready';
-  storeTake(R.i, blob, R.kind, dur, a, b, extOf(R.mime));
+  const blob = R.blob, aud = R.ablob; R.blob = null; R.ablob = null; R.state = 'ready';
+  storeTake(R.i, blob, R.kind, dur, a, b, extOf(R.mime), aud);
 }
 // a clip you filmed or recorded somewhere else (for example the phone's camera app): it stays on this device too
 async function useFile(i, f) {
@@ -620,13 +630,14 @@ async function useFile(i, f) {
   const ext = (f.name.match(/\.([a-z0-9]{2,4})$/i) || [, isAudio ? 'm4a' : 'mp4'])[1].toLowerCase();
   storeTake(i, f, cam && !isAudio ? 'video' : 'voice', dur, a, b, ext);
 }
-function storeTake(i, blob, kind, dur, a, b, ext) {
+function storeTake(i, blob, kind, dur, a, b, ext, aud) {
   const s = ep.scenes[i];
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '').replace('T', '-');
   const file = `takes/${ep.id}/${lang}/scene${i + 1}-${stamp}.${ext}`;
   s.lang = s.lang || {}; s.lang[lang] = s.lang[lang] || {};
   s.lang[lang].take = { file, kind, dur: +dur.toFixed(2), in: +a.toFixed(2), out: +b.toFixed(2), store: 'device' };
   blobs[file] = blob; deviceKeys.add(file);
+  if (aud) { s.lang[lang].take.aud = true; blobs[file + '.aud'] = aud; deviceKeys.add(file + '.aud'); saveBlob(file + '.aud', aud).catch(() => {}); }
   changed(); renderScenes(); remount(); seekScene(i);
   saveBlob(file, blob).then(() => msg('Recording kept on this device. Tap "Save to GitHub" when you are done, so the build times the scenes to your voice.', 'good'))
     .catch(e => msg('Could not keep the recording in this browser (' + (e && e.message || e) + '). It works until you close the page. Free some space on the phone and record again.', 'bad'));
@@ -652,7 +663,7 @@ function mkFrame() {
 const mkEase = u => (u < .5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2), mkProg = (t, a, b) => Math.min(1, Math.max(0, (t - a) / (b - a)));
 function rrect(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
 async function makeVideo() {
-  if (mk.busy) return; mk.busy = true; $('mkGo').disabled = true; $('mkOut').innerHTML = ''; stop();
+  if (mk.busy) return; mk.busy = true; $('mkGo').disabled = true; $('mkGo2').disabled = true; $('mkOut').innerHTML = ''; stop();
   let wake = null, ac = null, k_diag = '';
   try {
     if (dirty) throw new Error('You have changes that are not saved. Tap "Save to GitHub", wait for the build (about 5 to 10 minutes), then make the video.');
@@ -757,9 +768,142 @@ async function makeVideo() {
     };
     mkSt(`Done: ${(mk.blob.size / 1048576).toFixed(1)} MB, ${tl.duration.toFixed(0)} seconds. Recordings used: ${k_diag || 'none'}.`, 'good');
   } catch (e) { mkSt(e.message || String(e), 'bad'); }
-  finally { try { wake && wake.release(); } catch (e) {} mk.busy = false; $('mkGo').disabled = false; $('mkCanvas').style.display = 'none'; setTimeout(() => { try { ac && ac.close(); } catch (e) {} }, 500); }
+  finally { try { wake && wake.release(); } catch (e) {} mk.busy = false; $('mkGo').disabled = false; $('mkGo2').disabled = false; $('mkCanvas').style.display = 'none'; setTimeout(() => { try { ac && ac.close(); } catch (e) {} }, 500); }
 }
-$('mkGo').onclick = makeVideo;
+
+// ---------- Make video on this device: every frame drawn, then encoded (WebCodecs) and packed into an MP4 ----------
+const bin64 = buf => { let s = '', u = new Uint8Array(buf); for (let i = 0; i < u.length; i += 0x8000) s += String.fromCharCode.apply(null, u.subarray(i, i + 0x8000)); return btoa(s); };
+const SCRIPTS = { 'Noto Sans Telugu': /[ఀ-౿]/, 'Noto Sans Devanagari': /[ऀ-ॿ]/, 'Noto Sans Bengali': /[ঀ-৿]/, 'Noto Sans Gujarati': /[઀-૿]/, 'Noto Sans Tamil': /[஀-௿]/, 'Noto Sans Kannada': /[ಀ-೿]/, 'Noto Sans Malayalam': /[ഀ-ൿ]/ };
+async function fontCssFor(text) { // fonts the picture needs, packed into the drawing itself (a drawing cannot load fonts from the page)
+  const css = await (await fetch('fonts.css', { cache: 'force-cache' })).text(), faces = css.match(/@font-face\{[^}]*\}/g) || [], out = [];
+  for (const f of faces) {
+    const fam = (f.match(/font-family:'([^']+)'/) || [])[1], url = (f.match(/url\(([^)]+)\)/) || [])[1];
+    if (!fam || !url) continue;
+    if (fam !== 'DM Sans' && !(SCRIPTS[fam] && SCRIPTS[fam].test(text))) continue;
+    const buf = await (await fetch(url, { cache: 'force-cache' })).arrayBuffer();
+    out.push(f.replace(/src:[^;]*;/, `src:url(data:font/woff2;base64,${bin64(buf)}) format('woff2');`));
+  }
+  return out.join('');
+}
+async function decodeSound(ac, blob) { try { return await ac.decodeAudioData(await blob.arrayBuffer()); } catch (e) { return null; } }
+function mkResult(blob, type, name, info) {
+  mk.blob = blob; if (mk.url) URL.revokeObjectURL(mk.url); mk.url = URL.createObjectURL(blob);
+  $('mkOut').innerHTML = `<video controls playsinline src="${mk.url}" style="width:100%;border-radius:8px;margin-top:8px"></video>
+    <div class="row" style="margin-top:8px"><a class="sm" href="${mk.url}" download="${name}" style="padding:7px 12px;border:1px solid var(--line);border-radius:8px;text-decoration:none;color:inherit">⬇ Save the video</a>
+    <button class="sm pri" id="mkShare">Share… (Save Video, YouTube, WhatsApp)</button></div>
+    <p class="muted">Watch it once before publishing. If Save does nothing on iPhone, tap Share and choose Save Video.</p>`;
+  $('mkShare').onclick = async () => {
+    const f = new File([blob], name, { type });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) { try { await navigator.share({ files: [f], title: (ep.title || {})[lang] || ep.id }); } catch (e) {} }
+    else mkSt('This browser cannot share files. Use Save the video instead.', 'bad');
+  };
+  mkSt(`Done: ${(blob.size / 1048576).toFixed(1)} MB. ${info || ''}`, 'good');
+}
+async function makeOnDevice() {
+  if (mk.busy) return; mk.busy = true; $('mkGo').disabled = true; $('mkGo2').disabled = true; $('mkOut').innerHTML = ''; stop();
+  let wake = null, svg = null, encV = null, encA = null, ac = null; const urls = [], els = [];
+  try {
+    if (!window.VideoEncoder || !window.VideoFrame || !window.AudioEncoder || !window.AudioData) throw new Error('This browser cannot make videos on the device. On iPhone you need iOS 17 or newer in Safari; on Android use a recent Chrome. You can use "Use the GitHub build instead".');
+    if (!window.Mp4Muxer) throw new Error('The video tool did not load. Reload the page and try again.');
+    const tl = E.timeline(ep, lang), DUR = tl.duration, FPS = 30, N = Math.round(DUR * FPS), [W2, H2] = mkFrame(), SR = 48000;
+    const A = window.AudioContext || window.webkitAudioContext; ac = new A();
+    // 1. what this browser can encode
+    mkSt('Checking this device…');
+    const vCands = [{ codec: 'avc1.640028', name: 'avc' }, { codec: 'avc1.4d0028', name: 'avc' }, { codec: 'avc1.42001f', name: 'avc' }, { codec: 'vp09.00.40.08', name: 'vp9' }];
+    let vcfg = null, vname = '';
+    for (const c of vCands) { const cfg = { codec: c.codec, width: W2, height: H2, bitrate: H2 >= 1080 ? 8e6 : 5e6, framerate: FPS }; try { const r = await VideoEncoder.isConfigSupported(cfg); if (r && r.supported) { vcfg = r.config || cfg; vname = c.name; break; } } catch (e) {} }
+    if (!vcfg) throw new Error('This browser cannot encode video.');
+    let acfg = null, aname = '';
+    for (const c of [{ codec: 'mp4a.40.2', name: 'aac' }, { codec: 'opus', name: 'opus' }]) { const cfg = { codec: c.codec, sampleRate: SR, numberOfChannels: 2, bitrate: 160000 }; try { const r = await AudioEncoder.isConfigSupported(cfg); if (r && r.supported) { acfg = r.config || cfg; aname = c.name; break; } } catch (e) {} }
+    if (!acfg) throw new Error('This browser cannot encode sound.');
+    // 2. your recordings: the voice of each take, and the camera picture
+    const takes = [];
+    for (const o of tl.scenes.filter(x => x.take)) {
+      const t = o.take, T = E.SCENES[o.scene.type], n = o.i + 1;
+      const main = await loadBlob(t.file); if (!main) throw new Error(`The recording for scene ${n} is not on this device. Record it again here.`);
+      const aud = t.aud ? await loadBlob(t.file + '.aud') : null;
+      mkSt(`Reading the voice of scene ${n}…`);
+      const buf = (aud && await decodeSound(ac, aud)) || await decodeSound(ac, main);
+      if (!buf) throw new Error(`This browser could not read the sound of scene ${n}. Record that scene again (new recordings keep a separate voice copy that always works).`);
+      const d = buf.getChannelData(0), a0 = Math.floor(t.in * buf.sampleRate), b0 = Math.min(d.length, Math.floor(t.out * buf.sampleRate)); let sq = 0;
+      for (let i = a0; i < b0; i++) sq += d[i] * d[i];
+      const rms = Math.sqrt(sq / Math.max(1, b0 - a0)) || .05;
+      const k = { o, t, buf, gain: Math.min(6, Math.max(.5, .1 / rms)), at: o.start + E.LEAD, slot: T.camera && t.kind === 'video' ? T.slot(E.sceneData(o.scene)) : null, el: null };
+      if (k.slot) {
+        const v = document.createElement('video'); v.playsInline = true; v.setAttribute('playsinline', ''); v.muted = true; v.preload = 'auto'; v.src = URL.createObjectURL(main); urls.push(v.src);
+        await new Promise(res => { v.onloadeddata = res; v.onerror = res; setTimeout(res, 5000); });
+        try { await Promise.race([v.play(), new Promise(r => setTimeout(r, 1500))]); } catch (e) {} v.pause(); k.el = v;
+        if (!v.videoWidth) throw new Error(`This browser could not open the camera picture of scene ${n}.`);
+      }
+      takes.push(k);
+    }
+    // 3. the soundtrack, mixed in one go
+    mkSt('Mixing the sound…');
+    const off = new OfflineAudioContext(2, Math.ceil(DUR * SR), SR);
+    for (const k of takes) { const s = off.createBufferSource(), g = off.createGain(); s.buffer = k.buf; g.gain.value = k.gain; s.connect(g); g.connect(off.destination); s.start(Math.max(0, k.at), k.t.in, Math.max(.05, k.t.out - k.t.in)); }
+    for (const c of tl.cues.filter(x => x.sound === 'beep')) { const os = off.createOscillator(), g = off.createGain(); os.frequency.value = 1800; g.gain.setValueAtTime(0, c.t); g.gain.linearRampToValueAtTime(.35, c.t + .01); g.gain.setValueAtTime(.35, c.t + .14); g.gain.linearRampToValueAtTime(0, c.t + .16); os.connect(g); g.connect(off.destination); os.start(c.t); os.stop(c.t + .2); }
+    const mixed = await off.startRendering();
+    // 4. encoder and file
+    let encErr = null; const target = new Mp4Muxer.ArrayBufferTarget();
+    const muxer = new Mp4Muxer.Muxer({ target, video: { codec: vname, width: W2, height: H2 }, audio: { codec: aname, sampleRate: SR, numberOfChannels: 2 }, fastStart: 'in-memory', firstTimestampBehavior: 'offset' });
+    encV = new VideoEncoder({ output: (c, m) => muxer.addVideoChunk(c, m), error: e => { encErr = e; } }); encV.configure(vcfg);
+    encA = new AudioEncoder({ output: (c, m) => muxer.addAudioChunk(c, m), error: e => { encErr = e; } }); encA.configure(acfg);
+    { const L = mixed.getChannelData(0), R2 = mixed.numberOfChannels > 1 ? mixed.getChannelData(1) : L, step = 4800;
+      for (let i = 0; i < L.length; i += step) { const n = Math.min(step, L.length - i), data = new Float32Array(n * 2); data.set(L.subarray(i, i + n), 0); data.set(R2.subarray(i, i + n), n);
+        const ad = new AudioData({ format: 'f32-planar', sampleRate: SR, numberOfFrames: n, numberOfChannels: 2, timestamp: Math.round(i * 1e6 / SR), data }); encA.encode(ad); ad.close(); }
+      await encA.flush(); }
+    // 5. the picture
+    mkSt('Preparing the picture…');
+    const text = JSON.stringify(ep.scenes.map(s => (s.lang || {})[lang])) + JSON.stringify((ep.title || {})[lang]) + JSON.stringify(ep.languages[lang] || {}) + JSON.stringify((channel.names || {})[lang]) + JSON.stringify((channel.taglines || {})[lang]);
+    const fontCss = await fontCssFor(text), fam = getComputedStyle(document.documentElement).getPropertyValue('--ex-font').trim() || 'sans-serif';
+    await Promise.all(['400', '700', '800'].map(w => document.fonts.load(`${w} 40px ${fam}`, text).catch(() => {}))); await document.fonts.ready;
+    const hold = document.createElement('div'); hold.style.cssText = 'position:fixed;left:-99999px;top:0;width:1920px;height:1080px;overflow:hidden'; document.body.appendChild(hold); els.push(hold);
+    svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('width', 1920); svg.setAttribute('height', 1080); hold.appendChild(svg);
+    const app = E.mount(svg, ep, lang, { channel, preview: false }); svg.style.cssText = 'font-family:' + fam.replace(/"/g, "'") + ';';
+    const ser = new XMLSerializer(), styleTag = `<defs><style>${fontCss}</style></defs>`;
+    const cv = $('mkCanvas'); cv.width = W2; cv.height = H2; cv.style.display = 'block'; const c = cv.getContext('2d');
+    const raster = async () => {
+      const str = ser.serializeToString(svg).replace(/^<svg[^>]*>/, m => m + styleTag), u = URL.createObjectURL(new Blob([str], { type: 'image/svg+xml;charset=utf-8' }));
+      try { const im = new Image(); im.src = u; try { await im.decode(); } catch (e) { await new Promise((res, rej) => { im.onload = res; im.onerror = () => rej(new Error('The browser could not draw a frame.')); }); } c.drawImage(im, 0, 0, W2, H2); }
+      finally { URL.revokeObjectURL(u); }
+    };
+    app.render(0); for (let i = 0; i < 3; i++) { await raster(); await new Promise(r => setTimeout(r, 120)); } // lets the fonts settle before the first real frame
+    const seekTo = (v, t) => new Promise(res => { if (Math.abs(v.currentTime - t) < .002) return res(); let done = false; const f = () => { if (!done) { done = true; v.removeEventListener('seeked', f); res(); } }; v.addEventListener('seeked', f); try { v.currentTime = t; } catch (e) { f(); } setTimeout(f, 800); });
+    try { if (navigator.wakeLock) wake = await navigator.wakeLock.request('screen'); } catch (e) {}
+    const F = E.FADE, lastScene = tl.scenes.length ? tl.scenes[tl.scenes.length - 1].i : -1, tStart = performance.now();
+    for (let f = 0; f < N; f++) {
+      if (encErr) throw new Error('The video encoder stopped: ' + (encErr.message || encErr));
+      const t = f / FPS; app.render(t); await raster();
+      for (const k of takes) {
+        if (!k.slot || !k.el) continue; const st = k.o.start, en = k.o.end;
+        if (!(t >= st - F / 2 && t < en + F / 2)) continue;
+        const op = (k.o === tl.scenes[0] ? 1 : mkEase(mkProg(t, st - F / 2, st + F / 2))) * (k.o.i === lastScene ? 1 : 1 - mkEase(mkProg(t, en - F / 2, en + F / 2))) * mkEase(mkProg(t - st, 0, .35));
+        if (op <= 0) continue;
+        await seekTo(k.el, Math.min(k.t.out - .04, k.t.in + Math.max(0, t - k.at)));
+        const v = k.el, r = k.slot, sc = W2 / E.W, x = r.x * sc, y = r.y * sc, w = r.w * sc, h = r.h * sc, s2 = Math.max(w / v.videoWidth, h / v.videoHeight), dw = v.videoWidth * s2, dh = v.videoHeight * s2;
+        c.save(); c.globalAlpha = op; rrect(c, x, y, w, h, r.r * sc); c.clip(); c.drawImage(v, x + (w - dw) / 2, y + (h - dh) / 2, dw, dh); c.restore();
+      }
+      const vf = new VideoFrame(cv, { timestamp: Math.round(f * 1e6 / FPS), duration: Math.round(1e6 / FPS) }); encV.encode(vf, { keyFrame: f % (FPS * 2) === 0 }); vf.close();
+      while (encV.encodeQueueSize > 8) await new Promise(r => setTimeout(r, 5));
+      if (f % 6 === 0) {
+        $('mkBar').firstChild.style.width = (100 * f / N).toFixed(1) + '%';
+        const el = (performance.now() - tStart) / 1000, eta = f ? el / f * (N - f) : 0;
+        mkSt(`Making the video… ${Math.round(100 * f / N)}%${f > 30 ? ', about ' + Math.max(1, Math.round(eta / 60)) + ' min left' : ''}. Keep this page open and the screen on.`);
+        await new Promise(r => setTimeout(r));
+      }
+    }
+    mkSt('Finishing the file…'); await encV.flush(); muxer.finalize();
+    $('mkBar').firstChild.style.width = '100%';
+    mkResult(new Blob([target.buffer], { type: 'video/mp4' }), 'video/mp4', `${ep.id}-${lang}.mp4`, `${DUR.toFixed(0)} seconds, ${W2}x${H2}.`);
+  } catch (e) { mkSt(e.message || String(e), 'bad'); console.error(e); }
+  finally {
+    try { wake && wake.release(); } catch (e) {} try { els.forEach(x => x.remove()); } catch (e) {}
+    try { encV && encV.state !== 'closed' && encV.close(); } catch (e) {} try { encA && encA.state !== 'closed' && encA.close(); } catch (e) {}
+    urls.forEach(u => URL.revokeObjectURL(u)); try { ac && ac.close(); } catch (e) {}
+    mk.busy = false; $('mkGo').disabled = false; $('mkGo2').disabled = false; $('mkCanvas').style.display = 'none';
+  }
+}
+$('mkGo').onclick = makeOnDevice; $('mkGo2').onclick = makeVideo;
 
 function check() {
   const out = [];
