@@ -99,6 +99,7 @@ details summary{cursor:pointer;font-weight:700}
     <details class="box"><summary>GitHub connection</summary>
       <p class="muted">To save from this page, paste a GitHub fine-grained token with "Contents: read and write" access to your repository only. It is kept in this browser, never in the repository.</p>
       <div class="fld"><label>Repository</label><input id="ghRepo" placeholder="owner/repo"></div>
+      <div class="fld"><label>Private repository for your recordings</label><input id="ghTakes" placeholder="owner/repo, for example bkilapar-ship-it/oh-i-get-it-recordings"><div class="ref">Your recordings are kept here, out of public view. Your token needs access to this repository too. Leave empty to keep them in the main repository (public). Saved with the episode.</div></div>
       <div class="fld"><label>Token</label><input id="ghTok" type="password" placeholder="github_pat_…"></div>
       <div class="row"><button id="ghSaveCfg" class="sm">Remember on this device</button><button id="ghLoad" class="sm">Load latest from GitHub</button></div>
     </details>
@@ -270,6 +271,7 @@ function renderScenes() {
 }
 function renderChannel() {
   channel.names = channel.names || {}; channel.taglines = channel.taglines || {};
+  $('ghTakes').value = channel.takesRepo || '';
   $('chanBox').innerHTML = Object.keys(ep.languages).map(k => `<div class="fld"><label>${esc(ep.languages[k].name || k)}: channel name</label><input data-cn="${k}" value="${esc(channel.names[k] || '')}"></div><div class="fld"><label>${esc(ep.languages[k].name || k)}: tagline</label><input data-ct="${k}" value="${esc(channel.taglines[k] || '')}"></div>`).join('');
   $('chanBox').querySelectorAll('[data-cn]').forEach(n => n.oninput = () => { channel.names[n.dataset.cn] = n.value; channel.__dirty = true; remountSoon(); });
   $('chanBox').querySelectorAll('[data-ct]').forEach(n => n.oninput = () => { channel.taglines[n.dataset.ct] = n.value; channel.__dirty = true; remountSoon(); });
@@ -334,11 +336,12 @@ $('dl').onclick = () => {
 };
 
 // ---------- GitHub ----------
+$('ghTakes').oninput = () => { const v = $('ghTakes').value.trim().replace(/^https:\/\/github\.com\//, '').replace(/\/+$/, ''); if (v) channel.takesRepo = v; else delete channel.takesRepo; channel.__dirty = true; };
 $('ghSaveCfg').onclick = () => { store.set('ex.gh', { repo: $('ghRepo').value.trim(), tok: $('ghTok').value.trim() }); msg('Saved on this device.', 'good'); };
 const b64 = s => btoa(unescape(encodeURIComponent(s)));
 const unb64 = s => decodeURIComponent(escape(atob(s.replace(/\n/g, ''))));
-async function gh(path, method = 'GET', body) {
-  const repo = $('ghRepo').value.trim(), tok = $('ghTok').value.trim();
+async function gh(path, method = 'GET', body, repoOverride) {
+  const repo = repoOverride || $('ghRepo').value.trim(), tok = $('ghTok').value.trim();
   if (!repo || !tok) throw new Error('Open "GitHub connection" and add your repository and token first.');
   const r = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, { method, headers: { Authorization: 'Bearer ' + tok, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
   if (r.status === 404 && method === 'GET') return null;
@@ -354,9 +357,10 @@ $('save').onclick = async () => {
   $('save').disabled = true; msg('Saving…');
   try {
     await uploadPending();
+    // channel settings first, so the video build for this episode already sees the recordings repository
+    if (channel.__dirty) { const c = clone(channel); delete c.__dirty; await putFile('explainer/channel.json', JSON.stringify(c, null, 1) + '\n', 'Channel settings edited in the episode editor'); delete channel.__dirty; }
     await putFile(`explainer/episodes/${ep.id}.json`, JSON.stringify(ep, null, 1) + '\n', `Episode ${ep.id}: edited in the episode editor`);
     { const cur = await gh('explainer/episodes/index.json?ref=main'); const list = cur ? (JSON.parse(unb64(cur.content)).episodes || []) : []; if (!list.includes(ep.id)) { list.push(ep.id); await putFile('explainer/episodes/index.json', JSON.stringify({ episodes: list }, null, 1) + '\n', `Episode list: add ${ep.id}`); } }
-    if (channel.__dirty) { const c = clone(channel); delete c.__dirty; await putFile('explainer/channel.json', JSON.stringify(c, null, 1) + '\n', 'Channel names edited in the episode editor'); delete channel.__dirty; }
     dirty = false; store.set('ex.draft.' + ep.id, null);
     msg('Saved. The videos will be built in a few minutes: open your repository on GitHub, then Actions → "Explainer videos" to download them.', 'good');
   } catch (e) { msg(e.message, 'bad'); }
@@ -413,10 +417,20 @@ function mediaFor(t, cam) {
   if (vid) { m.className = 'camv'; $('stageBox').appendChild(m); } else { m.style.display = 'none'; document.body.appendChild(m); }
   const urls = [];
   if (pending[t.file]) urls.push(URL.createObjectURL(pending[t.file]));
-  urls.push(t.file, `https://raw.githubusercontent.com/${$('ghRepo').value.trim() || 'bkilapar-ship-it/profits-with-bk'}/main/explainer/${t.file}`);
+  if (t.store === 'private') { // private recordings: fetched with your token
+    if (!urls.length) privateURL(t.file).then(u => { if (u) m.src = u; else msg(`Could not load the recording ${t.file} from your private repository. Check the token and repository under "GitHub connection".`, 'bad'); });
+  } else urls.push(t.file, `https://raw.githubusercontent.com/${$('ghRepo').value.trim() || 'bkilapar-ship-it/profits-with-bk'}/main/explainer/${t.file}`);
   let k = 0; m.onerror = () => { if (++k < urls.length) m.src = urls[k]; };
-  m.src = urls[0];
+  if (urls.length) m.src = urls[0];
   return (media[t.file] = m);
+}
+async function privateURL(file) {
+  const repo = (channel.takesRepo || '').trim(), tok = $('ghTok').value.trim();
+  if (!repo || !tok) return null;
+  try {
+    const r = await fetch(`https://api.github.com/repos/${repo}/contents/${file}`, { headers: { Authorization: 'Bearer ' + tok, Accept: 'application/vnd.github.raw' } });
+    return r.ok ? URL.createObjectURL(await r.blob()) : null;
+  } catch (e) { return null; }
 }
 function unlockMedia() { // phones only allow sound that starts from a tap
   ep.scenes.forEach(s => { const t = takeOf(s); if (t) { const m = mediaFor(t, isCam(s)); const pr = m.play(); if (pr) pr.then(() => { if (!playing) m.pause(); }).catch(() => {}); } });
@@ -526,6 +540,7 @@ function keepTake() {
   const file = `takes/${ep.id}/${lang}/scene${R.i + 1}-${stamp}.${extOf(R.mime)}`;
   s.lang = s.lang || {}; s.lang[lang] = s.lang[lang] || {};
   s.lang[lang].take = { file, kind: R.kind, dur: +dur.toFixed(2), in: +a.toFixed(2), out: +b.toFixed(2) };
+  if ((channel.takesRepo || '').trim()) s.lang[lang].take.store = 'private';
   pending[file] = R.blob; R.blob = null; R.state = 'ready';
   changed(); renderScenes(); remount(); seekScene(R.i);
   queueUpload(file);
@@ -539,12 +554,17 @@ function queueUpload(file) {
       if (b.size > 90e6) throw new Error('too big');
       const content = await blobB64(b);
       let tries = 0;
-      for (;;) { try { await gh('explainer/' + file, 'PUT', { message: `Recording for ${ep.id}: ${file.split('/').slice(2).join('/')} [skip scan]`, content, branch: 'main' }); break; } catch (e) { if (++tries > 2 || !/ 409| 422/.test(e.message)) throw e; await new Promise(r => setTimeout(r, 1500)); } }
+      const t = ep.scenes.map(s => Object.values(s.lang || {}).map(l => l.take)).flat().find(x => x && x.file === file) || {};
+      const priv = t.store === 'private', where = priv ? (channel.takesRepo || '').trim() : null;
+      if (priv && !where) throw new Error('no private repo');
+      const body = { message: `Recording for ${ep.id}: ${file.split('/').slice(2).join('/')} [skip scan]`, content };
+      if (!priv) body.branch = 'main';
+      for (;;) { try { await gh(priv ? file : 'explainer/' + file, 'PUT', body, where); break; } catch (e) { if (++tries > 2 || !/ 409| 422/.test(e.message)) throw e; await new Promise(r => setTimeout(r, 1500)); } }
       delete pending[file];
-      msg('Recording saved on GitHub. Tap "Save to GitHub" when you are done so the episode uses it.', 'good');
+      msg((priv ? 'Recording saved in your private repository.' : 'Recording saved on GitHub.') + ' Tap "Save to GitHub" when you are done so the episode uses it.', 'good');
     } catch (e) {
       b.failed = true;
-      msg(/no token/.test(e.message) ? 'Recording kept on this page only. Add your GitHub token under "GitHub connection", then tap Save, or it is lost when you close the page.' : /too big/.test(e.message) ? 'That recording is too large to upload (over 90 MB). Record a shorter take.' : 'Could not upload the recording yet: ' + e.message + '. Save will try again.', 'bad');
+      msg(/no private repo/.test(e.message) ? 'Add your private recordings repository under "GitHub connection", then tap Save.' : /no token/.test(e.message) ? 'Recording kept on this page only. Add your GitHub token under "GitHub connection", then tap Save, or it is lost when you close the page.' : /too big/.test(e.message) ? 'That recording is too large to upload (over 90 MB). Record a shorter take.' : 'Could not upload the recording yet: ' + e.message + '. Save will try again.', 'bad');
     }
     refreshTakeStatus();
   });
