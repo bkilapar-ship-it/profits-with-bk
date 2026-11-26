@@ -239,7 +239,7 @@ function fieldHTML(f, si) {
   else if (f.kind === 'lines') input = `<textarea id="${id}" rows="${Math.max(2, (v || []).length + 1)}">${esc((v || []).join('\n'))}</textarea>`;
   else if (f.kind === 'number') input = `<input id="${id}" type="number" step="any" value="${v ?? ''}">`;
   else if (f.kind === 'money') input = `<div class="money"><span>${esc(ep.languages[lang].currency || '')}</span><input id="${id}" type="number" step="any" value="${v ?? ''}"></div>`;
-  else if (f.kind === 'select') input = `<select id="${id}">${f.options.map(o => `<option${o === v ? ' selected' : ''}>${o}</option>`).join('')}</select>`;
+  else if (f.kind === 'select') input = `<select id="${id}">${f.options.map(o => { const a2 = Array.isArray(o) ? o : [o, o]; return `<option value="${esc(a2[0])}"${a2[0] === v ? ' selected' : ''}>${esc(a2[1])}</option>`; }).join('')}</select>`;
   else if (f.kind === 'item') input = `<select id="${id}">${E.ITEM_KINDS.map(o => `<option${o === v ? ' selected' : ''}>${o}</option>`).join('')}</select>`;
   else if (f.kind === 'items') input = `<div class="chips" id="${id}">${(v || []).map((k, i) => `<button class="chip on" data-i="${i}" title="Tap to remove">${k} ✕</button>`).join('')}<select data-add style="width:auto"><option value="">+ add item</option>${E.ITEM_KINDS.map(o => `<option>${o}</option>`).join('')}</select></div>`;
   return `<div class="fld"><label for="${id}">${esc(f.label)}${isLang ? ` <span class="pill">${esc(ep.languages[lang].name || lang)}</span>` : ' <span class="pill">all languages</span>'}</label>${input}${ref}</div>`;

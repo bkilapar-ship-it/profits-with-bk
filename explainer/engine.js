@@ -121,44 +121,92 @@
   // fields: what the editor shows. per:'lang' = different in each language, per:'data' = same for every language.
   const SCENES = {};
 
+  // Layouts for the presenter scene, like the ones common on YouTube. Your camera picture always sits in the "slot" box.
+  const PRES_LAYOUTS = {
+    talking: { label: 'Talking head: big and centred, title across the top', slot: { x: 480, y: 200, w: 960, h: 720, r: 36 } },
+    side: { label: 'Side by side: you on one side, title on the other' },
+    circle: { label: 'Circle: you in a round frame, big title beside you' },
+    wide: { label: 'Wide: large centred picture under the title', slot: { x: 400, y: 245, w: 1120, h: 630, r: 32 } },
+    full: { label: 'Full width: picture fills the top, captions underneath', slot: { x: 0, y: 0, w: 1920, h: 925, r: 0 } },
+  };
+  const presLayout = d => { d = d || {}; return d.layout && PRES_LAYOUTS[d.layout] ? d.layout : (d.side === 'wide' ? 'wide' : 'side'); };
+  /** Chart-style decoration for the talking-head background: candles and a rising line on each side (drawn from scratch, no logos). */
+  function chartDecor(parent, uid) {
+    const g = el('g', {}, parent);
+    [[0, '#3aa0ff', 1], [1, '#ff7a45', -1]].forEach(([k, col, dir]) => {
+      const x0 = k ? 1500 : 60;
+      for (let i = 0; i < 9; i++) {
+        const h = 120 + ((i * 97 + k * 53) % 220), x = x0 + i * 40, yb = 930 - ((i * 61 + k * 29) % 140), up = (i + k) % 3 !== 0;
+        el('line', { x1: x + 11, x2: x + 11, y1: yb - h - 30, y2: yb + 22, stroke: col, 'stroke-width': 3, opacity: .45 }, g);
+        el('rect', { x, y: yb - h, width: 22, height: h * .62, rx: 3, fill: up ? col : 'none', stroke: col, 'stroke-width': 3, opacity: .5 }, g);
+      }
+      const pts = []; for (let i = 0; i < 9; i++) pts.push(`${x0 + i * 40 + 11},${700 - i * 38 * dir - ((i * 53) % 50)}`);
+      el('polyline', { points: pts.join(' '), fill: 'none', stroke: k ? '#ffb347' : '#7fd1ff', 'stroke-width': 5, 'stroke-linejoin': 'round', opacity: .7 }, g);
+      for (let i = 0; i < 5; i++) txt(g, x0 + 20 + (i % 3) * 110, 330 + i * 120, ((i * 37 + k * 11) % 90 / 10 + 0.2).toFixed(3), 30, 700, col, { anchor: 'start', attrs: { opacity: .28 } });
+    });
+    const rg = el('radialGradient', { id: 'pgl' + uid, cx: .5, cy: .55, r: .5 }, parent.ownerSVGElement ? parent.ownerSVGElement.querySelector('defs') || parent : parent);
+    el('stop', { offset: 0, 'stop-color': '#3a6ea5', 'stop-opacity': .55 }, rg); el('stop', { offset: 1, 'stop-color': '#3a6ea5', 'stop-opacity': 0 }, rg);
+    el('rect', { x: 360, y: 80, width: 1200, height: 1000, fill: `url(#pgl${uid})` }, g);
+    return g;
+  }
+
   SCENES.presenter = {
-    label: 'Presenter (you on camera, branded background)', base: 5, captions: true, camera: true,
+    label: 'Presenter (you on camera)', base: 5, captions: true, camera: true,
     /** Where your camera picture sits on screen (it is cropped to fill this box). */
-    slot(data) { const side = (data || {}).side; if (side === 'wide') return { x: 400, y: 245, w: 1120, h: 630, r: 32 }; return side === 'center' ? { x: 610, y: 150, w: 700, h: 600, r: 36 } : { x: side === 'left' ? 110 : 1110, y: 150, w: 700, h: 760, r: 36 }; },
+    slot(data) {
+      const lay = presLayout(data), side = (data || {}).side;
+      if (PRES_LAYOUTS[lay].slot) return PRES_LAYOUTS[lay].slot;
+      if (lay === 'circle') return { x: side === 'left' ? 150 : 1170, y: 230, w: 600, h: 600, r: 300 };
+      return side === 'center' ? { x: 610, y: 150, w: 700, h: 600, r: 36 } : { x: side === 'left' ? 110 : 1110, y: 150, w: 700, h: 760, r: 36 };
+    },
     fields: [
-      { k: 'title', per: 'lang', kind: 'text', label: 'Title shown at the bottom' },
+      { k: 'title', per: 'lang', kind: 'text', label: 'Title (shown on screen)' },
       { k: 'lines', per: 'lang', kind: 'lines', label: 'What you say (one line per caption)' },
-      { k: 'side', per: 'data', kind: 'select', options: ['left', 'right', 'center', 'wide'], label: 'Where you stand (wide = big centred picture with the title across the top)' },
+      { k: 'layout', per: 'data', kind: 'select', options: Object.keys(PRES_LAYOUTS).map(k => [k, PRES_LAYOUTS[k].label]), label: 'Layout' },
+      { k: 'side', per: 'data', kind: 'select', options: ['left', 'right', 'center'], label: 'Which side (for Side by side and Circle)' },
     ],
-    defaults: { data: { side: 'right' }, lang: { title: 'Topic title', lines: ['Say hello and introduce the topic.'] } },
+    defaults: { data: { layout: 'talking', side: 'right' }, lang: { title: 'Topic title', lines: ['Say hello and introduce the topic.'] } },
     build(g, S, ctx) {
+      const lay = presLayout(S.data), side = S.data.side || 'right', r = this.slot(S.data);
       const bg = el('g', {}, g);
       const grd = el('linearGradient', { id: 'pg' + ctx.uid, x1: 0, y1: 0, x2: 1, y2: 1 }, ctx.defs);
-      el('stop', { offset: 0, 'stop-color': '#0d1b2a' }, grd); el('stop', { offset: 1, 'stop-color': '#1b3a5c' }, grd);
+      el('stop', { offset: 0, 'stop-color': '#0d1b2a' }, grd); el('stop', { offset: 1, 'stop-color': lay === 'talking' ? '#10294a' : '#1b3a5c' }, grd);
       el('rect', { width: W, height: H, fill: `url(#pg${ctx.uid})` }, bg);
       const dots = el('g', { opacity: .18 }, bg);
       for (let i = 0; i < 26; i++) { const x = (i * 337) % W, y = (i * 211) % H; el('circle', { cx: x, cy: y, r: 3 + (i % 4) * 2, fill: '#ffd166' }, dots); }
-      const big = bulb(bg, S.data.side === 'left' ? 1500 : 420, 560, 6.5, false); big.setAttribute('opacity', .07);
-      const brand = el('g', { transform: S.data.side === 'wide' ? 'translate(70,22)' : 'translate(70,70)' }, g);
-      bulb(brand, 40, 46, .9, true);
-      txt(brand, 100, 70, ctx.channelName, 44, 800, '#fff', { anchor: 'start', max: 900 });
-      const third = el('g', {}, g);
-      const wide = S.data.side === 'wide', anchor = S.data.side === 'left' ? 'end' : 'start';
+      if (lay === 'talking') chartDecor(bg, ctx.uid);
+      else { const big = bulb(bg, side === 'left' ? 1500 : 420, 560, 6.5, false); big.setAttribute('opacity', .07); }
+      const brand = el('g', {}, g), third = el('g', {}, g);
       const cam = S.L.take && S.L.take.kind === 'video' ? S.L.take : null;
-      if (wide) { // big title across the top, picture centred below it
-        const tt0 = txt(third, 960, 205, S.L.title || '', 72, 800, '#fff', { anchor: 'middle', max: 1700 });
-        el('rect', { x: 760, y: 222, width: 400, height: 8, rx: 4, fill: '#ffd166' }, third);
+      if (lay === 'talking') { // channel name big in gold across the top, topic title under it
+        const gold = el('linearGradient', { id: 'gd' + ctx.uid, x1: 0, y1: 0, x2: 0, y2: 1 }, ctx.defs);
+        el('stop', { offset: 0, 'stop-color': '#fff3c4' }, gold); el('stop', { offset: .55, 'stop-color': '#e8c15a' }, gold); el('stop', { offset: 1, 'stop-color': '#b88a1f' }, gold);
+        txt(brand, 960, 122, ctx.channelName.toUpperCase(), 100, 800, `url(#gd${ctx.uid})`, { max: 1600, attrs: { stroke: '#0b1522', 'stroke-width': 3, 'paint-order': 'stroke' } });
+        txt(third, 960, 176, S.L.title || '', 40, 700, '#cfe3ff', { max: 1400 });
       } else {
-        el('rect', { x: S.data.side === 'left' ? 1810 : 110, y: 790, width: 10, height: 90, rx: 5, fill: '#ffd166' }, third);
-        txt(third, S.data.side === 'left' ? 1785 : 145, 856, S.L.title || '', 60, 800, '#fff', { anchor, max: cam ? 900 : 1150 });
+        brand.setAttribute('transform', lay === 'wide' ? 'translate(70,22)' : lay === 'full' ? 'translate(70,978)' : 'translate(70,70)');
+        bulb(brand, 40, 46, .9, true);
+        txt(brand, 100, 70, ctx.channelName, 44, 800, '#fff', { anchor: 'start', max: 900 });
+        if (lay === 'wide') {
+          txt(third, 960, 205, S.L.title || '', 72, 800, '#fff', { anchor: 'middle', max: 1700 });
+          el('rect', { x: 760, y: 222, width: 400, height: 8, rx: 4, fill: '#ffd166' }, third);
+        } else if (lay === 'circle') {
+          const left = side === 'left', tx = left ? 1000 : 120;
+          el('rect', { x: tx - 20, y: 380, width: 10, height: 190, rx: 5, fill: '#ffd166' }, third);
+          txt(third, tx, 470, S.L.title || '', 84, 800, '#fff', { anchor: 'start', max: 760 });
+          txt(third, tx, 548, ctx.channelName, 36, 700, '#ffd166', { anchor: 'start', max: 760 });
+        } else if (lay === 'side') {
+          el('rect', { x: side === 'left' ? 1810 : 110, y: 790, width: 10, height: 90, rx: 5, fill: '#ffd166' }, third);
+          txt(third, side === 'left' ? 1785 : 145, 856, S.L.title || '', 60, 800, '#fff', { anchor: side === 'left' ? 'end' : 'start', max: cam ? 900 : 1150 });
+        }
       }
       let ph = null, img = null, camG = null;
-      if (cam) { // your recorded video, in a rounded frame. In the editor the video plays on top of this box.
-        const r = this.slot(S.data);
+      const border = lay !== 'full';
+      if (cam) { // your recorded video, in a frame. In the editor the video plays on top of this box.
         camG = el('g', {}, g);
         const clip = el('clipPath', { id: 'pc' + ctx.uid }, ctx.defs);
         el('rect', { x: r.x, y: r.y, width: r.w, height: r.h, rx: r.r }, clip);
-        el('rect', { x: r.x - 10, y: r.y - 10, width: r.w + 20, height: r.h + 20, rx: r.r + 10, fill: '#ffd166', opacity: .9 }, camG);
+        if (border) el('rect', { x: r.x - 10, y: r.y - 10, width: r.w + 20, height: r.h + 20, rx: r.r + 10, fill: '#ffd166', opacity: .9 }, camG);
         el('rect', { x: r.x, y: r.y, width: r.w, height: r.h, rx: r.r, fill: '#13263b' }, camG);
         if (cam.frames) {
           img = el('image', { x: r.x, y: r.y, width: r.w, height: r.h, preserveAspectRatio: 'xMidYMid slice', 'clip-path': `url(#pc${ctx.uid})` }, camG);
@@ -166,17 +214,16 @@
           img.addEventListener('error', () => img.removeAttribute('data-pending'));
         }
       } else if (ctx.preview) { // where your camera picture goes (preview only, never rendered into the video)
-        if (wide) { const r = this.slot(S.data); ph = el('g', { opacity: .35 }, g); el('rect', { x: r.x, y: r.y, width: r.w, height: r.h, rx: r.r, fill: 'none', stroke: '#fff', 'stroke-width': 4, 'stroke-dasharray': '14 10' }, ph); txt(ph, 960, r.y + r.h / 2 + 10, 'YOUR CAMERA', 40, 700, '#fff'); }
-        else { const cx = S.data.side === 'left' ? 520 : S.data.side === 'center' ? 960 : 1400;
-        ph = el('g', { opacity: .35 }, g);
-        el('circle', { cx, cy: 380, r: 120, fill: 'none', stroke: '#fff', 'stroke-width': 4, 'stroke-dasharray': '14 10' }, ph);
-        el('path', { d: `M${cx - 230} 1080 q0 -330 230 -330 q230 0 230 330`, fill: 'none', stroke: '#fff', 'stroke-width': 4, 'stroke-dasharray': '14 10' }, ph);
-        txt(ph, cx, 670, 'YOUR CAMERA', 30, 700, '#fff'); }
+        ph = el('g', { opacity: .4 }, g);
+        el('rect', { x: r.x, y: r.y, width: r.w, height: r.h, rx: r.r, fill: 'rgba(255,255,255,.04)', stroke: '#fff', 'stroke-width': 4, 'stroke-dasharray': '14 10' }, ph);
+        const cx = r.x + r.w / 2, cy = r.y + r.h / 2;
+        el('circle', { cx, cy: cy - r.h * .1, r: Math.min(r.w, r.h) * .13, fill: 'none', stroke: '#fff', 'stroke-width': 4, 'stroke-dasharray': '14 10' }, ph);
+        txt(ph, cx, cy + r.h * .2, 'YOUR CAMERA', 30, 700, '#fff');
       }
       return u => {
-        const ts = u * this.base;
-        const a = ease(prog(ts, .2, .9));
-        third.setAttribute('transform', `translate(${wide ? 0 : (S.data.side === 'left' ? 1 : -1) * (1 - a) * 60},${wide ? -(1 - a) * 30 : 0})`); third.setAttribute('opacity', a);
+        const ts = u * this.base, a = ease(prog(ts, .2, .9));
+        const dx = lay === 'side' ? (side === 'left' ? 1 : -1) * (1 - a) * 60 : 0, dy = lay === 'side' || lay === 'circle' ? 0 : -(1 - a) * 30;
+        third.setAttribute('transform', `translate(${dx},${dy})`); third.setAttribute('opacity', a);
         brand.setAttribute('opacity', ease(prog(ts, 0, .5)));
         dots.setAttribute('transform', `translate(0,${-ts * 6})`);
         if (camG) camG.setAttribute('opacity', ease(prog(u * ctx.dur, 0, .35)));
