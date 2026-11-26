@@ -124,6 +124,8 @@
   // Layouts for the presenter scene, like the ones common on YouTube. Your camera picture always sits in the "slot" box.
   const PRES_LAYOUTS = {
     talking: { label: 'Talking head: big and centred, title across the top', slot: { x: 480, y: 200, w: 960, h: 720, r: 36 } },
+    cut: { label: 'Standing in front of the banner: only you, no box (cut-out)', slot: { x: 260, y: 150, w: 1400, h: 788, r: 0, mode: 'cut' } },
+    soft: { label: 'Soft edges: your whole picture, no box, edges fade into the banner', slot: { x: 302, y: 190, w: 1316, h: 740, r: 0, mode: 'soft' } },
     side: { label: 'Side by side: you on one side, title on the other' },
     circle: { label: 'Circle: you in a round frame, big title beside you' },
     wide: { label: 'Wide: large centred picture under the title', slot: { x: 400, y: 245, w: 1120, h: 630, r: 32 } },
@@ -167,18 +169,18 @@
     ],
     defaults: { data: { layout: 'talking', side: 'right' }, lang: { title: 'Topic title', lines: ['Say hello and introduce the topic.'] } },
     build(g, S, ctx) {
-      const lay = presLayout(S.data), side = S.data.side || 'right', r = this.slot(S.data);
+      const lay = presLayout(S.data), side = S.data.side || 'right', r = this.slot(S.data), banner = lay === 'talking' || lay === 'cut' || lay === 'soft';
       const bg = el('g', {}, g);
       const grd = el('linearGradient', { id: 'pg' + ctx.uid, x1: 0, y1: 0, x2: 1, y2: 1 }, ctx.defs);
-      el('stop', { offset: 0, 'stop-color': '#0d1b2a' }, grd); el('stop', { offset: 1, 'stop-color': lay === 'talking' ? '#10294a' : '#1b3a5c' }, grd);
+      el('stop', { offset: 0, 'stop-color': '#0d1b2a' }, grd); el('stop', { offset: 1, 'stop-color': banner ? '#10294a' : '#1b3a5c' }, grd);
       el('rect', { width: W, height: H, fill: `url(#pg${ctx.uid})` }, bg);
       const dots = el('g', { opacity: .18 }, bg);
       for (let i = 0; i < 26; i++) { const x = (i * 337) % W, y = (i * 211) % H; el('circle', { cx: x, cy: y, r: 3 + (i % 4) * 2, fill: '#ffd166' }, dots); }
-      if (lay === 'talking') chartDecor(bg, ctx.uid);
+      if (banner) chartDecor(bg, ctx.uid);
       else { const big = bulb(bg, side === 'left' ? 1500 : 420, 560, 6.5, false); big.setAttribute('opacity', .07); }
       const brand = el('g', {}, g), third = el('g', {}, g);
       const cam = S.L.take && S.L.take.kind === 'video' ? S.L.take : null;
-      if (lay === 'talking') { // channel name big in gold across the top, topic title under it
+      if (banner) { // channel name big in gold across the top, topic title under it
         const gold = el('linearGradient', { id: 'gd' + ctx.uid, x1: 0, y1: 0, x2: 0, y2: 1 }, ctx.defs);
         el('stop', { offset: 0, 'stop-color': '#fff3c4' }, gold); el('stop', { offset: .55, 'stop-color': '#e8c15a' }, gold); el('stop', { offset: 1, 'stop-color': '#b88a1f' }, gold);
         txt(brand, 960, 122, ctx.channelName.toUpperCase(), 100, 800, `url(#gd${ctx.uid})`, { max: 1600, attrs: { stroke: '#0b1522', 'stroke-width': 3, 'paint-order': 'stroke' } });
@@ -201,13 +203,13 @@
         }
       }
       let ph = null, img = null, camG = null;
-      const border = lay !== 'full';
+      const border = lay !== 'full' && !r.mode;
       if (cam) { // your recorded video, in a frame. In the editor the video plays on top of this box.
         camG = el('g', {}, g);
         const clip = el('clipPath', { id: 'pc' + ctx.uid }, ctx.defs);
         el('rect', { x: r.x, y: r.y, width: r.w, height: r.h, rx: r.r }, clip);
         if (border) el('rect', { x: r.x - 10, y: r.y - 10, width: r.w + 20, height: r.h + 20, rx: r.r + 10, fill: '#ffd166', opacity: .9 }, camG);
-        el('rect', { x: r.x, y: r.y, width: r.w, height: r.h, rx: r.r, fill: '#13263b' }, camG);
+        if (!r.mode) el('rect', { x: r.x, y: r.y, width: r.w, height: r.h, rx: r.r, fill: '#13263b' }, camG);
         if (cam.frames) {
           img = el('image', { x: r.x, y: r.y, width: r.w, height: r.h, preserveAspectRatio: 'xMidYMid slice', 'clip-path': `url(#pc${ctx.uid})` }, camG);
           img.addEventListener('load', () => img.removeAttribute('data-pending'));
