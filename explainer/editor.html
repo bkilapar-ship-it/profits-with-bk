@@ -27,6 +27,8 @@ html,body{overflow-x:hidden}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .row>*{flex:0 0 auto}
 .grow{flex:1 1 auto!important}
+body[data-tab=edit] [data-tab]:not([data-tab=edit]),body[data-tab=video] [data-tab]:not([data-tab=video]),body[data-tab=config] [data-tab]:not([data-tab=config]){display:none!important}
+body:not([data-tab=edit]) main{grid-template-columns:minmax(0,760px)}body:not([data-tab=edit]) .pv{position:static}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .tab{border-radius:999px;padding:5px 12px}
 .tab.on{background:var(--acc);color:#1d2a36;border-color:var(--acc);font-weight:700}
@@ -70,11 +72,12 @@ details summary{cursor:pointer;font-weight:700}
   <button id="newEp" class="sm">New episode</button>
   <span class="grow"></span>
   <button id="dl" class="sm">Download file</button>
-  <button id="save" class="pri sm">Save to GitHub</button>
+  <button id="save" class="sm" title="Optional: stores the episode file on GitHub so it is backed up and can be built there">Save to GitHub (optional)</button>
 </header>
+<nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
   <section>
-    <div class="box">
+    <div class="box" data-tab="edit">
       <div class="tabs" id="langTabs"></div>
       <div class="row"><div class="grow"><label class="muted">Episode title (this language)</label><input id="epTitle"></div></div>
       <details style="margin-top:10px"><summary>Language settings</summary>
@@ -87,24 +90,28 @@ details summary{cursor:pointer;font-weight:700}
         <div class="row" style="margin-top:8px"><button id="delLang" class="sm">Remove this language</button></div>
       </details>
     </div>
-    <div id="scenes"></div>
-    <div class="box row">
+    <div id="scenes" data-tab="edit"></div>
+    <div class="box row" data-tab="edit">
       <select id="addType" class="grow" style="width:auto"></select>
       <button id="addScene" class="sm">Add scene</button>
     </div>
-    <details class="box"><summary>Channel names and taglines</summary>
+    <details class="box" data-tab="config" open><summary><b>Channel names and taglines</b></summary>
       <div id="chanBox"></div>
       <p class="muted">These appear on the presenter background and the end card. Saved to channel.json.</p>
     </details>
-    <details class="box"><summary>GitHub connection</summary>
+    <details class="box" data-tab="config" open><summary><b>GitHub connection</b> <span class="muted">(optional: only for saving to GitHub)</span></summary>
       <p class="muted">To save from this page, paste a GitHub fine-grained token with "Contents: read and write" access to your repository only. It is kept in this browser, never in the repository.</p>
       <div class="fld"><label>Repository</label><input id="ghRepo" placeholder="owner/repo"></div>
       <div class="fld"><label>Token</label><input id="ghTok" type="password" placeholder="github_pat_…"></div>
       <div class="row"><button id="ghSaveCfg" class="sm">Remember on this device</button><button id="ghLoad" class="sm">Load latest from GitHub</button></div>
     </details>
+      <details class="box" id="ytConn" data-tab="config" open><summary><b>YouTube connection</b> <span class="muted">(needed once, for uploading)</span></summary>
+        <div class="fld"><label for="ytId">Google OAuth client ID</label><input id="ytId" placeholder="…apps.googleusercontent.com" autocomplete="off"></div>
+        <p class="muted">Create it once at console.cloud.google.com: new project, enable <b>YouTube Data API v3</b>, OAuth consent screen set to External with your own Google account as a test user, then Credentials / Create client / <b>Web application</b> with <code>https://bkilapar-ship-it.github.io</code> as the authorised JavaScript origin. Paste the client ID here. When Google asks which account to use, pick the <b>Oh, I Get It</b> channel. The studio page uses the same ID, so it is shared.</p>
+      </details>
   </section>
   <section class="pv">
-    <div class="box">
+    <div class="box" data-tab="edit">
       <div class="stage" id="stageBox"><svg id="stage" xmlns="http://www.w3.org/2000/svg"></svg></div>
       <div class="row" style="margin-top:8px">
         <button id="play" class="sm">▶ Play</button>
@@ -114,21 +121,18 @@ details summary{cursor:pointer;font-weight:700}
       <div class="row" style="margin-top:8px"><span class="muted grow" id="sceneAt"></span><button id="copyScript" class="sm">Copy script (this language)</button></div>
       <div id="msg" class="msg"></div>
     </div>
-    <div class="box" id="makeBox">
+    <div class="box" id="makeBox" data-tab="video">
       <b>Make the final video</b> <span class="pill" id="mkLang"></span>
       <p class="muted" style="margin:4px 0 8px">Makes the finished video right here on your phone: the animation, your voice and your camera. No GitHub and no waiting for a build. Keep this page open and the screen on until it is done (a minute of video takes a few minutes). Then save it, share it, or upload it.</p>
       <button class="pri" id="mkGo">🎬 Make video on this device</button>
       <button class="sm" id="mkGo2" style="margin-left:6px" title="The older method: needs Save to GitHub and a finished build">Use the GitHub build instead</button>
-      <details class="box" id="ytConn" style="margin:8px 0"><summary><b>YouTube connection</b> <span class="muted">(needed once, for uploading)</span></summary>
-        <div class="fld"><label for="ytId">Google OAuth client ID</label><input id="ytId" placeholder="…apps.googleusercontent.com" autocomplete="off"></div>
-        <p class="muted">Create it once at console.cloud.google.com: new project, enable <b>YouTube Data API v3</b>, OAuth consent screen set to External with your own Google account as a test user, then Credentials / Create client / <b>Web application</b> with <code>https://bkilapar-ship-it.github.io</code> as the authorised JavaScript origin. Paste the client ID here. When Google asks which account to use, pick the <b>Oh, I Get It</b> channel. The studio page uses the same ID, so it is shared.</p>
-      </details>
+      <p class="muted" id="ytHint" style="margin:6px 0">Uploading to YouTube needs a one-time Google setup in the <b>⚙️ Configuration</b> tab.</p>
       <canvas id="mkCanvas" style="display:none;width:100%;border-radius:8px;margin-top:8px;background:#000"></canvas>
       <div id="mkBar" style="height:6px;border-radius:3px;background:var(--line);margin-top:8px"><i style="display:block;height:100%;width:0;border-radius:3px;background:var(--good)"></i></div>
       <div id="mkSt" class="msg"></div>
       <div id="mkOut"></div>
     </div>
-    <div class="box muted">
+    <div class="box muted" data-tab="edit">
       <b>How this works.</b> Change any words, prices or timings in the scene cards and the preview updates. Each language has its own words and prices; the animation is shared. "Save to GitHub" updates the episode file, and the video build then makes one video per language. Lines in the "voiceover" boxes become the captions and your teleprompter script.
     </div>
   </section>
@@ -960,7 +964,12 @@ async function makeOnDevice() {
   }
 }
 try { $('ytId').value = localStorage.getItem('bkstudio-ytid') || ''; } catch (e) {}
+const ytHintUpd = () => { const h = $('ytHint'); if (h) h.style.display = /\.apps\.googleusercontent\.com$/.test($('ytId').value.trim()) ? 'none' : ''; }; ytHintUpd();
+$('ytId').oninput = ytHintUpd;
 $('ytId').onchange = () => { try { localStorage.setItem('bkstudio-ytid', $('ytId').value.trim()); } catch (e) {} };
+function showTab(t) { document.body.dataset.tab = t; document.querySelectorAll('#mainTabs [data-main]').forEach(b => b.classList.toggle('on', b.dataset.main === t)); try { sessionStorage.setItem('exTab', t); } catch (e) {} window.scrollTo({ top: 0 }); }
+document.querySelectorAll('#mainTabs [data-main]').forEach(b => { b.onclick = () => showTab(b.dataset.main); });
+showTab('edit');
 $('mkGo').onclick = makeOnDevice; $('mkGo2').onclick = makeVideo;
 
 function check() {
