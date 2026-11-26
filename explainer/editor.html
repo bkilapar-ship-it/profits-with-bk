@@ -69,10 +69,6 @@ details summary{cursor:pointer;font-weight:700}
 <header>
   <h1>💡 Episode Editor</h1>
   <select id="epSel" style="width:auto"></select>
-  <button id="newEp" class="sm">New episode</button>
-  <span class="grow"></span>
-  <button id="dl" class="sm">Download file</button>
-  <button id="save" class="sm" title="Optional: stores the episode file on GitHub so it is backed up and can be built there">Save to GitHub (optional)</button>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -95,6 +91,7 @@ details summary{cursor:pointer;font-weight:700}
       <select id="addType" class="grow" style="width:auto"></select>
       <button id="addScene" class="sm">Add scene</button>
     </div>
+    <div class="box" data-tab="config"><b>Episodes</b> <p class="muted" style="margin:4px 0 8px">Pick an episode at the top of the page. Start a new one here.</p><button id="newEp" class="sm">New episode</button></div>
     <details class="box" data-tab="config" open><summary><b>Channel names and taglines</b></summary>
       <div id="chanBox"></div>
       <p class="muted">These appear on the presenter background and the end card. Saved to channel.json.</p>
@@ -131,6 +128,10 @@ details summary{cursor:pointer;font-weight:700}
       <div id="mkBar" style="height:6px;border-radius:3px;background:var(--line);margin-top:8px"><i style="display:block;height:100%;width:0;border-radius:3px;background:var(--good)"></i></div>
       <div id="mkSt" class="msg"></div>
       <div id="mkOut"></div>
+      <div class="box" style="margin-top:12px"><b>Keep a copy</b> <span class="muted">(only when you are happy with the recordings)</span>
+        <p class="muted" style="margin:4px 0 8px">Your recordings stay on this phone either way. These two only keep the episode file (words, prices, timings).</p>
+        <div class="row"><button id="dl" class="sm">Download file</button><button id="save" class="sm" title="Optional: stores the episode file on GitHub (needs the token in Configuration)">Save to GitHub (optional)</button></div>
+      </div>
     </div>
     <div class="box muted" data-tab="edit">
       <b>How this works.</b> Change any words, prices or timings in the scene cards and the preview updates. Each language has its own words and prices; the animation is shared. "Save to GitHub" updates the episode file, and the video build then makes one video per language. Lines in the "voiceover" boxes become the captions and your teleprompter script.
@@ -647,7 +648,7 @@ function storeTake(i, blob, kind, dur, a, b, ext, aud) {
   blobs[file] = blob; deviceKeys.add(file);
   if (aud) { s.lang[lang].take.aud = true; blobs[file + '.aud'] = aud; deviceKeys.add(file + '.aud'); saveBlob(file + '.aud', aud).catch(() => {}); }
   changed(); renderScenes(); remount(); seekScene(i);
-  saveBlob(file, blob).then(() => msg('Recording kept on this device. Tap "Save to GitHub" when you are done, so the build times the scenes to your voice.', 'good'))
+  saveBlob(file, blob).then(() => msg('Recording kept on this device. When all scenes are recorded, go to the Video tab and tap Make video.', 'good'))
     .catch(e => msg('Could not keep the recording in this browser (' + (e && e.message || e) + '). It works until you close the page. Free some space on the phone and record again.', 'bad'));
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 }
