@@ -119,6 +119,10 @@ details summary{cursor:pointer;font-weight:700}
       <p class="muted" style="margin:4px 0 8px">Makes the finished video right here on your phone: the animation, your voice and your camera. No GitHub and no waiting for a build. Keep this page open and the screen on until it is done (a minute of video takes a few minutes). Then save it, share it, or upload it.</p>
       <button class="pri" id="mkGo">🎬 Make video on this device</button>
       <button class="sm" id="mkGo2" style="margin-left:6px" title="The older method: needs Save to GitHub and a finished build">Use the GitHub build instead</button>
+      <details class="box" id="ytConn" style="margin:8px 0"><summary><b>YouTube connection</b> <span class="muted">(needed once, for uploading)</span></summary>
+        <div class="fld"><label for="ytId">Google OAuth client ID</label><input id="ytId" placeholder="…apps.googleusercontent.com" autocomplete="off"></div>
+        <p class="muted">Create it once at console.cloud.google.com: new project, enable <b>YouTube Data API v3</b>, OAuth consent screen set to External with your own Google account as a test user, then Credentials / Create client / <b>Web application</b> with <code>https://bkilapar-ship-it.github.io</code> as the authorised JavaScript origin. Paste the client ID here. When Google asks which account to use, pick the <b>Oh, I Get It</b> channel. The studio page uses the same ID, so it is shared.</p>
+      </details>
       <canvas id="mkCanvas" style="display:none;width:100%;border-radius:8px;margin-top:8px;background:#000"></canvas>
       <div id="mkBar" style="height:6px;border-radius:3px;background:var(--line);margin-top:8px"><i style="display:block;height:100%;width:0;border-radius:3px;background:var(--good)"></i></div>
       <div id="mkSt" class="msg"></div>
@@ -830,16 +834,12 @@ function ytCard() {
   const L = ep.languages[lang] || {}, lines = []; ep.scenes.forEach(sc => ((sc.lang || {})[lang] || {}).lines && lines.push(...sc.lang[lang].lines.filter(x => String(x).trim())));
   const tag = ((channel.taglines || {})[lang] || (channel.taglines || {}).en || ''), name = ((channel.names || {})[lang] || (channel.names || {}).en || 'Oh, I Get It');
   const desc = [tag, lines.join(' '), 'All prices in this video are illustrative.', `#OhIGetIt #${(L.name || lang).replace(/\W/g, '')} #explained`].filter(Boolean).join('\n\n');
-  let cid = ''; try { cid = localStorage.getItem('bkstudio-ytid') || ''; } catch (e) {}
   return `<div class="box" style="margin-top:10px"><b>Upload to YouTube</b> <span class="pill">${esc(name)}</span>
     <div class="fld"><label>Title</label><input id="ytT" value="${esc(((ep.title || {})[lang] || ep.id).slice(0, 100))}"></div>
     <div class="fld"><label>Description</label><textarea id="ytD" rows="6">${esc(desc)}</textarea></div>
     <div class="row"><select id="ytPriv" style="width:auto"><option value="private">Private</option><option value="unlisted">Unlisted</option></select><button class="pri" id="ytGo">⬆ Upload to YouTube</button></div>
     <div id="ytSt" class="msg"></div>
-    <details><summary>YouTube connection (one time)</summary>
-      <div class="fld"><label>Google OAuth client ID</label><input id="ytId" value="${esc(cid)}" placeholder="…apps.googleusercontent.com"></div>
-      <p class="muted">If you already set up uploads in the studio page, the client ID is remembered here too (same website). Otherwise: in console.cloud.google.com create a project, enable <b>YouTube Data API v3</b>, set the OAuth consent screen to External with your Google account as a test user, create an OAuth client ID of type <b>Web application</b> with this site's address as an authorised JavaScript origin, and paste the client ID above. When Google asks which account to use, pick the channel <b>${esc(name)}</b>. Until Google audits the project, YouTube keeps API uploads private; switch it to public by hand in YouTube Studio.</p>
-    </details></div>`;
+    <p class="muted">Needs the Google client ID in <b>YouTube connection</b> above (once).</p></div>`;
 }
 function mkResult(blob, type, name, info) {
   mk.blob = blob; if (mk.url) URL.revokeObjectURL(mk.url); mk.url = URL.createObjectURL(blob);
@@ -959,6 +959,8 @@ async function makeOnDevice() {
     mk.busy = false; $('mkGo').disabled = false; $('mkGo2').disabled = false; $('mkCanvas').style.display = 'none';
   }
 }
+try { $('ytId').value = localStorage.getItem('bkstudio-ytid') || ''; } catch (e) {}
+$('ytId').onchange = () => { try { localStorage.setItem('bkstudio-ytid', $('ytId').value.trim()); } catch (e) {} };
 $('mkGo').onclick = makeOnDevice; $('mkGo2').onclick = makeVideo;
 
 function check() {
