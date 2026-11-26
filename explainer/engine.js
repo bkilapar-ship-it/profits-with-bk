@@ -105,13 +105,27 @@
     txt(g, 0, -20, label, 30, 700, '#6b7f8e', { max: 290 });
     return { g, v: txt(g, 0, 46, '', 64, 800, stroke) };
   }
-  function bulb(parent, x, y, s, glow) {
+  function bulb(parent, x, y, s, glow) { // the channel logo: glass bulb with a tangled line that becomes straight, sparkle and rays
     const g = el('g', { transform: `translate(${x},${y}) scale(${s})` }, parent);
-    if (glow) el('circle', { cx: 0, cy: -10, r: 70, fill: '#ffd166', opacity: .25 }, g);
-    el('path', { d: 'M-34 -14 a40 40 0 1 1 68 0 q-12 14 -14 30 h-40 q-2 -16 -14 -30z', fill: '#ffd166' }, g);
-    el('rect', { x: -20, y: 20, width: 40, height: 10, rx: 4, fill: '#adb5bd' }, g);
-    el('rect', { x: -16, y: 33, width: 32, height: 9, rx: 4, fill: '#8d99ae' }, g);
-    el('path', { d: 'M-10 6 l6 -18 l8 12 l6 -16', stroke: '#e09f3e', 'stroke-width': 4, fill: 'none', 'stroke-linejoin': 'round' }, g);
+    if (glow) el('circle', { cx: 0, cy: -10, r: 70, fill: '#ffd166', opacity: .12 }, g);
+    const svg = parent.ownerSVGElement || (parent.tagName === 'svg' ? parent : null);
+    let fillG = '#ffd166';
+    if (svg) {
+      const defs = svg.querySelector('defs') || el('defs', {}, svg);
+      if (!defs.querySelector('#bulbGlass')) {
+        const rg = el('radialGradient', { id: 'bulbGlass', cx: .4, cy: .3, r: .8 }, defs);
+        el('stop', { offset: 0, 'stop-color': '#fff0b3' }, rg); el('stop', { offset: .55, 'stop-color': '#ffd166' }, rg); el('stop', { offset: 1, 'stop-color': '#f0a93a' }, rg);
+      }
+      fillG = 'url(#bulbGlass)';
+    }
+    const l = el('g', { transform: 'translate(0,-10) scale(.42) translate(-100,-108)' }, g);
+    const rays = el('g', { stroke: '#ffd166', 'stroke-width': 11, 'stroke-linecap': 'round' }, l);
+    [[100, -8, 100, -34], [154, 6.5, 167, -16], [46, 6.5, 33, -16], [193.5, 46, 216, 33], [6.5, 46, -16, 33]].forEach(([a, b, c, d]) => el('line', { x1: a, y1: b, x2: c, y2: d }, rays));
+    el('path', { d: 'M100 12 C48 12 14 52 14 100 C14 134 34 156 52 176 C60 186 62 194 62 204 L138 204 C138 194 140 186 148 176 C166 156 186 134 186 100 C186 52 152 12 100 12Z', fill: fillG }, l);
+    el('rect', { x: 60, y: 212, width: 80, height: 16, rx: 8, fill: '#9aa7bb' }, l);
+    el('rect', { x: 74, y: 232, width: 52, height: 13, rx: 6.5, fill: '#66758c' }, l);
+    el('path', { d: 'M34 132 C50 76 92 150 84 104 C78 74 44 104 70 128 C94 150 112 98 120 100 L166 100', fill: 'none', stroke: '#0d1b2a', 'stroke-width': 9, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, l);
+    el('path', { d: 'M150 50 l4 12 l12 4 l-12 4 l-4 12 l-4 -12 l-12 -4 l12 -4z', fill: '#fffdf3' }, l);
     return g;
   }
 
@@ -133,6 +147,21 @@
   };
   const presLayout = d => { d = d || {}; return d.layout && PRES_LAYOUTS[d.layout] ? d.layout : (d.side === 'wide' ? 'wide' : 'side'); };
   /** Chart-style decoration for the talking-head background: candles and a rising line on each side (drawn from scratch, no logos). */
+  /** Background of the channel banner: soft glow, golden dots, and the line that starts tangled and becomes straight, ending in a sparkle. */
+  function bannerDecor(parent, uid) {
+    const g = el('g', {}, parent), svg = parent.ownerSVGElement, defs = svg.querySelector('defs');
+    const halo = el('radialGradient', { id: 'bh' + uid, cx: .5, cy: .5, r: .5 }, defs);
+    el('stop', { offset: 0, 'stop-color': '#ffd166', 'stop-opacity': .2 }, halo); el('stop', { offset: 1, 'stop-color': '#ffd166', 'stop-opacity': 0 }, halo);
+    el('ellipse', { cx: 960, cy: 500, rx: 800, ry: 380, fill: `url(#bh${uid})` }, g);
+    const tr = el('linearGradient', { id: 'bt' + uid, x1: 0, y1: 0, x2: 1, y2: 0 }, defs);
+    el('stop', { offset: 0, 'stop-color': '#e09f3e', 'stop-opacity': .25 }, tr); el('stop', { offset: .4, 'stop-color': '#ffd166', 'stop-opacity': .8 }, tr); el('stop', { offset: 1, 'stop-color': '#ffd166' }, tr);
+    const t = el('g', { transform: 'translate(0,-35) scale(.75)' }, g), d = 'M-40 1130 C 50 1040 140 1250 240 1130 S 380 1040 450 1170 S 570 1250 650 1120 S 790 1090 860 1170 C 920 1236 980 1178 1040 1180 L 2430 1180';
+    el('path', { d, fill: 'none', stroke: `url(#bt${uid})`, 'stroke-width': 14, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, t);
+    el('path', { d, fill: 'none', stroke: '#ffd166', 'stroke-width': 3, 'stroke-linecap': 'round', opacity: .35, transform: 'translate(0,34)' }, t);
+    el('path', { d: 'M2470 1120 l12 40 l40 12 l-40 12 l-12 40 l-12 -40 l-40 -12 l40 -12z', fill: '#fff6dc' }, t);
+    [[1750, 180, 5, .5], [285, 190, 6, .4], [1600, 830, 5, .6]].forEach(([x, y, r, o]) => el('circle', { cx: x, cy: y, r, fill: '#ffd166', opacity: o }, g));
+    return g;
+  }
   function chartDecor(parent, uid) {
     const g = el('g', {}, parent);
     [[0, '#3aa0ff', 1], [1, '#ff7a45', -1]].forEach(([k, col, dir]) => {
@@ -176,7 +205,7 @@
       el('rect', { width: W, height: H, fill: `url(#pg${ctx.uid})` }, bg);
       const dots = el('g', { opacity: .18 }, bg);
       for (let i = 0; i < 26; i++) { const x = (i * 337) % W, y = (i * 211) % H; el('circle', { cx: x, cy: y, r: 3 + (i % 4) * 2, fill: '#ffd166' }, dots); }
-      if (banner) chartDecor(bg, ctx.uid);
+      if (banner) bannerDecor(bg, ctx.uid);
       else { const big = bulb(bg, side === 'left' ? 1500 : 420, 560, 6.5, false); big.setAttribute('opacity', .07); }
       const brand = el('g', {}, g), third = el('g', {}, g);
       const cam = S.L.take && S.L.take.kind === 'video' ? S.L.take : null;
@@ -555,7 +584,7 @@
       const k = txt(g, 960, 430, S.L.kicker || '', 40, 700, '#ffd166', { max: 1700, attrs: { 'letter-spacing': 6 } });
       const m = txt(g, 960, 540, S.L.main || '', 88, 800, '#fff', { max: 1760 });
       const brand = el('g', {}, g);
-      bulb(brand, 960, 660, .8, true);
+      bulb(brand, 960, 668, 1.05, true);
       txt(brand, 960, 770, ctx.channelName, 44, 800, '#fff', { max: 1400 });
       txt(brand, 960, 825, ctx.tagline, 32, 400, '#8ecae6', { max: 1600 });
       txt(g, 960, 1010, S.L.small || '', 26, 400, '#6c7f93', { max: 1700 });
