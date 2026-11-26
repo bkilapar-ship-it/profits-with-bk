@@ -634,7 +634,7 @@ const mkEase = u => (u < .5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2), mkPr
 function rrect(c, x, y, w, h, r) { c.beginPath(); c.moveTo(x + r, y); c.arcTo(x + w, y, x + w, y + h, r); c.arcTo(x + w, y + h, x, y + h, r); c.arcTo(x, y + h, x, y, r); c.arcTo(x, y, x + w, y, r); c.closePath(); }
 async function makeVideo() {
   if (mk.busy) return; mk.busy = true; $('mkGo').disabled = true; $('mkOut').innerHTML = ''; stop();
-  let wake = null, ac = null;
+  let wake = null, ac = null, k_diag = '';
   try {
     if (dirty) throw new Error('You have changes that are not saved. Tap "Save to GitHub", wait for the build (about 5 to 10 minutes), then make the video.');
     const A = window.AudioContext || window.webkitAudioContext; ac = new A(); // made on the tap, so phones allow sound
@@ -672,11 +672,15 @@ async function makeVideo() {
         const m = document.createElement(k.slot ? 'video' : 'audio'); m.playsInline = true; m.setAttribute('playsinline', ''); m.preload = 'auto';
         m.src = URL.createObjectURL(k.blob); m.muted = !!k.buf;
         await new Promise(res => { m.onloadeddata = res; m.onerror = res; setTimeout(res, 4000); });
-        try { m.currentTime = k.in; } catch (e) {}
+        // phones show a black picture until the video has really started: play it silently for a moment, then go back to the start of your take
+        m.muted = true; try { await Promise.race([m.play(), new Promise(r => setTimeout(r, 1500))]); } catch (e) {} m.pause();
+        await new Promise(r => { m.onseeked = r; setTimeout(r, 1000); try { m.currentTime = k.in; } catch (e) { r(); } });
+        k.picOk = !k.slot || !!(m.videoWidth && m.readyState >= 2);
         if (!k.buf) { const g = ac.createGain(); g.gain.value = 1; ac.createMediaElementSource(m).connect(g); g.connect(mix); m.muted = false; }
         k.el = m;
       }
     }
+    k_diag = takes.map(k => `scene ${k.scene + 1}: ${k.buf ? 'voice ok' : 'voice fallback (could not decode)'}${k.slot ? ', camera ' + (k.picOk ? 'ok' : 'NOT readable') : ''}`).join('; ');
     // record the canvas
     const [W2, H2] = mkFrame(), sc = W2 / E.W, cv = $('mkCanvas'); cv.width = W2; cv.height = H2; cv.style.display = 'block';
     const c = cv.getContext('2d');
@@ -732,7 +736,7 @@ async function makeVideo() {
       if (navigator.canShare && navigator.canShare({ files: [f] })) { try { await navigator.share({ files: [f], title: (ep.title || {})[lang] || ep.id }); } catch (e) {} }
       else mkSt('This browser cannot share files. Use Save the video instead.', 'bad');
     };
-    mkSt(`Done: ${(mk.blob.size / 1048576).toFixed(1)} MB, ${tl.duration.toFixed(0)} seconds.`, 'good');
+    mkSt(`Done: ${(mk.blob.size / 1048576).toFixed(1)} MB, ${tl.duration.toFixed(0)} seconds. Recordings used: ${k_diag || 'none'}.`, 'good');
   } catch (e) { mkSt(e.message || String(e), 'bad'); }
   finally { try { wake && wake.release(); } catch (e) {} mk.busy = false; $('mkGo').disabled = false; $('mkCanvas').style.display = 'none'; setTimeout(() => { try { ac && ac.close(); } catch (e) {} }, 500); }
 }
