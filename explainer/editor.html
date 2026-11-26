@@ -95,7 +95,7 @@ details summary{cursor:pointer;font-weight:700}
       <select id="addAt" style="width:auto"><option value="beforeEnd">before the end card</option><option value="top">at the very top</option><option value="end">at the very end</option></select>
       <button id="addScene" class="sm">Add scene</button>
     </div>
-    <div class="box" data-tab="config"><b>Episodes</b> <p class="muted" style="margin:4px 0 8px">Pick an episode at the top of the page. Start a new one here.</p><button id="newEp" class="sm">New episode</button></div>
+    <div class="box" data-tab="config"><b>Episodes</b> <p class="muted" style="margin:4px 0 8px">Pick an episode at the top of the page. Start a new one here.</p><select id="newTpl" style="margin-bottom:8px"></select><button id="newEp" class="sm">New episode</button></div>
     <details class="box" data-tab="config" open><summary><b>Channel names and taglines</b></summary>
       <div id="chanBox"></div>
       <p class="muted">These appear on the presenter background and the end card. Saved to channel.json.</p>
@@ -195,9 +195,25 @@ async function loadEpisode(id) {
   dirty = false; openScene = 0; tNow = 1.2;
   renderAll();
 }
-function blankEpisode(id) {
-  const langs = { en: { name: 'English', currency: '£', locale: 'en-GB', decimals: 2 }, te: { name: 'Telugu', currency: '₹', locale: 'en-IN', decimals: 0 } };
-  return { id, title: { en: 'New episode', te: 'కొత్త episode' }, languages: langs, scenes: [E.newScene('presenter', Object.keys(langs)), E.newScene('endCard', Object.keys(langs))] };
+const TEMPLATES = {
+  quick: { label: 'Quick (aims at 30s): Intro, 1 Middle, End', mid: 1 },
+  standard: { label: 'Standard (aims at 60s): Intro, 2 Middle, End', mid: 2 },
+  deeper: { label: 'Deeper (aims at 90s): Intro, 3 Middle, End', mid: 3 },
+  plain: { label: 'Just Intro and End', mid: 0 },
+};
+const MID_SAMPLES = [
+  ['The idea in one picture', ['Here is the idea in everyday terms.', 'Think of it like something you already do every day.']],
+  ['How it works', ['Now the next step. Say what happens and why.', 'Keep each line short so it is easy to follow.']],
+  ['Why it matters', ['Finish with why this matters to you.', 'One clear takeaway, then say goodbye.']],
+];
+function blankEpisode(id, tpl) {
+  const langs = { en: { name: 'English', currency: '£', locale: 'en-GB', decimals: 2 }, te: { name: 'Telugu', currency: '₹', locale: 'en-IN', decimals: 0 } }, ks = Object.keys(langs);
+  const T = TEMPLATES[tpl] || TEMPLATES.standard, scenes = [];
+  const pres = (title, lines, layout, side) => { const s = E.newScene('presenter', ks); s.data = { layout, side }; ks.forEach(k => { s.lang[k].title = title; s.lang[k].lines = lines.slice(); }); return s; };
+  scenes.push(pres('Today\'s question', ['Hi, welcome to the channel.', 'Today we answer one simple question. Say it here.'], 'talking', 'right'));
+  for (let i = 0; i < T.mid; i++) { const m = MID_SAMPLES[i % 3]; scenes.push(pres(m[0], m[1], i % 2 ? 'circle' : 'side', i % 2 ? 'left' : 'right')); }
+  scenes.push(E.newScene('endCard', ks));
+  return { id, title: { en: 'New episode', te: 'కొత్త episode' }, languages: langs, scenes };
 }
 
 // ---------- UI ----------
@@ -362,11 +378,12 @@ $('addScene').onclick = () => {
   msg('Scene added with sample words in every language. Change them in each language tab.', 'good');
 };
 $('epSel').onchange = async () => { if (dirty && !confirm('Switch episode? Unsaved changes stay on this device as a draft.')) { $('epSel').value = ep.id; return; } await loadEpisode($('epSel').value); };
+$('newTpl').innerHTML = Object.entries(TEMPLATES).map(([k, t]) => `<option value="${k}"${k === 'standard' ? ' selected' : ''}>${esc(t.label)}</option>`).join('');
 $('newEp').onclick = () => {
   const name = (prompt('Short name for the new episode (letters, numbers and dashes, for example "how-ai-learns"):') || '').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
   if (!name) return;
   if (index.includes(name)) return msg('An episode with that name already exists.', 'bad');
-  ep = blankEpisode(name); index.push(name); fillEpSel(name); lang = 'en'; openScene = 0; tNow = 0; changed(); renderAll();
+  ep = blankEpisode(name, $('newTpl').value); index.push(name); fillEpSel(name); lang = 'en'; openScene = 0; tNow = 0; changed(); renderAll();
 };
 $('copyScript').onclick = async () => { const s = E.script(ep, lang); try { await navigator.clipboard.writeText(s); msg('Script copied.', 'good'); } catch (e) { prompt('Copy the script:', s); } };
 $('dl').onclick = () => {
