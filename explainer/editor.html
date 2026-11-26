@@ -72,7 +72,7 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 20:45 cache-fix</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 20:55 no-popups</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -187,22 +187,25 @@ function fillEpSel(sel) {
   $('epSel').innerHTML = index.map(id => `<option value="${id}"${id === sel ? ' selected' : ''}>${id}</option>`).join('');
 }
 async function loadEpisode(id) {
+  let restored = false;
   if (!id) { ep = blankEpisode('my-first-episode'); }
   else {
     const draft = store.get('ex.draft.' + id, null);
     try { ep = await getJSON('episodes/' + id + '.json'); } catch (e) { ep = null; }
-    if (draft && draft.ep && confirm('You have unsaved changes to "' + id + '" on this device. Keep them?')) ep = draft.ep;
+    if (draft && draft.ep) { ep = draft.ep; restored = true; } // unsaved edits are kept on this device automatically: no question asked
     if (!ep) ep = blankEpisode(id);
   }
   store.set('ex.last', ep.id);
   lang = Object.keys(ep.languages || { en: 1 })[0];
-  dirty = false; openScene = 0; tNow = 1.2;
+  dirty = restored; openScene = 0; tNow = 1.2;
   renderAll();
+  if (restored) msg('Your unsaved changes were restored. To go back to the saved version, use Configuration → Manage episodes → Revert.', '');
 }
 function renderEpList() {
   const box = $('epList'); if (!box) return;
-  box.innerHTML = index.map(id => `<div class="row" style="align-items:center;gap:8px;margin-top:6px"><span class="grow">${esc(id)}${ep && ep.id === id ? ' <span class="pill">open</span>' : ''}</span><button class="sm" data-open="${esc(id)}">Open</button><button class="sm" data-rm="${esc(id)}" style="color:var(--bad)">Delete</button></div>`).join('') || '<div class="muted">No episodes yet.</div>';
-  box.querySelectorAll('[data-open]').forEach(b => b.onclick = async () => { if (dirty && !confirm('Switch episode? Unsaved changes stay on this device as a draft.')) return; fillEpSel(b.dataset.open); await loadEpisode(b.dataset.open); showTab('edit'); });
+  box.innerHTML = index.map(id => `<div class="row" style="align-items:center;gap:8px;margin-top:6px"><span class="grow">${esc(id)}${ep && ep.id === id ? ' <span class="pill">open</span>' : ''}</span>${store.get('ex.draft.' + id, null) ? `<button class="sm" data-revert="${esc(id)}" title="Throw away the unsaved changes on this device">Revert</button>` : ''}<button class="sm" data-open="${esc(id)}">Open</button><button class="sm" data-rm="${esc(id)}" style="color:var(--bad)">Delete</button></div>`).join('') || '<div class="muted">No episodes yet.</div>';
+  box.querySelectorAll('[data-open]').forEach(b => b.onclick = async () => { fillEpSel(b.dataset.open); await loadEpisode(b.dataset.open); showTab('edit'); });
+  box.querySelectorAll('[data-revert]').forEach(b => b.onclick = async () => { if (!confirm('Throw away your unsaved changes to "' + b.dataset.revert + '" on this device and go back to the saved version?')) return; store.set('ex.draft.' + b.dataset.revert, null); fillEpSel(b.dataset.revert); await loadEpisode(b.dataset.revert); showTab('edit'); });
   box.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => deleteEpisode(b.dataset.rm));
 }
 async function deleteEpisode(id) {
@@ -413,7 +416,7 @@ $('addScene').onclick = () => {
   ep.scenes.splice(at, 0, s); openScene = at; changed(); renderScenes(); remount(); seekScene(at);
   msg('Scene added with sample words in every language. Change them in each language tab.', 'good');
 };
-$('epSel').onchange = async () => { if (dirty && !confirm('Switch episode? Unsaved changes stay on this device as a draft.')) { $('epSel').value = ep.id; return; } await loadEpisode($('epSel').value); };
+$('epSel').onchange = async () => { await loadEpisode($('epSel').value); };
 $('newTpl').innerHTML = Object.entries(TEMPLATES).map(([k, t]) => `<option value="${k}"${k === 'standard' ? ' selected' : ''}>${esc(t.label)}</option>`).join('');
 $('newEp').onclick = () => {
   const name = (prompt('Short name for the new episode (letters, numbers and dashes, for example "how-ai-learns"):') || '').trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '');
@@ -1116,7 +1119,7 @@ function check() {
   Object.keys(ep.languages).forEach(l => ep.scenes.forEach((s, i) => { const L = (s.lang || {})[l]; if (!L || !(L.lines || []).length) out.push(`• Scene ${i + 1} has no voiceover lines in ${ep.languages[l].name}.`); }));
   return out.slice(0, 8);
 }
-window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
+// no "leave this page?" popup: every change is kept on this device automatically (see changed())
 boot().then(refreshDeviceKeys).catch(e => msg('Could not start: ' + e.message, 'bad'));
 })();
 </script>
