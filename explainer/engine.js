@@ -124,11 +124,11 @@
   SCENES.presenter = {
     label: 'Presenter (you on camera, branded background)', base: 5, captions: true, camera: true,
     /** Where your camera picture sits on screen (it is cropped to fill this box). */
-    slot(data) { const side = (data || {}).side; return side === 'center' ? { x: 610, y: 150, w: 700, h: 600, r: 36 } : { x: side === 'left' ? 110 : 1110, y: 150, w: 700, h: 760, r: 36 }; },
+    slot(data) { const side = (data || {}).side; if (side === 'wide') return { x: 400, y: 245, w: 1120, h: 630, r: 32 }; return side === 'center' ? { x: 610, y: 150, w: 700, h: 600, r: 36 } : { x: side === 'left' ? 110 : 1110, y: 150, w: 700, h: 760, r: 36 }; },
     fields: [
       { k: 'title', per: 'lang', kind: 'text', label: 'Title shown at the bottom' },
       { k: 'lines', per: 'lang', kind: 'lines', label: 'What you say (one line per caption)' },
-      { k: 'side', per: 'data', kind: 'select', options: ['left', 'right', 'center'], label: 'Where you stand' },
+      { k: 'side', per: 'data', kind: 'select', options: ['left', 'right', 'center', 'wide'], label: 'Where you stand (wide = big centred picture with the title across the top)' },
     ],
     defaults: { data: { side: 'right' }, lang: { title: 'Topic title', lines: ['Say hello and introduce the topic.'] } },
     build(g, S, ctx) {
@@ -139,14 +139,19 @@
       const dots = el('g', { opacity: .18 }, bg);
       for (let i = 0; i < 26; i++) { const x = (i * 337) % W, y = (i * 211) % H; el('circle', { cx: x, cy: y, r: 3 + (i % 4) * 2, fill: '#ffd166' }, dots); }
       const big = bulb(bg, S.data.side === 'left' ? 1500 : 420, 560, 6.5, false); big.setAttribute('opacity', .07);
-      const brand = el('g', { transform: 'translate(70,70)' }, g);
+      const brand = el('g', { transform: S.data.side === 'wide' ? 'translate(70,22)' : 'translate(70,70)' }, g);
       bulb(brand, 40, 46, .9, true);
       txt(brand, 100, 70, ctx.channelName, 44, 800, '#fff', { anchor: 'start', max: 900 });
       const third = el('g', {}, g);
-      const tx = S.data.side === 'left' ? 1800 : 120, anchor = S.data.side === 'left' ? 'end' : 'start';
-      const bar = el('rect', { x: S.data.side === 'left' ? 1810 : 110, y: 790, width: 10, height: 90, rx: 5, fill: '#ffd166' }, third);
+      const wide = S.data.side === 'wide', anchor = S.data.side === 'left' ? 'end' : 'start';
       const cam = S.L.take && S.L.take.kind === 'video' ? S.L.take : null;
-      const tt = txt(third, S.data.side === 'left' ? 1785 : 145, 856, S.L.title || '', 60, 800, '#fff', { anchor, max: cam ? 900 : 1150 });
+      if (wide) { // big title across the top, picture centred below it
+        const tt0 = txt(third, 960, 205, S.L.title || '', 72, 800, '#fff', { anchor: 'middle', max: 1700 });
+        el('rect', { x: 760, y: 222, width: 400, height: 8, rx: 4, fill: '#ffd166' }, third);
+      } else {
+        el('rect', { x: S.data.side === 'left' ? 1810 : 110, y: 790, width: 10, height: 90, rx: 5, fill: '#ffd166' }, third);
+        txt(third, S.data.side === 'left' ? 1785 : 145, 856, S.L.title || '', 60, 800, '#fff', { anchor, max: cam ? 900 : 1150 });
+      }
       let ph = null, img = null, camG = null;
       if (cam) { // your recorded video, in a rounded frame. In the editor the video plays on top of this box.
         const r = this.slot(S.data);
@@ -161,16 +166,17 @@
           img.addEventListener('error', () => img.removeAttribute('data-pending'));
         }
       } else if (ctx.preview) { // where your camera picture goes (preview only, never rendered into the video)
-        const cx = S.data.side === 'left' ? 520 : S.data.side === 'center' ? 960 : 1400;
+        if (wide) { const r = this.slot(S.data); ph = el('g', { opacity: .35 }, g); el('rect', { x: r.x, y: r.y, width: r.w, height: r.h, rx: r.r, fill: 'none', stroke: '#fff', 'stroke-width': 4, 'stroke-dasharray': '14 10' }, ph); txt(ph, 960, r.y + r.h / 2 + 10, 'YOUR CAMERA', 40, 700, '#fff'); }
+        else { const cx = S.data.side === 'left' ? 520 : S.data.side === 'center' ? 960 : 1400;
         ph = el('g', { opacity: .35 }, g);
         el('circle', { cx, cy: 380, r: 120, fill: 'none', stroke: '#fff', 'stroke-width': 4, 'stroke-dasharray': '14 10' }, ph);
         el('path', { d: `M${cx - 230} 1080 q0 -330 230 -330 q230 0 230 330`, fill: 'none', stroke: '#fff', 'stroke-width': 4, 'stroke-dasharray': '14 10' }, ph);
-        txt(ph, cx, 670, 'YOUR CAMERA', 30, 700, '#fff');
+        txt(ph, cx, 670, 'YOUR CAMERA', 30, 700, '#fff'); }
       }
       return u => {
         const ts = u * this.base;
         const a = ease(prog(ts, .2, .9));
-        third.setAttribute('transform', `translate(${(S.data.side === 'left' ? 1 : -1) * (1 - a) * 60},0)`); third.setAttribute('opacity', a);
+        third.setAttribute('transform', `translate(${wide ? 0 : (S.data.side === 'left' ? 1 : -1) * (1 - a) * 60},${wide ? -(1 - a) * 30 : 0})`); third.setAttribute('opacity', a);
         brand.setAttribute('opacity', ease(prog(ts, 0, .5)));
         dots.setAttribute('transform', `translate(0,${-ts * 6})`);
         if (camG) camG.setAttribute('opacity', ease(prog(u * ctx.dur, 0, .35)));

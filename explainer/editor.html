@@ -89,6 +89,7 @@ details summary{cursor:pointer;font-weight:700}
     <div id="scenes" data-tab="edit"></div>
     <div class="box row" data-tab="edit">
       <select id="addType" class="grow" style="width:auto"></select>
+      <select id="addAt" style="width:auto"><option value="beforeEnd">before the end card</option><option value="top">at the very top</option><option value="end">at the very end</option></select>
       <button id="addScene" class="sm">Add scene</button>
     </div>
     <div class="box" data-tab="config"><b>Episodes</b> <p class="muted" style="margin:4px 0 8px">Pick an episode at the top of the page. Start a new one here.</p><button id="newEp" class="sm">New episode</button></div>
@@ -252,7 +253,7 @@ function renderScenes() {
     const o = tl.scenes.find(x => x.i === i);
     return `<div class="scene${i === openScene ? ' open' : ''}" data-i="${i}">
       <div class="hd" data-toggle="${i}"><span class="pill">${i + 1}</span><b>${esc(T.label)}</b><span class="pill">${o ? o.start.toFixed(1) + 's' : ''}</span>
-        <button class="sm" data-up="${i}" title="Move up">↑</button><button class="sm" data-down="${i}" title="Move down">↓</button><button class="sm" data-dup="${i}" title="Duplicate">⧉</button><button class="sm" data-del="${i}" title="Delete">✕</button></div>
+        <button class="sm" data-top="${i}" title="Move to the very top">⤒</button><button class="sm" data-up="${i}" title="Move up">↑</button><button class="sm" data-down="${i}" title="Move down">↓</button><button class="sm" data-bottom="${i}" title="Move to the very end">⤓</button><button class="sm" data-dup="${i}" title="Duplicate">⧉</button><button class="sm" data-del="${i}" title="Delete">✕</button></div>
       <div class="bd">
         ${takeHTML(s, i, o)}
         <div class="fld"><label for="dur_${i}">Length in seconds when there is no recording <span class="pill">all languages</span></label><input id="dur_${i}" type="number" step="0.1" min="0.5" value="${s.duration ?? T.base}"><div class="ref">Designed for ${T.base}s. The animation stretches to fit. A language with a recording follows your voice instead.</div></div>
@@ -263,6 +264,8 @@ function renderScenes() {
   const box = $('scenes');
   box.querySelectorAll('[data-toggle]').forEach(h => h.onclick = e => { if (e.target.closest('button')) return; const i = +h.dataset.toggle; openScene = openScene === i ? -1 : i; renderScenes(); seekScene(i); });
   const act = (sel, fn) => box.querySelectorAll(sel).forEach(b => b.onclick = e => { e.stopPropagation(); fn(+Object.values(b.dataset)[0]); changed(); renderScenes(); remount(); });
+  act('[data-top]', i => { if (i > 0) { const [x] = ep.scenes.splice(i, 1); ep.scenes.unshift(x); openScene = 0; } });
+  act('[data-bottom]', i => { if (i < ep.scenes.length - 1) { const [x] = ep.scenes.splice(i, 1); ep.scenes.push(x); openScene = ep.scenes.length - 1; } });
   act('[data-up]', i => { if (i > 0) { [ep.scenes[i - 1], ep.scenes[i]] = [ep.scenes[i], ep.scenes[i - 1]]; openScene = i - 1; } });
   act('[data-down]', i => { if (i < ep.scenes.length - 1) { [ep.scenes[i + 1], ep.scenes[i]] = [ep.scenes[i], ep.scenes[i + 1]]; openScene = i + 1; } });
   act('[data-dup]', i => { ep.scenes.splice(i + 1, 0, clone(ep.scenes[i])); openScene = i + 1; });
@@ -338,7 +341,7 @@ $('delLang').onclick = () => {
 $('addType').innerHTML = Object.entries(E.SCENES).map(([k, T]) => `<option value="${k}">${esc(T.label)}</option>`).join('');
 $('addScene').onclick = () => {
   const s = E.newScene($('addType').value, Object.keys(ep.languages));
-  const at = ep.scenes.length && ep.scenes[ep.scenes.length - 1].type === 'endCard' ? ep.scenes.length - 1 : ep.scenes.length;
+  const pos = $('addAt').value, at = pos === 'top' ? 0 : pos === 'end' ? ep.scenes.length : (ep.scenes.length && ep.scenes[ep.scenes.length - 1].type === 'endCard' ? ep.scenes.length - 1 : ep.scenes.length);
   ep.scenes.splice(at, 0, s); openScene = at; changed(); renderScenes(); remount(); seekScene(at);
   msg('Scene added with sample words in every language. Change them in each language tab.', 'good');
 };
