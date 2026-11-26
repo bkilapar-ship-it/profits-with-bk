@@ -642,6 +642,7 @@ async function makeVideo() {
     const tl = await fetchRender(`${ep.id}/${lang}/timeline.json`, 'json');
     if (!tl) throw new Error('There is no build for this episode and language yet. Tap "Save to GitHub" and wait for the build (about 5 to 10 minutes).');
     if (tl.sig !== E.takeSig(ep, lang)) throw new Error('The latest build does not match your latest recordings yet. If you just saved, wait a few minutes for the build to finish and try again. Otherwise tap "Save to GitHub" first.');
+    if (!tl.takes || !tl.takes.length) throw new Error('This build has no recordings in it, so the video would be only the animation. Record a scene, tap "✓ Use this take", then tap "Save to GitHub", wait for the build to finish (about 10 minutes) and make the video again.');
     const takes = [];
     for (const k of tl.takes) {
       const b = await loadBlob(k.file);
