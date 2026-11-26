@@ -64,20 +64,9 @@ jobs:
           npx playwright install --with-deps chromium
           sudo apt-get update -qq && sudo apt-get install -y -qq ffmpeg
 
-      - name: Get your recordings from the private repository
-        if: steps.eps.outputs.list != ''
-        env:
-          TAKES_TOKEN: ${{ secrets.TAKES_TOKEN }}
-        run: |
-          repo=$(jq -r '.takesRepo // ""' explainer/channel.json)
-          if [ -z "$repo" ]; then echo "No private recordings repository set in explainer/channel.json; using explainer/takes."; exit 0; fi
-          if [ -z "$TAKES_TOKEN" ]; then echo "::warning::Add the secret TAKES_TOKEN (a token that can read $repo) so the videos can use your recordings."; exit 0; fi
-          git clone --quiet --depth 1 "https://x-access-token:${TAKES_TOKEN}@github.com/${repo}.git" explainer-takes \
-            || echo "::warning::Could not read $repo. Check that TAKES_TOKEN has access to it. Scenes without their recording keep their fixed length."
-
       - name: Build the videos
         if: steps.eps.outputs.list != ''
-        run: for f in ${{ steps.eps.outputs.list }}; do node explainer/render.js "$f" --out explainer-out --takes-root explainer-takes; done
+        run: for f in ${{ steps.eps.outputs.list }}; do node explainer/render.js "$f" --out explainer-out; done
 
       - name: Keep the videos for 14 days
         if: steps.eps.outputs.list != ''

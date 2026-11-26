@@ -7,8 +7,7 @@
  *
  * Recordings: a scene with a take (scene.lang.<lang>.take, see engine.js) gets that voice in the soundtrack, and a
  * presenter scene with a video take shows the video in its camera frame. The scene follows the voice length.
- * Takes live in your private recordings repository (checked out by the workflow and passed as --takes-root <dir>),
- * or in explainer/takes/ when no private repository is set. The voice is evened out in loudness; silence at the
+ * Takes live in explainer/takes/ (uploaded by the editor). The voice is evened out in loudness; silence at the
  * start and end is cut using the editor's in/out marks, or found automatically when those are missing.
  */
 'use strict';
@@ -25,7 +24,6 @@ const ROOT = __dirname, FPS = +opt('fps', 30), OUT = opt('out', 'explainer-out')
 const ep = JSON.parse(fs.readFileSync(epFile, 'utf8'));
 const langs = opt('lang', null) ? opt('lang').split(',') : Object.keys(ep.languages || { en: {} });
 const stills = opt('stills', null);
-const TAKES_ROOT = opt('takes-root', null) ? path.resolve(opt('takes-root')) : null;
 const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'explainer-'));
 const epByLang = {};   // the episode as each language sees it, with recordings measured and prepared
 
@@ -51,9 +49,8 @@ function prepareTakes(lang) {
   (e.scenes || []).forEach((s, i) => {
     const t = ((s.lang || {})[lang] || {}).take;
     if (!t || !t.file) return;
-    const roots = (t.store === 'private' ? [TAKES_ROOT, ROOT] : [ROOT, TAKES_ROOT]).filter(Boolean);
-    const src = roots.map(r => path.resolve(r, t.file)).find((f, k) => f.startsWith(roots[k] + path.sep) && fs.existsSync(f));
-    if (!src) { console.log(`[${lang}] scene ${i + 1}: recording ${t.file} not found, using the fixed length instead`); delete s.lang[lang].take; return; }
+    const src = path.resolve(ROOT, t.file);
+    if (!src.startsWith(ROOT + path.sep) || !fs.existsSync(src)) { console.log(`[${lang}] scene ${i + 1}: recording ${t.file} not found, using the fixed length instead`); delete s.lang[lang].take; return; }
     const full = path.join(TMP, `${lang}-${i}-full.wav`), wav = path.join(TMP, `${lang}-${i}.wav`);
     // decode the whole sound first: phone recordings often have no reliable length in the file
     run('ffmpeg', ['-y', '-v', 'error', '-i', src, '-vn', '-ac', '1', '-ar', '48000', full]);
