@@ -73,7 +73,7 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 22:50 YouTube tags</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 23:20 video kept</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -192,9 +192,9 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=0038"></script>
+<script src="engine.js?v=0039"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=0038"></script>
+<script src="cutout.js?v=0039"></script>
 <script>
 (() => {
 'use strict';
@@ -236,7 +236,7 @@ async function loadEpisode(id) {
   store.set('ex.last', ep.id); applyTimings();
   lang = Object.keys(ep.languages || { en: 1 })[0];
   dirty = restored; openScene = 0; tNow = 0;
-  renderAll();
+  renderAll(); restoreMade().catch(() => {});
   if (restored) msg('Your unsaved changes were restored. To go back to the saved version, use Configuration → Manage episodes → Revert.', '');
 }
 function renderEpList() {
@@ -1185,9 +1185,23 @@ function ytCard() {
     <div id="ytSt" class="msg"></div>
     <p class="muted">Needs the Google client ID in <b>YouTube connection</b> above (once).</p></div>`;
 }
-function mkResult(blob, type, name, info) {
+const madeKey = sh => `made/${ep.id}/${lang}/${sh ? 'short' : 'full'}`;
+function mkKeep(blob, type, name, info, sh) { // the finished video is kept on this phone, so a refresh or leaving the page does not lose it
+  const k = madeKey(sh); try { localStorage.setItem('ex.' + k, JSON.stringify({ name, type, info, at: Date.now() })); } catch (e) {}
+  saveBlob(k, blob).catch(() => { try { localStorage.removeItem('ex.' + k); } catch (e) {} });
+}
+async function restoreMade() {
+  for (const sh of [false, true]) {
+    const k = madeKey(sh); let m = null; try { m = JSON.parse(localStorage.getItem('ex.' + k) || 'null'); } catch (e) {} if (!m) continue;
+    const out = $(sh ? 'shOut' : 'mkOut'); if (!out || out.querySelector('video')) continue;
+    const b = await loadBlob(k); if (!b) continue;
+    const keepIds = mk.ids; mk.ids = sh ? { st: 'shSt', bar: 'shBar', cv: 'shCanvas', out: 'shOut' } : { st: 'mkSt', bar: 'mkBar', cv: 'mkCanvas', out: 'mkOut' };
+    mkResult(b, m.type || 'video/mp4', m.name, m.info || '', true); mk.ids = keepIds; { const st = $(sh ? 'shSt' : 'mkSt'); if (st) { st.className = 'msg good'; st.textContent = 'Your last ' + (sh ? 'Short' : 'video') + ' is kept on this phone (made ' + new Date(m.at || Date.now()).toLocaleString() + '). ' + (m.info || ''); } }
+  }
+}
+function mkResult(blob, type, name, info, restored) {
   mk.blob = blob; if (mk.url) URL.revokeObjectURL(mk.url); mk.url = URL.createObjectURL(blob);
-  const isSh = mk.ids.out === 'shOut';
+  const isSh = mk.ids.out === 'shOut'; if (!restored) mkKeep(blob, type, name, info, isSh);
   $(mk.ids.out).innerHTML = `<video controls playsinline src="${mk.url}" style="${isSh ? 'max-height:60vh;' : 'width:100%;'}border-radius:8px;margin-top:8px"></video>
     <div class="row" style="margin-top:8px"><a class="sm" href="${mk.url}" download="${name}" style="padding:7px 12px;border:1px solid var(--line);border-radius:8px;text-decoration:none;color:inherit">⬇ Save the ${isSh ? 'Short' : 'video'}</a>
     <button class="sm pri" id="mkShare">Share… (Save Video, YouTube, WhatsApp)</button></div>
