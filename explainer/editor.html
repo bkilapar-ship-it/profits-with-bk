@@ -73,7 +73,7 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 18:45 tap fix</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 19:15 preview follows voice</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -192,9 +192,9 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=0029"></script>
+<script src="engine.js?v=0030"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=0029"></script>
+<script src="cutout.js?v=0030"></script>
 <script>
 (() => {
 'use strict';
@@ -443,7 +443,13 @@ function draw() {
   syncMedia(o);
 }
 function seekScene(i) { const o = app && app.timeline.scenes.find(x => x.i === i); if (o) { tNow = o.start + .01; draw(); } }
-function loop(ts) { if (!playing) return; tNow = (ts - t0) / 1000; if (tNow >= app.duration) { tNow = app.duration; stop(); } draw(); raf = requestAnimationFrame(loop); }
+function loop(ts) { if (!playing) return; tNow = (ts - t0) / 1000;
+  { // while your recording plays, the animation follows the recording's real position (phones seek recordings loosely, so a clock alone drifts)
+    const o = app.timeline.scenes.find(x => tNow >= x.start && tNow < x.end), cur = o && o.take ? media[o.take.file] : null;
+    if (cur && !cur.paused && !cur.seeking && cur.readyState >= 2 && cur.currentTime >= o.take.in + .05 && cur.currentTime < o.take.out) {
+      const tm = o.start + E.LEAD + (cur.currentTime - o.take.in); if (Math.abs(tm - tNow) < 4) { tNow = tm; t0 = ts - tNow * 1000; }
+    }
+  } if (tNow >= app.duration) { tNow = app.duration; stop(); } draw(); raf = requestAnimationFrame(loop); }
 function play() { unlockMedia(); if (tNow >= app.duration - .05) tNow = 0; playing = true; t0 = performance.now() - tNow * 1000; $('play').textContent = '❚❚ Pause'; raf = requestAnimationFrame(loop); }
 function stop() { playing = false; cancelAnimationFrame(raf); $('play').textContent = '▶ Play'; syncMedia(null); }
 $('play').onclick = () => (playing ? stop() : play());
