@@ -34,7 +34,18 @@
       if (same) v = v * .55 + prevA[k] * .45; prevA[k] = v;
       d[i] = d[i + 1] = d[i + 2] = 255; d[i + 3] = Math.round(v * 255);
     }
-    prevT = nowT; x.putImageData(id, 0, 0);
+    prevT = nowT;
+    // keep only the biggest connected shape (you); stray patches such as a chair back or a shelf are dropped
+    { const W2 = mw, H2 = mh, lab = new Int32Array(n2), st = []; let best = 0, bestN = 0, cnt = 0;
+      for (let p0 = 0; p0 < n2; p0++) { if (lab[p0] || prevA[p0] <= .5) continue; cnt++; let sz = 0; st.length = 0; st.push(p0); lab[p0] = cnt;
+        while (st.length) { const p = st.pop(); sz++; const px = p % W2, py = (p / W2) | 0;
+          if (px > 0 && !lab[p - 1] && prevA[p - 1] > .5) { lab[p - 1] = cnt; st.push(p - 1); } if (px < W2 - 1 && !lab[p + 1] && prevA[p + 1] > .5) { lab[p + 1] = cnt; st.push(p + 1); }
+          if (py > 0 && !lab[p - W2] && prevA[p - W2] > .5) { lab[p - W2] = cnt; st.push(p - W2); } if (py < H2 - 1 && !lab[p + W2] && prevA[p + W2] > .5) { lab[p + W2] = cnt; st.push(p + W2); } }
+        if (sz > bestN) { bestN = sz; best = cnt; } }
+      if (best) { const keep = new Uint8Array(n2); for (let p = 0; p < n2; p++) if (lab[p] === best) keep[p] = 1;
+        const near = new Uint8Array(n2); for (let p = 0; p < n2; p++) if (keep[p]) { const px = p % W2, py = (p / W2) | 0; for (let dy = -3; dy <= 3; dy++) for (let dx = -3; dx <= 3; dx++) { const qx = px + dx, qy = py + dy; if (qx >= 0 && qx < W2 && qy >= 0 && qy < H2) near[qy * W2 + qx] = 1; } }
+        for (let p = 0; p < n2; p++) if (!near[p]) d[p * 4 + 3] = 0; } }
+    x.putImageData(id, 0, 0);
     return mcv;
   }
   function cut(video, out, dims) {
