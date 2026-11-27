@@ -73,7 +73,7 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 21:20 sound check</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 22:10 cards follow lines</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -192,9 +192,9 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=0036"></script>
+<script src="engine.js?v=0037"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=0036"></script>
+<script src="cutout.js?v=0037"></script>
 <script>
 (() => {
 'use strict';
@@ -219,13 +219,18 @@ async function boot() {
 function fillEpSel(sel) {
   $('epSel').innerHTML = index.map(id => `<option value="${id}"${id === sel ? ' selected' : ''}>${id}</option>`).join('');
 }
+function fillCardLines(cur, base) { // a saved draft from before cards were tied to lines: copy the line numbers across (same card, only when its own number is missing)
+  (cur.scenes || []).forEach((s, i) => { const b = (base.scenes || [])[i]; if (!b || s.type !== 'cards' || b.type !== 'cards') return;
+    Object.keys(s.lang || {}).forEach(l => { const A = ((s.lang[l] || {}).items) || [], B = (((b.lang || {})[l] || {}).items) || [];
+      A.forEach((it, k) => { const p = String(it).split('|').map(x => x.trim()), q2 = String(B[k] || '').split('|').map(x => x.trim()); if (p.length >= 2 && q2.length >= 4 && q2[3] && !p[3] && p[0] === q2[0] && p[1] === q2[1]) { while (p.length < 3) p.push(''); p[3] = q2[3]; A[k] = p.join(' | '); } }); }); });
+}
 async function loadEpisode(id) {
   let restored = false;
   if (!id) { ep = blankEpisode('my-first-episode'); }
   else {
     const draft = store.get('ex.draft.' + id, null);
-    try { ep = await getJSON('episodes/' + id + '.json'); } catch (e) { ep = null; }
-    if (draft && draft.ep) { ep = draft.ep; restored = true; } // unsaved edits are kept on this device automatically: no question asked
+    let base = null; try { ep = await getJSON('episodes/' + id + '.json'); base = ep; } catch (e) { ep = null; }
+    if (draft && draft.ep) { ep = draft.ep; restored = true; if (base) fillCardLines(ep, base); } // unsaved edits are kept on this device automatically: no question asked
     if (!ep) ep = blankEpisode(id);
   }
   store.set('ex.last', ep.id); applyTimings();
