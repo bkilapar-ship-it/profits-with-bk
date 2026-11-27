@@ -73,7 +73,7 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 19:55 timing readout</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 20:20 shift all lines</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -192,9 +192,9 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=0032"></script>
+<script src="engine.js?v=0033"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=0032"></script>
+<script src="cutout.js?v=0033"></script>
 <script>
 (() => {
 'use strict';
@@ -576,6 +576,8 @@ function timingHTML(s, i, t) {
   const { lines, abs } = lineStartsAbs(s, t); if (lines.length < 2) return '';
   return `<details style="margin:8px 0"><summary class="muted" style="cursor:pointer">⏱ Line timing: fix captions or animation that come too early or late</summary>
     <div class="muted" style="margin:6px 0">Each line starts at a time in your recording (seconds). Type the time where you really start saying it. Tap ▶ to listen from just before it. Tip: next time, tap “Next line” while recording and this is done for you.</div>
+    <div class="muted" style="margin:6px 0 2px">Everything early or late by the same amount? Shift all lines:</div>
+    <div class="row" style="gap:6px;margin-bottom:6px">${[-1, -.5, -.1, .1, .5, 1].map(d => `<button class="sm" data-lsh="${i}:${d}">${d > 0 ? '+' : ''}${d}s</button>`).join('')}</div>
     <button class="pri" data-ltap="${i}" style="margin:6px 0">🎯 Play my recording and tap where each line starts</button>
     ${lines.map((x, j) => j === 0 ? '' : `<div class="row" style="align-items:center;gap:6px;margin:4px 0"><span class="muted" style="width:56px">Line ${j + 1}</span><input type="number" inputmode="decimal" step="0.1" min="0" max="${t.out}" data-lm="${i}:${j}" value="${abs[j].toFixed(1)}" style="width:84px"><span class="muted">s</span><button class="sm" data-lp="${i}:${j}">▶</button><span class="muted" style="flex:1;font-size:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(String(x).slice(0, 48))}</span></div>`).join('')}</details>`;
 }
@@ -616,6 +618,9 @@ function wireTake(s, i) {
     ins.forEach(x => { let v = +x.value; if (!(v > prev + .3)) v = prev + .3; v = Math.min(v, t.out - .3); marks.push(+v.toFixed(2)); prev = v; x.value = v.toFixed(1); });
     t.marks = marks; t.marksOn = true; changed(); remount(); refreshTakeStatus(); openTakePreview(s, i, Math.max(t.in, +inp.value - .6)); }; });
   box.querySelectorAll(`[data-lp^="${i}:"]`).forEach(bt => bt.onclick = e => { e.stopPropagation(); const j = bt.dataset.lp.split(':')[1], inp = box.querySelector(`[data-lm="${i}:${j}"]`); openTakePreview(s, i, Math.max(0, +inp.value - .6)); });
+  box.querySelectorAll(`[data-lsh^="${i}:"]`).forEach(bt => bt.onclick = ev => { ev.stopPropagation(); const t = (((s.lang || {})[lang]) || {}).take; if (!t) return; const d = +bt.dataset.lsh.split(':')[1], { abs } = lineStartsAbs(s, t);
+    let prev = t.in; const marks = [t.in]; abs.forEach((v, j) => { if (j === 0) return; let x = v + d; x = Math.max(prev + .3, Math.min(t.out - .3, x)); marks.push(+x.toFixed(2)); prev = x; });
+    t.marks = marks; t.marksOn = true; changed(); remount(); refreshTakeStatus(); box.querySelectorAll(`[data-lm^="${i}:"]`).forEach(inp => { const k = +inp.dataset.lm.split(':')[1]; if (marks[k] != null) inp.value = marks[k].toFixed(1); }); });
   { const lt = q('ltap'); if (lt) lt.onclick = ev => { ev.stopPropagation(); const t = (((s.lang || {})[lang]) || {}).take; if (t) openTakePreview(s, i, Math.max(0, t.in), true); }; }
   const so = q('tsyncoff'); if (so) so.onclick = e => { e.stopPropagation(); const t = (((s.lang || {})[lang]) || {}).take; if (t) { t.marksOn = false; delete t.marks; changed(); renderScenes(); remount(); msg('Back to the automatic timing.', ''); } };
   const pv = q('tprev'); if (pv) pv.onclick = e => { e.stopPropagation(); openTakePreview(s, i); };
