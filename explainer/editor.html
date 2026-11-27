@@ -73,7 +73,7 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 16:20 timing restored</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 17:00 line timing</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -185,16 +185,16 @@ canvas.camv{object-fit:contain}
   <svg id="recAnim" style="margin-top:8px"></svg>
   <div class="row">
     <button class="pri" id="recGo">● Start recording</button>
-    <button id="recStop" style="display:none">■ Stop</button>
+    <button class="pri" id="recMark" style="display:none">Next line ▶</button><button id="recStop" style="display:none">■ Stop</button><div id="recMarkSt" class="muted" style="display:none;width:100%;font-size:13px"></div>
     <button class="pri" id="recKeep" style="display:none">✓ Use this take</button>
     <button id="recNext" style="display:none">✓ Use it, record next scene ›</button>
     <button id="recAgain" style="display:none">↺ Try again</button>
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=0022"></script>
+<script src="engine.js?v=0023"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=0022"></script>
+<script src="cutout.js?v=0023"></script>
 <script>
 (() => {
 'use strict';
@@ -546,13 +546,20 @@ function takeStatus(s, o) {
   let st;
   if (t) {
     const up = deviceKeys.has(t.file) ? ' · kept on this device' : ' · <b style="color:var(--bad)">not on this device</b> (recorded on another phone or browser: record it again here before making the video)';
-    st = `${t.kind === 'video' ? '🎥' : '🎙'} ${(t.out - t.in).toFixed(1)}s of you speaking. In ${esc(L)} this scene lasts ${o ? o.dur.toFixed(1) : '?'}s${up}${t.marksOn ? ' · animation matched to your voice (experimental)' : ''}`;
+    st = `${t.kind === 'video' ? '🎥' : '🎙'} ${(t.out - t.in).toFixed(1)}s of you speaking. In ${esc(L)} this scene lasts ${o ? o.dur.toFixed(1) : '?'}s${up}${t.marksOn ? ' · line timing set exactly' : ''}`;
   } else st = `No recording in ${esc(L)} yet. The scene uses the length below.`;
   return st;
 }
 function refreshTakeStatus() {
   const tl = E.timeline(ep, lang);
   ep.scenes.forEach((s, i) => { const n = $('tst_' + i); if (n) n.innerHTML = takeStatus(s, tl.scenes.find(x => x.i === i)); });
+}
+function lineStartsAbs(s, t) { const lines = ((E.sceneLang(s, lang) || {}).lines || []).filter(x => String(x).trim()); return { lines, abs: E.relStarts(lines, t, t.out - t.in).map(x => +(t.in + x).toFixed(2)) }; }
+function timingHTML(s, i, t) {
+  const { lines, abs } = lineStartsAbs(s, t); if (lines.length < 2) return '';
+  return `<details style="margin:8px 0"><summary class="muted" style="cursor:pointer">⏱ Line timing: fix captions or animation that come too early or late</summary>
+    <div class="muted" style="margin:6px 0">Each line starts at a time in your recording (seconds). Type the time where you really start saying it. Tap ▶ to listen from just before it. Tip: next time, tap “Next line” while recording and this is done for you.</div>
+    ${lines.map((x, j) => j === 0 ? '' : `<div class="row" style="align-items:center;gap:6px;margin:4px 0"><span class="muted" style="width:56px">Line ${j + 1}</span><input type="number" inputmode="decimal" step="0.1" min="0" max="${t.out}" data-lm="${i}:${j}" value="${abs[j].toFixed(1)}" style="width:84px"><span class="muted">s</span><button class="sm" data-lp="${i}:${j}">▶</button><span class="muted" style="flex:1;font-size:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(String(x).slice(0, 48))}</span></div>`).join('')}</details>`;
 }
 function takeHTML(s, i, o) {
   const t = takeOf(s), L = ep.languages[lang].name || lang, cam = isCam(s), st = takeStatus(s, o);
@@ -561,11 +568,12 @@ function takeHTML(s, i, o) {
     <div class="st" id="tst_${i}">${st}</div>
     <div class="row"><button class="sm pri" data-rec="${i}">${t ? '↺ Record again' : cam ? '🎥 Record yourself' : '🎙 Record voice'}</button>
     <label class="sm" style="padding:4px 8px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:13px">📁 Choose a ${cam ? 'video' : 'video or sound'} file<input type="file" accept="video/*,audio/*" data-tfile="${i}" style="display:none"></label>
-    ${t ? `<button class="sm" data-tsync="${i}">↻ Match animation to my voice (experimental)</button>${t.marksOn ? `<button class="sm" data-tsyncoff="${i}">✕ Back to automatic timing</button>` : ''}<button class="sm" data-tprev="${i}">👁 Preview my recording</button><button class="sm" data-tplay="${i}">▶ Play scene with animation</button><button class="sm" data-tdl="${i}">⬇ Download to phone</button><button class="sm" data-tdel="${i}">✕ Discard recording</button>` : ''}</div>
+    ${t ? `${t.marksOn ? `<button class="sm" data-tsyncoff="${i}">✕ Back to automatic timing</button>` : ''}<button class="sm" data-tprev="${i}">👁 Preview my recording</button><button class="sm" data-tplay="${i}">▶ Play scene with animation</button><button class="sm" data-tdl="${i}">⬇ Download to phone</button><button class="sm" data-tdel="${i}">✕ Discard recording</button>` : ''}</div>
     ${t && t.dur > 1 ? `<div style="margin:8px 0 2px"><div class="muted" style="margin-bottom:4px">Choose where your recording starts and ends. Move End to just before you reach for the camera; the last few seconds play so you can check.</div>
       <div class="row" style="align-items:center;gap:6px"><span class="muted" style="width:40px">Start</span><button class="sm" data-tn="${i}:in:-0.2">−</button><input type="range" data-tin="${i}" min="0" max="${t.dur}" step="0.05" value="${t.in}" style="flex:1"><button class="sm" data-tn="${i}:in:0.2">+</button><input type="number" inputmode="decimal" step="0.01" min="0" max="${t.dur}" data-tinn="${i}" value="${t.in.toFixed(2)}" style="width:86px" title="seconds"><span class="muted">s</span></div>
       <div class="row" style="align-items:center;gap:6px"><span class="muted" style="width:40px">End</span><button class="sm" data-tn="${i}:out:-0.2">−</button><input type="range" data-tout="${i}" min="0" max="${t.dur}" step="0.05" value="${t.out}" style="flex:1"><button class="sm" data-tn="${i}:out:0.2">+</button><input type="number" inputmode="decimal" step="0.01" min="0" max="${t.dur}" data-toutn="${i}" value="${t.out.toFixed(2)}" style="width:86px" title="seconds"><span class="muted">s</span></div>
       ${t.auto ? `<button class="sm" data-tauto="${i}" style="margin-top:4px">↺ Back to the automatic trim</button>` : ''}</div>` : ''}
+    ${t && timingHTML(s, i, t)}
     <div id="tpv_${i}"></div>
     <div class="ref">Record ${what} reading this scene's lines. The scene stretches to fit, and quiet bits at the start and end are trimmed. Recordings stay on this device; only their timings are saved.</div></div>`;
 }
@@ -585,7 +593,11 @@ function wireTake(s, i) {
   const tno = q('toutn'); if (tno) { tno.onclick = e => e.stopPropagation(); tno.onchange = () => { trimSet('out', tno.value, true); tno.value = ((((s.lang || {})[lang]) || {}).take || {}).out.toFixed(2); }; }
   box.querySelectorAll(`[data-tn^="${i}:"]`).forEach(bt => bt.onclick = e => { e.stopPropagation(); const [, w, d] = bt.dataset.tn.split(':'), t = takeOf(s); if (t) trimSet(w, t[w] + +d, true); });
   const au = q('tauto'); if (au) au.onclick = e => { e.stopPropagation(); const t = (((s.lang || {})[lang]) || {}).take; if (t && t.auto) { t.in = t.auto[0]; t.out = t.auto[1]; changed(); renderScenes(); remount(); } };
-  const sy = q('tsync'); if (sy) sy.onclick = async e => { e.stopPropagation(); sy.disabled = true; sy.textContent = 'Listening…'; try { const n = await autoMarks(i, true); msg(n ? `Matched: found ${n} pause${n > 1 ? 's' : ''} between your lines. Play the scene to check.` : 'Could not find clear pauses, so the lines are spread by length. Leave a short pause between lines when you record.', n ? '' : 'bad'); } catch (x) { msg('Could not read the sound: ' + x.message, 'bad'); } sy.disabled = false; sy.textContent = '↻ Match animation to my voice (experimental)'; };
+  const sy = null; if (sy) sy.onclick = async e => { e.stopPropagation(); sy.disabled = true; sy.textContent = 'Listening…'; try { const n = await autoMarks(i, true); msg(n ? `Matched: found ${n} pause${n > 1 ? 's' : ''} between your lines. Play the scene to check.` : 'Could not find clear pauses, so the lines are spread by length. Leave a short pause between lines when you record.', n ? '' : 'bad'); } catch (x) { msg('Could not read the sound: ' + x.message, 'bad'); } sy.disabled = false; sy.textContent = '↻ Match animation to my voice (experimental)'; };
+  box.querySelectorAll(`[data-lm^="${i}:"]`).forEach(inp => { inp.onclick = e => e.stopPropagation(); inp.onchange = () => { const t = (((s.lang || {})[lang]) || {}).take; if (!t) return; const ins = [...box.querySelectorAll(`[data-lm^="${i}:"]`)]; let prev = t.in; const marks = [t.in];
+    ins.forEach(x => { let v = +x.value; if (!(v > prev + .3)) v = prev + .3; v = Math.min(v, t.out - .3); marks.push(+v.toFixed(2)); prev = v; x.value = v.toFixed(1); });
+    t.marks = marks; t.marksOn = true; changed(); remount(); refreshTakeStatus(); openTakePreview(s, i, Math.max(t.in, +inp.value - .6)); }; });
+  box.querySelectorAll(`[data-lp^="${i}:"]`).forEach(bt => bt.onclick = e => { e.stopPropagation(); const j = bt.dataset.lp.split(':')[1], inp = box.querySelector(`[data-lm="${i}:${j}"]`); openTakePreview(s, i, Math.max(0, +inp.value - .6)); });
   const so = q('tsyncoff'); if (so) so.onclick = e => { e.stopPropagation(); const t = (((s.lang || {})[lang]) || {}).take; if (t) { t.marksOn = false; delete t.marks; changed(); renderScenes(); remount(); msg('Back to the automatic timing.', ''); } };
   const pv = q('tprev'); if (pv) pv.onclick = e => { e.stopPropagation(); openTakePreview(s, i); };
   wireTake2(s, i);
@@ -667,9 +679,12 @@ const R = { i: -1, stream: null, kind: null, rec: null, chunks: [], blob: null, 
 const recMsg = (t, c) => { $('recMsg').textContent = t || ''; $('recMsg').className = 'msg ' + (c || ''); };
 const pickMime = list => (window.MediaRecorder && MediaRecorder.isTypeSupported ? list.find(m => MediaRecorder.isTypeSupported(m)) : '') || '';
 const extOf = m => (/mp4/.test(m) ? (/^audio/.test(m) ? 'm4a' : 'mp4') : /ogg/.test(m) ? 'ogg' : 'webm');
+const recLines = i => ((E.sceneLang(ep.scenes[i] || {}, lang) || {}).lines || []).filter(x => String(x).trim());
+function recMarkText() { const n = recLines(R.i).length, k = (R.marks || []).length; return k >= n - 1 ? `Last line (${n} of ${n}). Tap Stop when you finish.` : `You are on line ${k + 1} of ${n}. Tap “Next line” the moment you start line ${k + 2}. This keeps the animation exactly with your voice.`; }
+$('recMark').onclick = () => { const n = recLines(R.i).length; R.marks = R.marks || []; if (R.marks.length < n - 1) R.marks.push((performance.now() - R.t0) / 1000); $('recMarkSt').textContent = recMarkText(); try { navigator.vibrate && navigator.vibrate(30); } catch (x) {} };
 function recButtons(state) { // ready | counting | recording | review
   const show = (id, on) => { $(id).style.display = on ? '' : 'none'; };
-  show('recGo', state === 'ready'); show('recStop', state === 'recording');
+  show('recGo', state === 'ready'); show('recStop', state === 'recording'); { const nl = recLines(R.i).length; show('recMark', state === 'recording' && nl > 1); $('recMarkSt').style.display = state === 'recording' && nl > 1 ? '' : 'none'; }
   show('recKeep', state === 'review'); show('recAgain', state === 'review'); show('recNext', state === 'review' && R.i < ep.scenes.length - 1);
   $('recDot').style.display = state === 'recording' ? 'block' : 'none';
 }
@@ -785,7 +800,7 @@ $('recGo').onclick = async () => {
     if (R.first == null) recMsg('I could not hear any speaking in that take. Check the microphone and try again, or use it anyway.', 'bad');
     else recMsg(`You spoke for about ${(R.last - R.first + .4).toFixed(1)}s. Play it back above, then keep it or try again.`, 'good');
   };
-  R.rec.start(250); if (R.arec) { try { R.arec.start(250); } catch (e) { R.arec = null; } } R.t0 = performance.now(); R.state = 'recording'; recButtons('recording'); promptRun();
+  R.rec.start(250); if (R.arec) { try { R.arec.start(250); } catch (e) { R.arec = null; } } R.t0 = performance.now(); R.state = 'recording'; R.marks = []; recButtons('recording'); $('recMarkSt').textContent = recMarkText(); promptRun();
 };
 $('recStop').onclick = () => { if (R.arec && R.arec.state !== 'inactive') { try { R.arec.stop(); } catch (e) {} } if (R.rec && R.rec.state !== 'inactive') R.rec.stop(); };
 $('recAgain').onclick = () => { R.blob = null; R.state = 'ready'; recButtons('ready'); showLive(); promptFrame(); recMsg('Ready when you are.'); };
@@ -797,7 +812,10 @@ function closeRecorder() { cancelAnimationFrame(P.raf); clearInterval(R.meter); 
 function keepTake() {
   const dur = R.dur, a = R.first == null ? 0 : Math.max(0, R.first - .25), b = R.last == null ? dur : Math.min(dur, R.last + .35);
   const blob = R.blob, aud = R.ablob; R.blob = null; R.ablob = null; R.state = 'ready';
-  storeTake(R.i, blob, R.kind, dur, a, b, extOf(R.mime), aud);
+  const idx = R.i, marks = (R.marks || []).slice(), nl = recLines(idx).length;
+  storeTake(idx, blob, R.kind, dur, a, b, extOf(R.mime), aud);
+  const rec = (((ep.scenes[idx].lang || {})[lang]) || {}).take;
+  if (rec && nl > 1 && marks.length === nl - 1) { rec.marks = [rec.in].concat(marks.map(x => +Math.min(rec.out - .3, Math.max(rec.in + .3, x)).toFixed(2))); rec.marksOn = true; changed(); remount(); refreshTakeStatus(); }
 }
 // a clip you filmed or recorded somewhere else (for example the phone's camera app): it stays on this device too
 async function useFile(i, f) {

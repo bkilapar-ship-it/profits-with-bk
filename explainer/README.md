@@ -85,3 +85,7 @@ Step cards appear when the spoken line they belong to starts (same timing as the
 
 ## Animation matched to your voice
 EXPERIMENTAL and OFF by default (it made well-timed scenes worse). Tapping "Match animation to my voice (experimental)" on a scene listens for the pauses between lines, saves `take.marks` and sets `take.marksOn`; "Back to automatic timing" undoes it. Without `marksOn` lines are spread by their length, as before. Tip: leave a short pause (a breath) between lines when you record.
+
+## Line timing (exact sync)
+- While recording a scene with several lines, tap **Next line ▶** the moment you start each new line. The animation then follows your real voice (take.marks, marksOn).
+- Under every recording, "⏱ Line timing" lets you type the second where each line starts (▶ plays from just before it). "Back to automatic timing" returns to the length-based estimate, which stays the default.

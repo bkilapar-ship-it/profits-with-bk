@@ -1042,5 +1042,5 @@
   }
 
   Object.keys(SCENES).forEach(k => { const T = SCENES[k]; if (!T.camera && T.fields && !T.fields.some(f => f.k === 'cam')) T.fields.push({ k: 'cam', per: 'data', kind: 'select', options: [['', 'No video of me in this scene']].concat(Object.keys(CAM_LAYOUTS).map(c => [c, CAM_LAYOUTS[c].label])), label: 'My video in this scene (record yourself for it)' }); });
-  root.Explainer = { CAM_LAYOUTS, camSlot, SCENES, ITEM_KINDS, mount, timeline, speechNeed, srt, script, newScene, sceneLang, sceneData, langOf, takeOf, takeSig, W, H, LEAD, TAIL, FADE };
+  root.Explainer = { relStarts, CAM_LAYOUTS, camSlot, SCENES, ITEM_KINDS, mount, timeline, speechNeed, srt, script, newScene, sceneLang, sceneData, langOf, takeOf, takeSig, W, H, LEAD, TAIL, FADE };
 })(typeof window !== 'undefined' ? window : globalThis);
