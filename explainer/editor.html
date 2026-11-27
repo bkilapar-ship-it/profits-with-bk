@@ -73,7 +73,7 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 22:10 cards follow lines</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 22:50 YouTube tags</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -192,9 +192,9 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=0037"></script>
+<script src="engine.js?v=0038"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=0037"></script>
+<script src="cutout.js?v=0038"></script>
 <script>
 (() => {
 'use strict';
@@ -1100,7 +1100,7 @@ function ytPut(url, blob, type) {
   });
 }
 async function ytUpload(o) {
-  o = Object.assign({ btn: 'ytGo', blob: mk.blob, title: 'ytT', desc: 'ytD', priv: 'ytPriv', st: 'ytSt', bar: 'mkBar' }, o || {});
+  o = Object.assign({ btn: 'ytGo', blob: mk.blob, title: 'ytT', desc: 'ytD', tags: 'ytTags', priv: 'ytPriv', st: 'ytSt', bar: 'mkBar' }, o || {});
   ytTarget = { st: o.st, bar: o.bar };
   const btn = $(o.btn); btn.disabled = true;
   try {
@@ -1109,11 +1109,12 @@ async function ytUpload(o) {
     if (!/\.apps\.googleusercontent\.com$/.test(cid)) throw new Error('Paste your Google OAuth client ID first (the same one the studio page uses; see the one-time setup below).');
     try { localStorage.setItem('bkstudio-ytid', cid); } catch (e) {}
     const title = $(o.title).value.trim().slice(0, 100); if (!title) throw new Error('Add a title.');
+    const tagList = (($(o.tags) || {}).value || '').split(/[,\n]/).map(x => x.replace(/^#/, '').trim()).filter(Boolean); let tl = 0; const tags = tagList.filter(x => (tl += x.length + 1) <= 480);
     const desc = $(o.desc).value.slice(0, 4900), type = o.blob.type || 'video/mp4';
     ytSt('Signing in with Google…'); const tok = await ytAuth(cid);
     ytSt('Starting the upload…');
     const r = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status', { method: 'POST', headers: { Authorization: 'Bearer ' + tok, 'Content-Type': 'application/json; charset=UTF-8', 'X-Upload-Content-Type': type, 'X-Upload-Content-Length': String(o.blob.size) },
-      body: JSON.stringify({ snippet: { title, description: desc, categoryId: '27', defaultLanguage: lang, defaultAudioLanguage: lang }, status: { privacyStatus: $(o.priv).value, selfDeclaredMadeForKids: false } }) });
+      body: JSON.stringify({ snippet: { title, description: desc, categoryId: '27', tags, defaultLanguage: lang, defaultAudioLanguage: lang }, status: { privacyStatus: $(o.priv).value, selfDeclaredMadeForKids: false } }) });
     if (!r.ok) throw new Error('YouTube refused to start the upload (' + r.status + '): ' + (await r.text()).slice(0, 200));
     const loc = r.headers.get('Location'); if (!loc) throw new Error('YouTube did not return an upload address.');
     const v = await ytPut(loc, o.blob, type);
@@ -1125,12 +1126,13 @@ function shUpCard() {
   const name = ((channel.names || {})[lang] || (channel.names || {}).en || 'Oh, I Get It!!'), t = (mk.shTitle || ((ep.title || {})[lang] || ep.id)).slice(0, 88);
   return `<div class="box" style="margin-top:10px"><b>Upload this Short to YouTube</b> <span class="pill">${esc(name)}</span>
     <div class="fld"><label>Title</label><input id="shT" value="${esc(t + ' #Shorts')}"></div>
+    <div class="fld"><label>Tags (separate with commas)</label><input id="shTags" value="${esc(ytTagDefault(true))}"></div>
     <div class="fld"><label>Description</label><textarea id="shD" rows="4">${esc('Watch the full video on the channel: ' + name + '\n\nAll prices in this video are illustrative.\n\n#Shorts #OhIGetIt')}</textarea></div>
     <div class="row"><select id="shPriv" style="width:auto"><option value="private">Private</option><option value="unlisted">Unlisted</option></select><button class="pri" id="shUp">⬆ Upload this Short</button></div>
     <div id="shUpSt" class="msg"></div>
     <p class="muted">Needs the Google client ID in the Configuration tab (once). A vertical video under 3 minutes with #Shorts is filed as a Short.</p></div>`;
 }
-function shUpload() { return ytUpload({ btn: 'shUp', blob: mk.blob, title: 'shT', desc: 'shD', priv: 'shPriv', st: 'shUpSt', bar: 'shBar' }); }
+function shUpload() { return ytUpload({ btn: 'shUp', blob: mk.blob, title: 'shT', desc: 'shD', tags: 'shTags', priv: 'shPriv', st: 'shUpSt', bar: 'shBar' }); }
 // ---- the Shorts card: suggested Shorts, your own picks, and the start and end of each picked scene
 const shPicked = new Set(); let shTrim = {};
 function shDur() { const d = {}; E.timeline(ep, lang).scenes.forEach(o => { d[o.i] = o.dur; }); return d; }
@@ -1164,6 +1166,13 @@ function shRender() {
 try { $('shSpeed').value = localStorage.getItem('exShSpeed') || '1'; } catch (e) {}
 $('shSpeed').onchange = () => { try { localStorage.setItem('exShSpeed', $('shSpeed').value); } catch (e) {} shTotal(); };
 $('shGo').onclick = () => { const idx = [...shPicked].sort((a, b) => a - b); if (!idx.length) return; const title = $('shTitle').value.trim() || ((ep.title || {})[lang] || ep.id); const d = shDur(), trims = {}; idx.forEach(i => { const r = shRange(i, d); if (r[0] > 0 || r[1] < (d[i] || 0)) trims[i] = r; }); makeOnDevice({ short: { scenes: idx, title, trims, speed: +$('shSpeed').value || 1 } }); };
+function ytTagDefault(short) { // starting tags from the episode title, the channel name and the general theme; edit freely
+  const title = ((ep.title || {})[lang] || ep.id || ''), name = ((channel.names || {})[lang] || (channel.names || {}).en || 'Oh, I Get It'), base = String(ep.id || '').replace(/-/g, ' ');
+  const t = [base, title.split(':')[0], name, 'explained simply', 'complex things explained', 'everyday life', 'payments explained', 'how it works'];
+  if (/agentic|agent/i.test(base + ' ' + title)) t.push('agentic payments', 'AI agent', 'AI agents', 'AI shopping', 'agentic commerce', 'fintech explained');
+  if (short) t.push('Shorts');
+  const seen = new Set(); return t.map(x => String(x).trim()).filter(x => x && !seen.has(x.toLowerCase()) && seen.add(x.toLowerCase())).join(', ');
+}
 function ytCard() {
   const L = ep.languages[lang] || {}, lines = []; ep.scenes.forEach(sc => ((sc.lang || {})[lang] || {}).lines && lines.push(...sc.lang[lang].lines.filter(x => String(x).trim())));
   const tag = ((channel.taglines || {})[lang] || (channel.taglines || {}).en || ''), name = ((channel.names || {})[lang] || (channel.names || {}).en || 'Oh, I Get It');
@@ -1171,6 +1180,7 @@ function ytCard() {
   return `<div class="box" style="margin-top:10px"><b>Upload to YouTube</b> <span class="pill">${esc(name)}</span>
     <div class="fld"><label>Title</label><input id="ytT" value="${esc(((ep.title || {})[lang] || ep.id).slice(0, 100))}"></div>
     <div class="fld"><label>Description</label><textarea id="ytD" rows="6">${esc(desc)}</textarea></div>
+    <div class="fld"><label>Tags (separate with commas)</label><input id="ytTags" value="${esc(ytTagDefault(false))}"></div>
     <div class="row"><select id="ytPriv" style="width:auto"><option value="private">Private</option><option value="unlisted">Unlisted</option></select><button class="pri" id="ytGo">⬆ Upload to YouTube</button></div>
     <div id="ytSt" class="msg"></div>
     <p class="muted">Needs the Google client ID in <b>YouTube connection</b> above (once).</p></div>`;
