@@ -73,7 +73,7 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 20:20 shift all lines</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 20:40 starts at 0</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -192,16 +192,16 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=0033"></script>
+<script src="engine.js?v=0034"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=0033"></script>
+<script src="cutout.js?v=0034"></script>
 <script>
 (() => {
 'use strict';
 const $ = id => document.getElementById(id);
 const E = window.Explainer;
 const store = { get(k, d) { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }, set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} } };
-let ep = null, channel = { names: {}, taglines: {} }, lang = 'en', index = [], app = null, playing = false, t0 = 0, tNow = 1.2, raf = 0, openScene = 0, dirty = false;
+let ep = null, channel = { names: {}, taglines: {} }, lang = 'en', index = [], app = null, playing = false, t0 = 0, tNow = 0, raf = 0, openScene = 0, dirty = false;
 const msg = (s, cls) => { const m = $('msg'); m.textContent = s || ''; m.className = 'msg ' + (cls || ''); };
 const clone = o => JSON.parse(JSON.stringify(o));
 
@@ -230,7 +230,7 @@ async function loadEpisode(id) {
   }
   store.set('ex.last', ep.id); applyTimings();
   lang = Object.keys(ep.languages || { en: 1 })[0];
-  dirty = restored; openScene = 0; tNow = 1.2;
+  dirty = restored; openScene = 0; tNow = 0;
   renderAll();
   if (restored) msg('Your unsaved changes were restored. To go back to the saved version, use Configuration → Manage episodes → Revert.', '');
 }
