@@ -73,7 +73,7 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 17:15 line near top</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 17:40 tap lines</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -192,9 +192,9 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=0024"></script>
+<script src="engine.js?v=0025"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=0024"></script>
+<script src="cutout.js?v=0025"></script>
 <script>
 (() => {
 'use strict';
@@ -559,6 +559,7 @@ function timingHTML(s, i, t) {
   const { lines, abs } = lineStartsAbs(s, t); if (lines.length < 2) return '';
   return `<details style="margin:8px 0"><summary class="muted" style="cursor:pointer">⏱ Line timing: fix captions or animation that come too early or late</summary>
     <div class="muted" style="margin:6px 0">Each line starts at a time in your recording (seconds). Type the time where you really start saying it. Tap ▶ to listen from just before it. Tip: next time, tap “Next line” while recording and this is done for you.</div>
+    <button class="pri" data-ltap="${i}" style="margin:6px 0">🎯 Play my recording and tap where each line starts</button>
     ${lines.map((x, j) => j === 0 ? '' : `<div class="row" style="align-items:center;gap:6px;margin:4px 0"><span class="muted" style="width:56px">Line ${j + 1}</span><input type="number" inputmode="decimal" step="0.1" min="0" max="${t.out}" data-lm="${i}:${j}" value="${abs[j].toFixed(1)}" style="width:84px"><span class="muted">s</span><button class="sm" data-lp="${i}:${j}">▶</button><span class="muted" style="flex:1;font-size:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(String(x).slice(0, 48))}</span></div>`).join('')}</details>`;
 }
 function takeHTML(s, i, o) {
@@ -598,11 +599,12 @@ function wireTake(s, i) {
     ins.forEach(x => { let v = +x.value; if (!(v > prev + .3)) v = prev + .3; v = Math.min(v, t.out - .3); marks.push(+v.toFixed(2)); prev = v; x.value = v.toFixed(1); });
     t.marks = marks; t.marksOn = true; changed(); remount(); refreshTakeStatus(); openTakePreview(s, i, Math.max(t.in, +inp.value - .6)); }; });
   box.querySelectorAll(`[data-lp^="${i}:"]`).forEach(bt => bt.onclick = e => { e.stopPropagation(); const j = bt.dataset.lp.split(':')[1], inp = box.querySelector(`[data-lm="${i}:${j}"]`); openTakePreview(s, i, Math.max(0, +inp.value - .6)); });
+  { const lt = q('ltap'); if (lt) lt.onclick = ev => { ev.stopPropagation(); const t = (((s.lang || {})[lang]) || {}).take; if (t) openTakePreview(s, i, Math.max(0, t.in), true); }; }
   const so = q('tsyncoff'); if (so) so.onclick = e => { e.stopPropagation(); const t = (((s.lang || {})[lang]) || {}).take; if (t) { t.marksOn = false; delete t.marks; changed(); renderScenes(); remount(); msg('Back to the automatic timing.', ''); } };
   const pv = q('tprev'); if (pv) pv.onclick = e => { e.stopPropagation(); openTakePreview(s, i); };
   wireTake2(s, i);
 }
-async function openTakePreview(s, i, from) { // watch or listen to your trimmed recording right here, no build needed
+async function openTakePreview(s, i, from, tap) { // watch or listen to your trimmed recording right here, no build needed
   { const box = $('tpv_' + i); const t = takeOf(s); if (!t || !box) return;
     box.innerHTML = '<div class="muted">Opening your recording…</div>';
     const b = blobs[t.file] || await loadBlob(t.file);
@@ -611,6 +613,15 @@ async function openTakePreview(s, i, from) { // watch or listen to your trimmed 
     m.onloadedmetadata = () => { try { m.currentTime = from != null ? from : t.in; } catch (x) {} };
     m.ontimeupdate = () => { if (m.currentTime >= t.out) { m.pause(); try { m.currentTime = t.in; } catch (x) {} } };
     box.innerHTML = ''; box.appendChild(m); m.play().catch(() => {});
+    if (tap) {
+      const lines = ((E.sceneLang(s, lang) || {}).lines || []).filter(x => String(x).trim()), st = (((s.lang || {})[lang]) || {}).take, marks = [st.in]; let j = 1;
+      const bt = document.createElement('button'), info = document.createElement('div'); bt.className = 'pri'; bt.style.cssText = 'width:100%;margin-top:8px;padding:14px;font-size:18px'; info.className = 'muted'; info.style.marginTop = '6px';
+      const label = () => { bt.textContent = `Line ${j + 1} starts NOW ▶`; info.textContent = `Listen. Tap the button the moment you hear line ${j + 1}: “${String(lines[j]).slice(0, 60)}”`; };
+      label(); box.appendChild(bt); box.appendChild(info);
+      bt.onclick = () => { const v = Math.max(marks[marks.length - 1] + .3, Math.min(st.out - .3, m.currentTime - .2)); marks.push(+v.toFixed(2)); j++;
+        if (j < lines.length) { label(); return; }
+        m.pause(); st.marks = marks; st.marksOn = true; changed(); remount(); refreshTakeStatus(); info.textContent = 'Saved. The animation now follows these times. Check the preview at the top.'; bt.remove(); };
+    }
     const hint = document.createElement('div'); hint.className = 'muted'; hint.textContent = 'This is the part that will be used (quiet bits at the start and end are already cut). Not happy? Tap Discard recording and record again.'; box.appendChild(hint);
   }
 }
