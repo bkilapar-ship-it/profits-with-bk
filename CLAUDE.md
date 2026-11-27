@@ -1,9 +1,10 @@
 # Repo guide
 
-Two projects live here. Read the notes for the one you are working on.
+Four projects live here (see PROJECTS.md for the map). Read the notes for the one you are working on, and work on one at a time.
 
 - Studio + screener (The 4% Swing Trades): see HANDOFF.md and studio/CLAUDE.md. CURRENTLY PAUSED (UK FCA review).
 - Explainer channel (Oh, I Get It): see explainer/README.md and explainer/CLAUDE.md.
+- Service product (selling explainer videos): see service/README.md. Idea stage.
 - The screener (scan.yaml, app.js, site) is separate again: do not touch it from studio or explainer work.
 
 Standing rules (all projects in this repo):
