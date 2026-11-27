@@ -73,7 +73,7 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 12:40 popup ends</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 13:20 thumbnails</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -140,6 +140,23 @@ canvas.camv{object-fit:contain}
         <div class="row"><button id="dl" class="sm">Download file</button><button id="save" class="sm" title="Optional: stores the episode file on GitHub (needs the token in Configuration)">Save to GitHub (optional)</button></div>
       </div>
     </div>
+    <div class="box" id="thumbBox" data-tab="video">
+      <b>Thumbnails</b> <span class="pill">video and Shorts</span>
+      <p class="muted" style="margin:4px 0 8px">A click-catching picture for the video (16:9) and for the Short (vertical). Your photo sits at the side and is cut out of its background. It uses your real photo as it is, with no changes to your face. Change the words, pick the side, or upload a different photo.</p>
+      <div class="fld"><label for="thFmt">Which one</label><select id="thFmt"><option value="video">Video thumbnail (1280 × 720)</option><option value="short">Short thumbnail (1080 × 1920)</option></select></div>
+      <div class="fld"><label for="thL1">Line 1 (white)</label><input id="thL1"></div>
+      <div class="fld"><label for="thL2">Line 2 (gold)</label><input id="thL2"></div>
+      <div class="fld"><label for="thL3">Line 3 (white on red)</label><input id="thL3"></div>
+      <div class="fld"><label for="thTag">Small tag</label><input id="thTag"></div>
+      <div class="row"><div class="fld grow"><label for="thSide">Your photo on the</label><select id="thSide"><option value="right">right</option><option value="left">left</option></select></div>
+      <label class="sm" style="padding:6px 10px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:13px;align-self:flex-end">📁 Use a different photo<input type="file" accept="image/*" id="thFile" style="display:none"></label>
+      <button class="sm" id="thReset" style="align-self:flex-end">↺ My saved photo</button></div>
+      <label style="display:block;margin:6px 0;font-size:14px"><input type="checkbox" id="thCut" checked style="width:auto"> Cut me out of the photo background</label>
+      <label style="display:block;margin:6px 0;font-size:14px"><input type="checkbox" id="thRobot" style="width:auto"> Add the shopping robot</label>
+      <canvas id="thCv" style="width:100%;border-radius:10px;background:#0b1522;margin-top:6px"></canvas>
+      <div id="thSt" class="muted" style="margin:4px 0"></div>
+      <div class="row"><button class="pri" id="thDl">⬇ Save this thumbnail</button><button id="thDlAll">⬇ Save both</button></div>
+    </div>
     <div class="box" id="shortsBox" data-tab="video">
       <b>Make Shorts</b> <span class="pill" id="shLang"></span>
       <p class="muted" style="margin:4px 0 8px">A Short is vertical (9:16): the title on top, the scene pictures in the middle, big captions underneath, and your voice. Pick a suggested Short or tick your own scenes. Under 60 seconds works best. Make the full video first, or in any order: both use the same recordings.</p>
@@ -175,9 +192,9 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=0015"></script>
+<script src="engine.js?v=0016"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=0015"></script>
+<script src="cutout.js?v=0016"></script>
 <script>
 (() => {
 'use strict';
@@ -272,7 +289,7 @@ function blankEpisode(id, tpl) {
 }
 
 // ---------- UI ----------
-function renderAll() { renderEpList(); renderLangTabs(); renderLangSettings(); renderScenes(); renderChannel(); remount(); }
+function renderAll() { renderEpList(); renderLangTabs(); renderLangSettings(); renderScenes(); renderChannel(); remount(); try { thRefresh(); } catch (e) {} }
 function renderLangTabs() {
   const L = ep.languages; $('mkLang').textContent = (L[lang] || {}).name || lang;
   $('langTabs').innerHTML = Object.keys(L).map(k => `<button class="tab${k === lang ? ' on' : ''}" data-l="${k}">${L[k].name || k}</button>`).join('') + `<button class="tab" id="addLang">+ Add language</button>`;
@@ -1292,6 +1309,99 @@ function check() {
   Object.keys(ep.languages).forEach(l => ep.scenes.forEach((s, i) => { const L = (s.lang || {})[l]; if (!L || !(L.lines || []).length) out.push(`• Scene ${i + 1} has no voiceover lines in ${ep.languages[l].name}.`); }));
   return out.slice(0, 8);
 }
+// ---------- Thumbnails: video (16:9) and Short (9:16), your photo at the side ----------
+const TH = { img: null, cut: null, cutFor: null, custom: false, busy: 0 };
+function thDefaults() {
+  if (ep.id === 'agentic-payments') return { l1: 'ARE ROBOTS', l2: 'GOING TO SHOP', l3: 'FOR US??', tag: 'AGENTIC PAYMENTS', side: 'right', cut: true, robot: true };
+  const w = String((E.sceneLang(ep.scenes[0], 'en') || {}).title || ep.id).toUpperCase().split(/\s+/); const t = Math.ceil(w.length / 3);
+  return { l1: w.slice(0, t).join(' '), l2: w.slice(t, t * 2).join(' '), l3: w.slice(t * 2).join(' '), tag: 'EXPLAINED', side: 'right', cut: true, robot: false };
+}
+const thGet = () => Object.assign(thDefaults(), store.get('ex.thumb.' + ep.id, {}) || {});
+function thSave() { store.set('ex.thumb.' + ep.id, { l1: $('thL1').value, l2: $('thL2').value, l3: $('thL3').value, tag: $('thTag').value, side: $('thSide').value, cut: $('thCut').checked, robot: $('thRobot').checked }); }
+const thLoadImg = src => new Promise((res, rej) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => rej(new Error('Could not open that photo.')); im.src = src; });
+async function thPhoto() {
+  if (!TH.img) { let src = 'assets/bk.png'; try { const d = localStorage.getItem('ex.thumbPhoto'); if (d) { src = d; TH.custom = true; } } catch (e) {} TH.img = await thLoadImg(src).catch(() => thLoadImg('assets/bk.png')); TH.cut = null; }
+  return TH.img;
+}
+async function thCutOut() {
+  if (!$('thCut').checked) return null;
+  if (TH.cut && TH.cutFor === TH.img) return TH.cut;
+  try { await Cutout.ready(); const cv = document.createElement('canvas'); await Cutout.cut(TH.img, cv); TH.cut = cv; TH.cutFor = TH.img; return cv; } catch (e) { $('thSt').textContent = 'The cut-out could not start on this device, so your whole photo is shown. ' + (e.message || ''); return null; }
+}
+function thFit(c, text, font, maxPx, maxW) { c.font = font(maxPx); const w = c.measureText(text).width; return w > maxW ? Math.max(20, Math.floor(maxPx * maxW / w)) : maxPx; }
+function thRobot(c, x, y, s) { // friendly shopping robot, feet at (x, y)
+  c.save(); c.translate(x, y); c.scale(s, s); c.lineJoin = 'round'; c.lineCap = 'round';
+  const rr = (a, b, w, h, r, f, st) => { c.beginPath(); c.roundRect(a, b, w, h, r); if (f) { c.fillStyle = f; c.fill(); } if (st) { c.strokeStyle = st; c.lineWidth = 6; c.stroke(); } };
+  rr(-46, -70, 30, 70, 14, '#7f9cf5', '#0b1522'); rr(16, -70, 30, 70, 14, '#7f9cf5', '#0b1522');          // legs
+  rr(-70, -200, 140, 140, 30, '#cfe3ff', '#0b1522');                                                       // body
+  rr(-40, -170, 80, 56, 12, '#0b1522'); c.fillStyle = '#ffd166'; [-20, 0, 20].forEach(k => { c.beginPath(); c.arc(k, -142, 7, 0, 7); c.fill(); });
+  rr(-72, -312, 144, 108, 32, '#e8f1ff', '#0b1522');                                                       // head
+  rr(-52, -290, 104, 62, 22, '#0b1522'); c.fillStyle = '#ffd166'; [-24, 24].forEach(k => { c.beginPath(); c.arc(k, -262, 12, 0, 7); c.fill(); });
+  c.strokeStyle = '#ffd166'; c.lineWidth = 6; c.beginPath(); c.arc(0, -240, 16, .2, Math.PI - .2); c.stroke();
+  c.strokeStyle = '#0b1522'; c.lineWidth = 7; c.beginPath(); c.moveTo(0, -312); c.lineTo(0, -346); c.stroke(); c.fillStyle = '#e11d48'; c.beginPath(); c.arc(0, -352, 12, 0, 7); c.fill(); c.stroke();
+  rr(-96, -190, 28, 100, 14, '#7f9cf5', '#0b1522');                                                         // arm
+  c.save(); c.translate(98, -120); c.rotate(-.15);                                                         // arm holding the basket
+  rr(-14, -70, 28, 90, 14, '#7f9cf5', '#0b1522');
+  c.fillStyle = '#f4a261'; c.strokeStyle = '#0b1522'; c.lineWidth = 6; c.beginPath(); c.moveTo(-50, 14); c.lineTo(76, 14); c.lineTo(58, 90); c.lineTo(-32, 90); c.closePath(); c.fill(); c.stroke();
+  c.fillStyle = '#fff'; c.beginPath(); c.roundRect(-18, -30, 22, 46, 6); c.fill(); c.stroke();                // milk
+  c.fillStyle = '#ffd166'; c.beginPath(); c.moveTo(14, 14); c.lineTo(62, 14); c.lineTo(62, -22); c.closePath(); c.fill(); c.stroke(); // cheese
+  c.fillStyle = '#4cc9f0'; c.beginPath(); c.roundRect(-46, -14, 22, 28, 6); c.fill(); c.stroke();               // detergent
+  c.strokeStyle = '#0b1522'; c.lineWidth = 6; c.beginPath(); c.arc(13, 14, 50, Math.PI, 0); c.stroke();
+  c.restore(); c.restore();
+}
+function thDraw(o) {
+  const W = o.W, H = o.H, sh = o.short, right = o.side === 'right', cv = document.createElement('canvas'); cv.width = W; cv.height = H; const c = cv.getContext('2d');
+  const fam = (getComputedStyle(document.documentElement).getPropertyValue('--ex-font').trim() || "'DM Sans', sans-serif"), F = px => `800 ${px}px ${fam}`;
+  const ph = sh ? H * .46 : H * 1.0, asp = o.photo ? (o.photo.width || o.photo.naturalWidth) / (o.photo.height || o.photo.naturalHeight) : 1, pw = ph * asp;
+  const px = sh ? (right ? W - pw * .94 : -pw * .06) : (right ? W - pw * .93 : -pw * .07), py = H - ph * (sh ? .98 : .97), fx = px + pw / 2, fy = py + ph * .33;
+  const g = c.createRadialGradient(fx, fy, 40, fx, fy, Math.max(W, H) * .95); g.addColorStop(0, '#2a66b5'); g.addColorStop(.45, '#12305a'); g.addColorStop(1, '#050b16'); c.fillStyle = g; c.fillRect(0, 0, W, H);
+  c.save(); c.translate(fx, fy); c.globalAlpha = .13; for (let i = 0; i < 18; i++) { c.rotate(Math.PI * 2 / 18); if (i % 2) continue; c.fillStyle = '#ffd166'; c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.max(W, H) * 1.4, -Math.max(W, H) * .13); c.lineTo(Math.max(W, H) * 1.4, Math.max(W, H) * .13); c.fill(); } c.restore();
+  c.fillStyle = '#ffd166'; for (let i = 0; i < 34; i++) { c.globalAlpha = .12 + (i % 4) * .05; c.beginPath(); c.arc((i * 337) % W, (i * 211) % H, 3 + (i % 4) * 2, 0, 7); c.fill(); } c.globalAlpha = 1;
+  // words
+  const col0 = sh ? W * .06 : (right ? W * .045 : W * .43), colW = sh ? W * .88 : W * .53, lines = [o.l1, o.l2, o.l3].map(x => String(x || '').toUpperCase().trim());
+  const mx = sh ? [190, 150, 190] : [108, 88, 104], sz = lines.map((t, i) => t ? thFit(c, t, F, mx[i], colW - (i === 2 ? 60 : 0)) : 0);
+  let y = sh ? H * .055 : H * .07;
+  if (o.tag) { c.font = F(sh ? 44 : 28); const tw = c.measureText(o.tag).width + 40, th = sh ? 70 : 46; c.fillStyle = '#ffd166'; c.beginPath(); c.roundRect(col0, y, tw, th, th / 2); c.fill(); c.fillStyle = '#0b1522'; c.textBaseline = 'middle'; c.fillText(o.tag, col0 + 20, y + th / 2 + 2); y += th + (sh ? 30 : 18); }
+  c.textBaseline = 'alphabetic'; c.lineJoin = 'round';
+  lines.forEach((t, i) => { if (!t) return; const s = sz[i]; y += s * .88 + (i === 2 ? s * .26 : 0); c.font = F(s);
+    if (i === 2) { const w = c.measureText(t).width + 56; c.save(); c.translate(col0 + w / 2, y - s * .32); c.rotate(-.035); c.fillStyle = '#e11d48'; c.strokeStyle = '#fff'; c.lineWidth = sh ? 10 : 7; c.beginPath(); c.roundRect(-w / 2, -s * .68, w, s * 1.22, 22); c.fill(); c.stroke(); c.fillStyle = '#fff'; c.textAlign = 'center'; c.fillText(t, 0, s * .32); c.restore(); c.textAlign = 'left'; y += s * .42; }
+    else { c.lineWidth = s * .16; c.strokeStyle = '#050b16'; c.strokeText(t, col0, y); c.fillStyle = i === 0 ? '#fff' : '#ffd166'; c.fillText(t, col0, y); y += s * .16; } });
+  // robot and question marks
+  const rs = sh ? 1.7 : .72; if (o.robot) thRobot(c, sh ? (right ? W * .22 : W * .78) : (right ? W * .17 : W * .83), H - (sh ? H * .035 : H * .012), rs);
+  if (o.robot) { c.font = F(sh ? 220 : 120); c.textAlign = 'center'; c.lineWidth = 14; c.strokeStyle = '#050b16'; c.fillStyle = '#ffd166';
+  (sh ? [[W * .1, H * .6, -.2], [W * .46, H * .56, .15]] : [[W * (right ? .33 : .67), H * .8, .2], [W * (right ? .44 : .56), H * .9, -.15]]).forEach(([a, b, r]) => { c.save(); c.translate(a, b); c.rotate(r); c.strokeText('?', 0, 0); c.fillText('?', 0, 0); c.restore(); }); c.textAlign = 'left'; }
+  c.font = F(sh ? 46 : 28); c.fillStyle = '#ffd166'; c.strokeStyle = '#050b16'; c.lineWidth = 8; const brand = 'OH, I GET IT!!'; const bx = sh ? W * .94 - c.measureText(brand).width : (right ? W * .04 : W * .96 - c.measureText(brand).width); const by = sh ? H * .055 + 48 : H - 22; c.strokeText(brand, bx, by); c.fillText(brand, bx, by);
+  // you: glowing sticker outline when cut out, a framed photo otherwise
+  if (o.photo) {
+    if (o.cut) { const sil = document.createElement('canvas'); sil.width = Math.ceil(pw) + 40; sil.height = Math.ceil(ph) + 40; const sx = sil.getContext('2d'); sx.drawImage(o.photo, 20, 20, pw, ph); sx.globalCompositeOperation = 'source-in'; sx.fillStyle = '#fff'; sx.fillRect(0, 0, sil.width, sil.height);
+      c.save(); c.shadowColor = 'rgba(255,209,102,.9)'; c.shadowBlur = sh ? 60 : 40; const R = sh ? 12 : 8; for (let a = 0; a < 24; a++) c.drawImage(sil, px - 20 + Math.cos(a / 24 * 6.283) * R, py - 20 + Math.sin(a / 24 * 6.283) * R); c.restore(); c.drawImage(o.photo, px, py, pw, ph); }
+    else { c.save(); c.beginPath(); c.roundRect(px + pw * .04, py + ph * .04, pw * .92, ph * .92, 36); c.clip(); c.drawImage(o.photo, px, py, pw, ph); c.restore(); c.strokeStyle = '#ffd166'; c.lineWidth = 10; c.beginPath(); c.roundRect(px + pw * .04, py + ph * .04, pw * .92, ph * .92, 36); c.stroke(); }
+  }
+  return cv;
+}
+let thTick = 0;
+async function thRender() {
+  const id = ++thTick; if (!$('thCv')) return; const sh = $('thFmt').value === 'short';
+  try { await document.fonts.load("800 60px 'DM Sans'", 'ABC?!'); } catch (e) {}
+  await thPhoto(); $('thSt').textContent = $('thCut').checked && !TH.cut ? 'Cutting you out of the photo…' : '';
+  const cut = await thCutOut(); if (id !== thTick) return;
+  const out = thDraw({ W: sh ? 1080 : 1280, H: sh ? 1920 : 720, short: sh, l1: $('thL1').value, l2: $('thL2').value, l3: $('thL3').value, tag: $('thTag').value, side: $('thSide').value, robot: $('thRobot').checked, photo: cut || TH.img, cut: !!cut });
+  const cv = $('thCv'); cv.width = out.width; cv.height = out.height; cv.getContext('2d').drawImage(out, 0, 0); cv.style.maxWidth = sh ? '320px' : '100%'; if (!$('thSt').textContent) $('thSt').textContent = (sh ? '1080 × 1920' : '1280 × 720') + ' picture. ' + (cut ? '' : '');
+}
+function thRefresh() { const d = thGet(); $('thL1').value = d.l1; $('thL2').value = d.l2; $('thL3').value = d.l3; $('thTag').value = d.tag; $('thSide').value = d.side; $('thCut').checked = d.cut !== false; $('thRobot').checked = !!d.robot; thRender(); }
+function thSaveFile(cv, name) {
+  return new Promise(res => cv.toBlob(async b => { const f = new File([b], name, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) { try { await navigator.share({ files: [f], title: name }); return res(); } catch (x) { if (x && x.name === 'AbortError') return res(); } }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000); res(); }, 'image/png'));
+}
+['thL1', 'thL2', 'thL3', 'thTag'].forEach(k => $(k).addEventListener('input', () => { thSave(); clearTimeout(thTick.t); thTick.t = 0; setTimeout(thRender, 150); }));
+['thFmt', 'thSide', 'thCut', 'thRobot'].forEach(k => $(k).addEventListener('change', () => { thSave(); thRender(); }));
+$('thFile').onchange = async () => { const f = $('thFile').files[0]; $('thFile').value = ''; if (!f) return; try {
+  const im = await thLoadImg(URL.createObjectURL(f)), k = Math.min(1, 1400 / Math.max(im.naturalWidth, im.naturalHeight)), c2 = document.createElement('canvas'); c2.width = Math.round(im.naturalWidth * k); c2.height = Math.round(im.naturalHeight * k); c2.getContext('2d').drawImage(im, 0, 0, c2.width, c2.height);
+  try { localStorage.setItem('ex.thumbPhoto', c2.toDataURL('image/jpeg', .9)); } catch (e) {} TH.img = await thLoadImg(c2.toDataURL('image/jpeg', .9)); TH.cut = null; TH.custom = true; thRender(); } catch (e) { msg(e.message, 'bad'); } };
+$('thReset').onclick = () => { try { localStorage.removeItem('ex.thumbPhoto'); } catch (e) {} TH.img = null; TH.cut = null; TH.custom = false; thRender(); };
+$('thDl').onclick = async () => { await thRender(); await thSaveFile($('thCv'), `${ep.id}-thumbnail-${$('thFmt').value}.png`); };
+$('thDlAll').onclick = async () => { const keep = $('thFmt').value; for (const f of ['video', 'short']) { $('thFmt').value = f; await thRender(); await thSaveFile($('thCv'), `${ep.id}-thumbnail-${f}.png`); } $('thFmt').value = keep; thRender(); };
 // no "leave this page?" popup: every change is kept on this device automatically (see changed())
 boot().then(refreshDeviceKeys).catch(e => msg('Could not start: ' + e.message, 'bad'));
 })();

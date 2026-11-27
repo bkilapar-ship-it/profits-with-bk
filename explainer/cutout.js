@@ -51,8 +51,9 @@
   function cut(video, out, dims) {
     const job = busy.then(async () => {
       await ready();
-      if (!video.videoWidth) throw new Error('No picture to cut out.');
-      const vw = dims ? dims.w : video.videoWidth, vh = dims ? dims.h : video.videoHeight, w = Math.min(960, vw), h = Math.round(w * vh / vw);
+      const sw0 = video.videoWidth || video.naturalWidth || 0, sh0 = video.videoHeight || video.naturalHeight || 0;
+      if (!sw0) throw new Error('No picture to cut out.');
+      const vw = dims ? dims.w : sw0, vh = dims ? dims.h : sh0, w = Math.min(960, vw), h = Math.round(w * vh / vw);
       if (out.width !== w || out.height !== h) { out.width = w; out.height = h; }
       last = null; await seg.send({ image: video });
       const c = out.getContext('2d'); c.clearRect(0, 0, w, h);

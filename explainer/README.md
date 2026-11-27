@@ -72,3 +72,6 @@ Same style as the studio: the whole script is one colour and scrolls past a fixe
 
 ## Animated story beside you (presenter, Side by side / Circle)
 Set "Animated story beside you" to the shops story: two shops with their tags (cheapest detergent and soap, best quality milk and cheese), a person walking back and forth ("Two shops? Such a hassle..."), then the AI agent visiting both shops with ticks, filling a basket and "Paid for you". It follows the spoken lines 3 to 6 (change the start with `storyFrom` in the scene data). Lines before that still use the big popups.
+
+## Thumbnails
+Video tab, "Thumbnails" card: 1280x720 video thumbnail and 1080x1920 Short thumbnail drawn on a canvas (no external images). Your photo (default explainer/assets/bk.png, a copy of studio/assets/bk.png, or an uploaded one kept in this browser only) is cut out with the same on-device tool as the video and sits on the left or right with a glow outline. Three headline lines, a small tag, optional shopping robot, saves as PNG (share sheet on iPhone). The photo is used as it is: no edits to the face. Words are saved per episode in this browser (`ex.thumb.<id>`).
