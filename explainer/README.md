@@ -95,3 +95,11 @@ EXPERIMENTAL and OFF by default (it made well-timed scenes worse). Tapping "Matc
 
 ## Instagram Reels
 Configuration > Instagram connection (account ID, token, token type, API version; stored only on the device). Video tab: "Post Reel to Instagram" under the YouTube card. Flow: the video is committed to a spare `ig-media` branch of the repo via the GitHub connection, Instagram is asked to fetch it (`video_url`), the container is polled until FINISHED, published, and the temporary file is deleted. Needs a Professional Instagram account. Unverified on a real account: browser CORS to graph.instagram.com/graph.facebook.com, and whether Instagram accepts the raw.githubusercontent.com content type (application/octet-stream).
+
+## Motion beta (opt-in, off by default)
+Tick **Motion beta** in the editor header to try it. It only changes the feel, never the timing, so your line sync is untouched.
+- Smoother start and stop on all eased moves (cubic instead of quadratic).
+- Scenes glide in (slight rise and scale-up with ease-out), drift very slowly while on screen, and ease out at the end.
+- Captions pop in with a small overshoot, then settle.
+- Scenes that carry your video stay still so the gold frame matches your camera.
+Applies to the preview and the finished video. Also settable per episode with `"motion":"beta"` in the JSON. Research notes: ease-out for entrances, one focal element at a time, short anticipation, restrained overshoot, consistent easing (duck.design, motion principles guides).

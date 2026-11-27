@@ -22,7 +22,12 @@
   const LEAD = 0.3, TAIL = 0.5;
   const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
   const lerp = (a, b, u) => a + (b - a) * u;
-  const ease = u => (u < .5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2);
+  let BETA = false; // BETA motion polish (off by default). Same start and end times, only the feel in between changes.
+  const easeOld = u => (u < .5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2);
+  const easeNew = u => (u < .5 ? 4 * u * u * u : 1 - Math.pow(-2 * u + 2, 3) / 2); // smoother start and stop than the old curve
+  const ease = u => (BETA ? easeNew(u) : easeOld(u));
+  const easeOut = u => 1 - Math.pow(1 - u, 3);
+  const settle = u => { const c = 1.35; return 1 + (c + 1) * Math.pow(u - 1, 3) + c * Math.pow(u - 1, 2); }; // gentle overshoot then settle
   const bounce = u => { const n = 7.5625, d = 2.75; if (u < 1 / d) return n * u * u; if (u < 2 / d) return n * (u -= 1.5 / d) * u + .75; if (u < 2.5 / d) return n * (u -= 2.25 / d) * u + .9375; return n * (u -= 2.625 / d) * u + .984375; };
   const prog = (t, a, b) => clamp((t - a) / (b - a));
   function el(tag, attrs, parent, text) {
@@ -1024,6 +1029,8 @@
     const channelName = (channel.names || {})[lang] || channel.name || 'Oh, I Get It!!';
     const tagline = (channel.taglines || {})[lang] || (channel.taglines || {}).en || '';
     const tl = timeline(ep, lang);
+    BETA = opts.motion === 'beta' || (opts.motion == null && ep.motion === 'beta');
+    const beta = BETA;
     const built = tl.scenes.map((o, idx) => {
       const g = el('g', { opacity: 0 }, svg), cl = (SCENES[o.scene.type] || {}).camera ? null : CAM_LAYOUTS[sceneData(o.scene).cam];
       let body = g, camG = null;
@@ -1039,7 +1046,7 @@
       try { draw = SCENES[o.scene.type].build.call(SCENES[o.scene.type], body, S, ctx); } catch (e) { console.error('Scene', idx, o.scene.type, e); txt(g, 960, 540, 'Scene error: ' + e.message, 40, 700, '#d62828'); }
       if (camG) { const r = camG.slot, fr = el('g', {}, g); el('rect', { x: r.x, y: r.y, width: r.w, height: r.h, rx: r.r, fill: '#0b1522', opacity: o.take ? 0 : .55 }, fr); el('rect', { x: r.x, y: r.y, width: r.w, height: r.h, rx: r.r, fill: 'none', stroke: '#ffd166', 'stroke-width': 6 }, fr); if (!o.take) txt(fr, r.x + r.w / 2, r.y + r.h / 2 + 8, 'YOUR CAMERA', 30, 800, '#ffd166', { max: r.w - 40 }); }
       fitAll(g);
-      return { o, g, draw };
+      return { o, g, draw, still: !!camG };
     });
     const capG = el('g', { opacity: 0 }, svg);
     const capR = el('rect', { x: 260, y: 935, width: 1400, height: 92, rx: 46, fill: '#000', opacity: .62 }, capG);
@@ -1054,10 +1061,17 @@
         b.g.setAttribute('opacity', visible ? fadeIn : 0);
         b.g.style.display = visible ? '' : 'none';
         if (visible) { try { b.draw(clamp((t - start) / (end - start))); } catch (e) { /* keep playing */ } }
+        if (beta && !b.still) { // scenes with your video stay still so the gold frame matches your camera
+          if (!visible) b.g.removeAttribute('transform');
+          else { const u = prog(t, start - FADE / 2, start + FADE / 2), d = prog(t, start, end), x = prog(t, end - FADE / 2, end + FADE / 2);
+            const sc = (i === 0 ? 1 : lerp(.965, 1, easeOut(u))) * (1 + .018 * d) * (next ? 1 + .02 * easeOut(x) : 1), dy = i === 0 ? 0 : lerp(16, 0, easeOut(u));
+            b.g.setAttribute('transform', `translate(960 ${540 + dy}) scale(${sc.toFixed(4)}) translate(-960 -540)`); } }
+        else if (b.g.hasAttribute('transform')) b.g.removeAttribute('transform');
       });
       const c = opts.noCaptions ? null : tl.captions.find(c => c.show && t >= c.start && t < c.end);
       if (!c) { capG.setAttribute('opacity', 0); return; }
       capG.setAttribute('opacity', Math.min(prog(t, c.start, c.start + .2), 1 - prog(t, c.end - .2, c.end)));
+      if (beta) { const k = settle(prog(t, c.start, c.start + .35)); capG.setAttribute('transform', `translate(960 996) scale(${(.92 + .08 * k).toFixed(4)}) translate(-960 -996)`); } else capG.removeAttribute('transform');
       if (lastCap !== c) {
         lastCap = c; capT.textContent = c.text; capT.setAttribute('font-size', 44);
         let f = 44; try { while (capT.getComputedTextLength() > 1700 && f > 24) { f -= 1; capT.setAttribute('font-size', f); } } catch (e) {}

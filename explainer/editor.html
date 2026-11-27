@@ -73,7 +73,8 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 00:50 Instagram</span>
+  <label class="muted" style="font-size:12px;white-space:nowrap"><input type="checkbox" id="motionBeta" style="width:auto"> Motion beta</label>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 01:20 Motion beta</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -200,9 +201,9 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=0041"></script>
+<script src="engine.js?v=0042"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=0041"></script>
+<script src="cutout.js?v=0042"></script>
 <script>
 (() => {
 'use strict';
@@ -439,9 +440,11 @@ function renderChannel() {
 
 // ---------- preview ----------
 let remountT = 0;
+function motionBeta() { try { return localStorage.getItem('ex.motion') === 'beta'; } catch (x) { return false; } }
+(function () { const c = document.getElementById('motionBeta'); if (!c) return; c.checked = motionBeta(); c.onchange = () => { try { localStorage.setItem('ex.motion', c.checked ? 'beta' : 'off'); } catch (x) {} remount(); }; })();
 function remountSoon() { clearTimeout(remountT); remountT = setTimeout(remount, 250); }
 function remount() {
-  app = E.mount($('stage'), ep, lang, { channel, preview: true });
+  app = E.mount($('stage'), ep, lang, { channel, preview: true, motion: motionBeta() ? 'beta' : 'off' });
   document.fonts.ready.then(() => { if (app) { app.refit(); app.render(tNow); } });
   tNow = Math.min(tNow, app.duration); draw();
   const tl = app.timeline; $('scenes').querySelectorAll('.scene').forEach(n => { const o = tl.scenes.find(x => x.i === +n.dataset.i); const p = n.querySelector('.hd .pill.tm'); if (p && o) p.textContent = o.start.toFixed(1) + 's'; });
@@ -1412,7 +1415,7 @@ async function makeOnDevice(opts) {
     await Promise.all(['400', '700', '800'].map(w => document.fonts.load(`${w} 40px ${fam}`, text).catch(() => {}))); await document.fonts.ready;
     const hold = document.createElement('div'); hold.style.cssText = 'position:fixed;left:-99999px;top:0;width:1920px;height:1080px;overflow:hidden'; document.body.appendChild(hold); els.push(hold);
     svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg'); svg.setAttribute('width', 1920); svg.setAttribute('height', 1080); hold.appendChild(svg);
-    const app = E.mount(svg, epU, lang, { channel, preview: false, noCaptions: !!SHORT }); svg.style.cssText = 'font-family:' + fam.replace(/"/g, "'") + ';';
+    const app = E.mount(svg, epU, lang, { channel, preview: false, noCaptions: !!SHORT, motion: motionBeta() ? 'beta' : 'off' }); svg.style.cssText = 'font-family:' + fam.replace(/"/g, "'") + ';';
     const ser = new XMLSerializer(), styleTag = `<defs><style>${fontCss}</style></defs>`;
     const cv = $(IDS.cv); cv.width = W2; cv.height = H2; cv.style.display = 'block'; const c = cv.getContext('2d');
     const shBg = SHORT ? shortBackdrop(W2, H2, fam, SHORT.title, ((channel.names || {})[lang] || (channel.names || {}).en || 'Oh, I Get It!!')) : null;
