@@ -818,7 +818,7 @@
       const spark = el('g', {}, g), sp = []; for (let i = 0; i < 6; i++) sp.push(el('path', { d: 'M0 -16 l4 12 l12 4 l-12 4 l-4 12 l-4 -12 l-12 -4 l12 -4z', fill: '#fff6dc' }, spark));
       txt(g, 960, 880, S.L.small || '', 28, 500, '#8fa6bd', { max: 1700 });
       // three spoken lines -> three scenes of animation: a robot shopping, comments, then like / share / subscribe
-      const lt = (() => { const lines = (S.L.lines || []).filter(x => String(x).trim()), tk = S.L.take, spanT = tk ? tk.out - tk.in : ctx.dur, offT = tk ? LEAD - .15 : 0, tot = lines.reduce((a, q) => a + Math.max(12, q.length), 0); let acc = offT; const st = lines.map(q => { const x = acc; acc += spanT * Math.max(12, q.length) / tot; return x; }); return { n: lines.length, st, en: st.map((x, j) => j + 1 < st.length ? st[j + 1] : offT + spanT + .35) }; })();
+      const lt = (() => { let lines = (S.L.lines || []).filter(x => String(x).trim()); if (lines.length < 3) { const se = lines.join(' ').match(/[^.!?]+[.!?]+/g); if (se && se.length >= 3) lines = se.map(x => x.trim()); } const tk = S.L.take, spanT = tk ? tk.out - tk.in : ctx.dur, offT = tk ? LEAD - .15 : 0, tot = lines.reduce((a, q) => a + Math.max(12, q.length), 0); let acc = offT; const st = lines.map(q => { const x = acc; acc += spanT * Math.max(12, q.length) / tot; return x; }); return { n: lines.length, st, en: st.map((x, j) => j + 1 < st.length ? st[j + 1] : offT + spanT + .35) }; })();
       const PH = lt.n >= 3, ic = (par, name, k) => { const q = el('g', {}, par); cardIcon(el('g', { transform: `scale(${k})` }, q), name); return q; };
       const rob = el('g', { opacity: 0 }, g), cmt = el('g', { opacity: 0 }, g);
       el('rect', { x: 150, y: 770, width: 1620, height: 12, rx: 6, fill: '#3a4a60' }, rob);
