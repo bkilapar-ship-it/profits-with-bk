@@ -215,11 +215,15 @@
       if (popSpec.length && popLines.length) {
         const tk = S.L.take, spanT = tk ? tk.out - tk.in : ctx.dur, offT = tk ? LEAD - .15 : 0, tot = popLines.reduce((a, q) => a + Math.max(12, q.length), 0); let acc = offT;
         const st = popLines.map(q => { const x = acc; acc += spanT * Math.max(12, q.length) / tot; return x; }), en = st.map((x, j) => (j + 1 < st.length ? st[j + 1] : offT + spanT + .35));
-        // free space = what is left of / right of the camera picture, so popups never sit behind you
-        const fl = { x0: 0, x1: Math.max(0, r.x) }, fr = { x0: Math.min(W, r.x + r.w), x1: W }, wl = fl.x1 - fl.x0, wr = fr.x1 - fr.x0, regs = [];
-        if (wl >= 240 && wr >= 240 && Math.max(wl, wr) < 500) regs.push(fl, fr); else regs.push(wl >= wr ? fl : fr);
-        const cols = []; regs.forEach(g2 => { const w2 = g2.x1 - g2.x0; if (w2 >= 700) cols.push([g2.x0 + w2 * .25, 'a'], [g2.x0 + w2 * .75, 'b']); else cols.push([g2.x0 + w2 / 2, 'a']); });
-        const slots = [], rows = [330, 520, 710]; rows.forEach((yy, ri) => cols.forEach((c, ci) => slots.push([Math.round(c[0]), yy + ((ri + ci) % 2) * 25]))); const per = {};
+        // popups sit right beside you (just outside the camera picture, or just outside your shoulders for cut-out layouts), nearest column first
+        const half = r.mode ? 520 : null, lx = half ? 960 - half : r.x, rx = half ? 960 + half : r.x + r.w, sides = [];
+        const room = (a2, b2) => b2 - a2; // free width on that side
+        if (room(0, lx) >= 240) sides.push({ dir: -1, edge: lx, free: lx }); if (room(rx, W) >= 240) sides.push({ dir: 1, edge: rx, free: W - rx });
+        if (sides.length === 2 && Math.max(sides[0].free, sides[1].free) >= 700) sides.splice(sides[0].free >= sides[1].free ? 1 : 0, 1);
+        const slots = [], rows = [340, 520, 700];
+        rows.forEach((yy, ri) => [0, 1].forEach(ci => sides.forEach((sd, si) => { if (sd.free < 240 + ci * 260) return; slots.push([Math.round(sd.edge + sd.dir * (125 + ci * 250)), yy + ((ri + ci + si) % 2) * 25]); })));
+        if (!slots.length) slots.push([960, 330]);
+        const per = {};
         popSpec.forEach(p => { if (st[p.line] != null) (per[p.line] = per[p.line] || []).push(p); });
         const popG = el('g', {}, g); let k = 0;
         Object.keys(per).forEach(j => { const arr = per[j], len = en[j] - st[j]; arr.forEach((p, i) => {
