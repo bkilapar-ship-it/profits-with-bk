@@ -215,7 +215,11 @@
       if (popSpec.length && popLines.length) {
         const tk = S.L.take, spanT = tk ? tk.out - tk.in : ctx.dur, offT = tk ? LEAD - .15 : 0, tot = popLines.reduce((a, q) => a + Math.max(12, q.length), 0); let acc = offT;
         const st = popLines.map(q => { const x = acc; acc += spanT * Math.max(12, q.length) / tot; return x; }), en = st.map((x, j) => (j + 1 < st.length ? st[j + 1] : offT + spanT + .35));
-        const slots = [[130, 330], [1790, 350], [130, 530], [1790, 550], [130, 730], [1790, 740]], per = {};
+        // free space = what is left of / right of the camera picture, so popups never sit behind you
+        const fl = { x0: 0, x1: Math.max(0, r.x) }, fr = { x0: Math.min(W, r.x + r.w), x1: W }, wl = fl.x1 - fl.x0, wr = fr.x1 - fr.x0, regs = [];
+        if (wl >= 240 && wr >= 240 && Math.max(wl, wr) < 500) regs.push(fl, fr); else regs.push(wl >= wr ? fl : fr);
+        const cols = []; regs.forEach(g2 => { const w2 = g2.x1 - g2.x0; if (w2 >= 700) cols.push([g2.x0 + w2 * .25, 'a'], [g2.x0 + w2 * .75, 'b']); else cols.push([g2.x0 + w2 / 2, 'a']); });
+        const slots = [], rows = [330, 520, 710]; rows.forEach((yy, ri) => cols.forEach((c, ci) => slots.push([Math.round(c[0]), yy + ((ri + ci) % 2) * 25]))); const per = {};
         popSpec.forEach(p => { if (st[p.line] != null) (per[p.line] = per[p.line] || []).push(p); });
         const popG = el('g', {}, g); let k = 0;
         Object.keys(per).forEach(j => { const arr = per[j], len = en[j] - st[j]; arr.forEach((p, i) => {
