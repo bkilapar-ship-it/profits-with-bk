@@ -2,7 +2,7 @@
  * Cutout.ready() -> Promise (rejects if this browser cannot run it)
  * Cutout.cut(videoEl, canvas) -> Promise: canvas holds only the person (transparent background), at most 960 px wide. */
 (function (root) {
-  let seg = null, loading = null, last = null, busy = Promise.resolve();
+  let seg = null, loading = null, last = null, prevA = null, prevT = -1, busy = Promise.resolve();
   const base = (() => { const s = document.currentScript; return s && s.src ? s.src.replace(/[^/]*$/, '') : ''; })();
   function loadScript(src) { return new Promise((res, rej) => { const s = document.createElement('script'); s.src = src; s.onload = res; s.onerror = () => rej(new Error('Could not load the cut-out tool.')); document.head.appendChild(s); }); }
   function ready() {
@@ -19,14 +19,23 @@
   }
   const mcv = document.createElement('canvas');
   /** The mask comes back as alpha on some browsers and as a red-on-opaque picture on others (iPhone). Returns a small canvas where alpha = person. */
-  function maskAlpha(m) {
+  function maskAlpha(m, tm) {
     const mw = m.width || 256, mh = m.height || 144; mcv.width = mw; mcv.height = mh;
     const x = mcv.getContext('2d', { willReadFrequently: true }); x.clearRect(0, 0, mw, mh); x.globalCompositeOperation = 'source-over'; x.drawImage(m, 0, 0, mw, mh);
     const id = x.getImageData(0, 0, mw, mh), d = id.data; let sa = 0, sr = 0, n = d.length / 4;
     for (let i = 0; i < d.length; i += 4) { sa += d[i + 3]; sr += Math.max(d[i], d[i + 1], d[i + 2]); }
     const ma = sa / n, mr = sr / n, opaque = ma > 235; // an (almost) fully opaque mask carries the person in its colour, not its alpha
     api.maskMode = (opaque ? 'colour' : 'alpha') + ' a' + Math.round(ma) + ' c' + Math.round(mr);
-    if (opaque) { for (let i = 0; i < d.length; i += 4) { d[i + 3] = Math.max(d[i], d[i + 1], d[i + 2]); d[i] = d[i + 1] = d[i + 2] = 255; } x.putImageData(id, 0, 0); }
+    // temporal smoothing (stops the edge shimmering), then a firmer edge that sits slightly inside the body (no whitish halo from the old background)
+    const n2 = d.length / 4, nowT = tm == null ? -1 : tm, same = prevA && prevA.length === n2 && nowT >= 0 && Math.abs(nowT - prevT) < .3 && nowT !== prevT;
+    if (!prevA || prevA.length !== n2) prevA = new Float32Array(n2);
+    for (let i = 0, k = 0; i < d.length; i += 4, k++) {
+      let v = (opaque ? Math.max(d[i], d[i + 1], d[i + 2]) : d[i + 3]) / 255;
+      if (same) v = v * .55 + prevA[k] * .45; prevA[k] = v;
+      let q = (v - .52) / .30; q = q < 0 ? 0 : q > 1 ? 1 : q; q = q * q * (3 - 2 * q);
+      d[i] = d[i + 1] = d[i + 2] = 255; d[i + 3] = Math.round(q * 255);
+    }
+    prevT = nowT; x.putImageData(id, 0, 0);
     return mcv;
   }
   function cut(video, out, dims) {
@@ -39,9 +48,12 @@
       const c = out.getContext('2d'); c.clearRect(0, 0, w, h);
       if (!last || !last.segmentationMask) return out;
       // picture first, then trim it with the mask canvas (canvas-to-canvas blending; blending a <video> directly is unreliable on iPhone Safari)
-      const mk = maskAlpha(last.segmentationMask);
+      const mk = maskAlpha(last.segmentationMask, video.currentTime);
       c.globalCompositeOperation = 'source-over'; c.drawImage(video, 0, 0, w, h);
       c.globalCompositeOperation = 'destination-in'; c.drawImage(mk, 0, 0, w, h);
+      // soft fade at the bottom edge, so there is no hard straight line across the body
+      const fg = c.createLinearGradient(0, h * .84, 0, h); fg.addColorStop(0, 'rgba(0,0,0,1)'); fg.addColorStop(1, 'rgba(0,0,0,0)');
+      c.fillStyle = fg; c.fillRect(0, 0, w, h);
       c.globalCompositeOperation = 'source-over';
       return out;
     });
