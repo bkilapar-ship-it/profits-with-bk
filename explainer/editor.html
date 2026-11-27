@@ -29,7 +29,7 @@ html,body{overflow-x:hidden}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .row>*{flex:0 0 auto}
 .grow{flex:1 1 auto!important}
-body[data-tab=edit] [data-tab]:not([data-tab=edit]),body[data-tab=video] [data-tab]:not([data-tab=video]),body[data-tab=config] [data-tab]:not([data-tab=config]){display:none!important}
+body[data-tab=edit] [data-tab]:not([data-tab=edit]),body[data-tab=video] [data-tab]:not([data-tab=video]),body[data-tab=config] [data-tab]:not([data-tab=config]),body[data-tab=shorts] [data-tab]:not([data-tab=shorts]){display:none!important}
 body:not([data-tab=edit]) main{grid-template-columns:minmax(0,760px)}body:not([data-tab=edit]) .pv{position:static}
 .tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
 .tab{border-radius:999px;padding:5px 12px}
@@ -74,9 +74,9 @@ canvas.camv{object-fit:contain}
 <header>
   <h1>💡 Episode Editor</h1>
   <label class="muted" style="font-size:12px;white-space:nowrap"><input type="checkbox" id="motionBeta" style="width:auto"> Motion beta</label>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 01:20 Motion beta</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 00:10 Shorts tab</span>
 </header>
-<nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
+<nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="shorts">📱 Shorts</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
   <section>
     <div class="box" data-tab="edit">
@@ -99,6 +99,7 @@ canvas.camv{object-fit:contain}
       <select id="addAt" style="width:auto"><option value="beforeEnd">before the end card</option><option value="top">at the very top</option><option value="end">at the very end</option></select>
       <button id="addScene" class="sm">Add scene</button>
     </div>
+    <div class="box" data-tab="shorts"><b>Shorts</b> <p class="muted" style="margin:4px 0 8px">Short vertical videos with their own script. Tap one to edit it, record it and make the video (Scenes and Video tabs).</p><div id="shortList"></div></div>
     <div class="box" data-tab="config"><b>Episodes</b> <p class="muted" style="margin:4px 0 8px">Pick an episode at the top of the page. To start a new one, choose a layout below and tap the button. This does not change the episode you have open.</p><select id="newTpl" style="margin-bottom:8px"></select><button id="newEp" class="sm">Create a new episode with this layout</button><div style="margin-top:14px"><b>Manage episodes</b><div id="epList"></div></div></div>
     <details class="box" data-tab="config" open><summary><b>Channel names and taglines</b></summary>
       <div id="chanBox"></div>
@@ -201,9 +202,9 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=0042"></script>
+<script src="engine.js?v=0043"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=0042"></script>
+<script src="cutout.js?v=0043"></script>
 <script>
 (() => {
 'use strict';
@@ -217,16 +218,23 @@ const clone = o => JSON.parse(JSON.stringify(o));
 // ---------- loading ----------
 async function getJSON(url) { const r = await fetch(url + (url.includes('?') ? '&' : '?') + 'v=' + Date.now()); if (!r.ok) throw new Error(url + ': ' + r.status); return r.json(); }
 async function boot() {
-  try { index = (await getJSON('episodes/index.json')).episodes || []; } catch (e) { index = []; }
-  { const gone = store.get('ex.deleted', []); index = index.filter(x => !gone.includes(x)); }
+  try { const ix = await getJSON('episodes/index.json'); index = ix.episodes || []; shortIds = ix.shorts || []; } catch (e) { index = []; shortIds = []; }
+  { const gone = store.get('ex.deleted', []); index = index.filter(x => !gone.includes(x)); shortIds = shortIds.filter(x => !gone.includes(x)); }
+  renderShortList();
   try { channel = await getJSON('channel.json'); } catch (e) {}
   const gh = store.get('ex.gh', {}); $('ghRepo').value = gh.repo || 'bkilapar-ship-it/profits-with-bk'; $('ghTok').value = gh.tok || '';
   const last = store.get('ex.last', index[0]);
   fillEpSel(last);
   await loadEpisode(last || index[0]);
 }
+let shortIds = [];
+function renderShortList() {
+  const box = $('shortList'); if (!box) return;
+  box.innerHTML = shortIds.map(id => `<div class="row" style="align-items:center;gap:8px;margin-top:6px"><span class="grow">${esc(id.replace(/^short-/, '').replace(/-/g, ' '))}${ep && ep.id === id ? ' <span class="pill">open</span>' : ''}</span><button class="sm" data-sopen="${esc(id)}">Open</button></div>`).join('') || '<span class="muted">No Shorts yet.</span>';
+  box.querySelectorAll('[data-sopen]').forEach(b => b.onclick = async () => { fillEpSel(b.dataset.sopen); await loadEpisode(b.dataset.sopen); showTab('edit'); });
+}
 function fillEpSel(sel) {
-  $('epSel').innerHTML = index.map(id => `<option value="${id}"${id === sel ? ' selected' : ''}>${id}</option>`).join('');
+  $('epSel').innerHTML = (shortIds.includes(sel) ? `<option value="${sel}" selected>📱 ${sel}</option>` : '') + index.map(id => `<option value="${id}"${id === sel ? ' selected' : ''}>${id}</option>`).join('');
 }
 function fillCardLines(cur, base) { // a saved draft from before cards were tied to lines: copy the line numbers across (same card, only when its own number is missing)
   (cur.scenes || []).forEach((s, i) => { const b = (base.scenes || [])[i]; if (!b || s.type !== 'cards' || b.type !== 'cards') return;
@@ -273,7 +281,7 @@ async function deleteEpisode(id) {
       const cur = await gh(`explainer/episodes/${id}.json?ref=main`);
       if (cur) await gh(`explainer/episodes/${id}.json`, 'DELETE', { message: `Episode ${id}: deleted in the episode editor`, sha: cur.sha, branch: 'main' });
       const ix = await gh('explainer/episodes/index.json?ref=main');
-      if (ix) { const list = (JSON.parse(unb64(ix.content)).episodes || []).filter(x => x !== id); await putFile('explainer/episodes/index.json', JSON.stringify({ episodes: list }, null, 1) + '\n', `Episode list: remove ${id}`); }
+      if (ix) { const o = JSON.parse(unb64(ix.content)); o.episodes = (o.episodes || []).filter(x => x !== id); if (o.shorts) o.shorts = o.shorts.filter(x => x !== id); await putFile('explainer/episodes/index.json', JSON.stringify(o, null, 1) + '\n', `Episode list: remove ${id}`); }
     } catch (e) { note = ' GitHub said: ' + e.message; }
   }
   if (!hasGH || note) store.set('ex.deleted', [...store.get('ex.deleted', []), id]);
@@ -303,7 +311,7 @@ function blankEpisode(id, tpl) {
 }
 
 // ---------- UI ----------
-function renderAll() { renderEpList(); renderLangTabs(); renderLangSettings(); renderScenes(); renderChannel(); remount(); try { thRefresh(); } catch (e) {} }
+function renderAll() { renderEpList(); renderShortList(); renderLangTabs(); renderLangSettings(); renderScenes(); renderChannel(); remount(); try { thRefresh(); } catch (e) {} }
 function renderLangTabs() {
   const L = ep.languages; $('mkLang').textContent = (L[lang] || {}).name || lang;
   $('langTabs').innerHTML = Object.keys(L).map(k => `<button class="tab${k === lang ? ' on' : ''}" data-l="${k}">${L[k].name || k}</button>`).join('') + `<button class="tab" id="addLang">+ Add language</button>`;
@@ -539,7 +547,7 @@ $('save').onclick = async () => {
     // channel settings first, so the video build for this episode already sees the recordings repository
     if (channel.__dirty) { const c = clone(channel); delete c.__dirty; await putFile('explainer/channel.json', JSON.stringify(c, null, 1) + '\n', 'Channel settings edited in the episode editor'); delete channel.__dirty; }
     await putFile(`explainer/episodes/${ep.id}.json`, JSON.stringify(ep, null, 1) + '\n', `Episode ${ep.id}: edited in the episode editor`);
-    { const cur = await gh('explainer/episodes/index.json?ref=main'); const list = cur ? (JSON.parse(unb64(cur.content)).episodes || []) : []; if (!list.includes(ep.id)) { list.push(ep.id); await putFile('explainer/episodes/index.json', JSON.stringify({ episodes: list }, null, 1) + '\n', `Episode list: add ${ep.id}`); } }
+    { const cur = await gh('explainer/episodes/index.json?ref=main'); const o = cur ? JSON.parse(unb64(cur.content)) : { episodes: [] }; o.episodes = o.episodes || []; if (!o.episodes.includes(ep.id) && !(o.shorts || []).includes(ep.id)) { o.episodes.push(ep.id); await putFile('explainer/episodes/index.json', JSON.stringify(o, null, 1) + '\n', `Episode list: add ${ep.id}`); } }
     dirty = false; store.set('ex.draft.' + ep.id, null); try { localStorage.removeItem('ex.timing.' + ep.id); } catch (x) {}
     msg('Saved. The videos will be built in a few minutes: open your repository on GitHub, then Actions → "Explainer videos" to download them.', 'good');
   } catch (e) { msg(e.message, 'bad'); }
