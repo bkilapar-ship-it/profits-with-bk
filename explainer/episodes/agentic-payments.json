@@ -15,8 +15,9 @@
   {
    "type": "presenter",
    "data": {
-    "layout": "cut",
-    "side": "right"
+    "layout": "side",
+    "side": "right",
+    "story": "shops"
    },
    "lang": {
     "en": {

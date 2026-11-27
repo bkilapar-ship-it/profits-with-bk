@@ -196,6 +196,7 @@
       { k: 'lines', per: 'lang', kind: 'lines', label: 'What you say (one line per caption)' },
       { k: 'layout', per: 'data', kind: 'select', options: Object.keys(PRES_LAYOUTS).map(k => [k, PRES_LAYOUTS[k].label]), label: 'Layout' },
       { k: 'side', per: 'data', kind: 'select', options: ['left', 'right', 'center'], label: 'Which side (for Side by side and Circle)' },
+      { k: 'story', per: 'data', kind: 'select', options: [['', 'None'], ['shops', 'Animated story on the empty half: two shops and the agent (Side by side or Circle)']], label: 'Animated story beside you' },
       { k: 'popups', per: 'lang', kind: 'lines', label: 'Popups behind you while you speak, one per line, as: line number | picture | word. The picture appears when that spoken line starts and goes away again. Pictures: ' + CARD_ICONS.join(', ') },
     ],
     defaults: { data: { layout: 'talking', side: 'right' }, lang: { title: 'Topic title', lines: ['Say hello and introduce the topic.'] } },
@@ -211,7 +212,7 @@
       else { const big = bulb(bg, side === 'left' ? 1500 : 420, 560, 6.5, false); big.setAttribute('opacity', .07); }
       // popups that come and go behind you, each tied to a spoken line (the camera picture is drawn on top of them)
       const popSpec = (S.L.popups || []).map(x => String(x).split('|').map(q => q.trim())).filter(a => a.length >= 2 && +a[0] > 0 && a[1]).map(a => ({ line: +a[0] - 1, icon: a[1].toLowerCase(), label: a[2] || '' })), popLines = (S.L.lines || []).filter(x => String(x).trim());
-      const pops = [];
+      const pops = []; let storyFn = null;
       if (popSpec.length && popLines.length) {
         const tk = S.L.take, spanT = tk ? tk.out - tk.in : ctx.dur, offT = tk ? LEAD - .15 : 0, tot = popLines.reduce((a, q) => a + Math.max(12, q.length), 0); let acc = offT;
         const st = popLines.map(q => { const x = acc; acc += spanT * Math.max(12, q.length) / tot; return x; }), en = st.map((x, j) => (j + 1 < st.length ? st[j + 1] : offT + spanT + .35));
@@ -226,7 +227,8 @@
         // side by side (or circle): the whole empty half becomes a stage where each spoken line's picture pops up BIG, one line at a time
         const bigSd = sides.length === 1 && sides[0].free >= 700 ? sides[0] : null, bigCx = bigSd ? (bigSd.dir < 0 ? bigSd.edge / 2 : bigSd.edge + bigSd.free / 2) : 0;
         const per = {};
-        popSpec.forEach(p => { if (st[p.line] != null) (per[p.line] = per[p.line] || []).push(p); });
+        const storyOn = !!bigSd && S.data.story === 'shops', SA = Math.max(0, (+S.data.storyFrom || 3) - 1);
+        popSpec.forEach(p => { if (st[p.line] != null && !(storyOn && p.line >= SA)) (per[p.line] = per[p.line] || []).push(p); });
         const popG = el('g', {}, g); let k = 0;
         Object.keys(per).forEach(j => { const arr = per[j], len = en[j] - st[j]; arr.forEach((p, i) => {
           const [px, py] = slots[k % slots.length], gg = el('g', { opacity: 0 }, popG);
@@ -236,6 +238,48 @@
           if (p.label) { const t = txt(gg, 0, 134, p.label, 32, 800, '#fff', { max: 236, attrs: { stroke: '#05101c', 'stroke-width': 7, 'paint-order': 'stroke' } }); void t; }
           const Bz = bigSd ? (arr.length > 2 ? 1.1 : arr.length > 1 ? 1.45 : 1.9) : 1, bx = bigSd ? bigCx + (i - (arr.length - 1) / 2) * (arr.length > 2 ? 300 : 380) : px, by = bigSd ? 470 : py;
           pops.push({ gg, ring, B: Bz, px: bx, py: by, k, t0: st[j] + .12 + (len * .78) * (i / arr.length), life: Math.min(4.4, Math.max(2.6, len / arr.length * 1.5 + 1)) }); k++; }); });
+        if (storyOn) { // the animated story on the empty half, timed to the spoken lines
+          const sc0 = Math.min(1, (bigSd.free - 40) / 940), sg = el('g', { transform: `translate(${Math.round(bigCx - 450 * sc0)},${Math.round(150 + (1 - sc0) * 40)}) scale(${sc0})` }, g);
+          const L1 = (i2, f) => i2 < st.length ? (f ? en[i2] : st[i2]) : (f ? offT + spanT : offT + spanT * .9), tA = L1(SA), tB = L1(SA + 1), tC = L1(SA + 2), tD = L1(SA + 3), tE = L1(SA + 3, 1), tAe = L1(SA, 1), tBe = L1(SA + 1, 1), tCe = L1(SA + 2, 1);
+          const ico = (par, name, k2) => { const q = el('g', {}, par), w2 = el('g', { transform: `scale(${k2})` }, q); cardIcon(w2, name); return q; };
+          const pill = (par, cx, cy, w2, text, fill, col) => { const q = el('g', {}, par); el('rect', { x: cx - w2 / 2, y: cy - 26, width: w2, height: 52, rx: 26, fill, stroke: '#05101c', 'stroke-width': 3 }, q); txt(q, cx, cy + 9, text, 26, 800, col, { max: w2 - 24 }); return q; };
+          const shop = (x0, col, name, items) => { const q = el('g', {}, sg);
+            el('rect', { x: x0, y: 250, width: 280, height: 310, fill: '#e9edf2' }, q); el('rect', { x: x0, y: 232, width: 280, height: 30, fill: '#c9d2dc' }, q);
+            el('rect', { x: x0 + 20, y: 170, width: 240, height: 52, rx: 10, fill: '#264653' }, q); txt(q, x0 + 140, 207, name, 32, 800, '#ffd166', { max: 210 });
+            for (let i = 0; i < 7; i++) el('path', { d: `M${x0 + i * 40} 262 h40 v34 q-20 18 -40 0 z`, fill: i % 2 ? '#fff' : col }, q);
+            el('rect', { x: x0 + 20, y: 330, width: 160, height: 140, rx: 8, fill: '#bde0fe', stroke: '#264653', 'stroke-width': 6 }, q);
+            items.forEach((n, i) => { const it = ico(q, n, .5); it.setAttribute('transform', `translate(${x0 + 62 + i * 76},${420}) scale(.62)`); });
+            el('rect', { x: x0 + 196, y: 380, width: 66, height: 180, fill: '#264653' }, q); return q; };
+          const s1 = shop(20, '#2a9d8f', 'SHOP 1', ['detergent', 'soap']), s2 = shop(600, '#e76f51', 'SHOP 2', ['milk', 'cheese']);
+          el('rect', { x: -10, y: 560, width: 920, height: 14, rx: 7, fill: '#3a4a60', opacity: .9 }, sg);
+          const tg1 = pill(sg, 160, 118, 330, 'Cheapest: detergent, soap', '#2a9d8f', '#fff'), tg2 = pill(sg, 740, 118, 330, 'Best quality: milk, cheese', '#ffd166', '#1b2433');
+          const pw = el('g', {}, sg), PP = makePerson(pw, { shirt: '#4cc9f0', shirtB: '#3a9bbd' });
+          const bub = el('g', {}, sg); el('rect', { x: 280, y: 255, width: 340, height: 120, rx: 30, fill: '#fff', stroke: '#05101c', 'stroke-width': 4 }, bub); txt(bub, 450, 305, 'Two shops?', 36, 800, '#1b2433', { max: 300 }); txt(bub, 450, 350, 'Such a hassle…', 34, 800, '#1b2433', { max: 300 });
+          const ag = el('g', {}, sg); el('circle', { r: 62, fill: '#0b1522', stroke: '#ffd166', 'stroke-width': 6 }, ag); ico(ag, 'agent', .85);
+          const t1 = pill(sg, 160, 56, 110, '✓', '#16a34a', '#fff'), t2 = pill(sg, 740, 56, 110, '✓', '#16a34a', '#fff');
+          const bas = el('g', {}, sg); el('circle', { r: 100, fill: '#0b1522', opacity: .92, stroke: '#ffd166', 'stroke-width': 6 }, bas); ico(bas, 'basket', 1.1);
+          const flyN = ['detergent', 'soap', 'milk', 'cheese'], fly = flyN.map((n, i) => { const q = el('g', {}, sg); const w3 = el('g', { transform: 'scale(.6)' }, q); cardIcon(w3, n); return q; });
+          const paid = pill(sg, 450, 600, 420, 'Paid for you ✓', '#2a9d8f', '#fff');
+          storyFn = t => {
+            const pop = (q, t0, x, y, k2 = 1) => { const a = prog(t, t0, t0 + .45), bnc = bounce(a); q.setAttribute('opacity', Math.min(1, a * 3)); q.setAttribute('transform', `translate(${x},${y}) scale(${lerp(.3, 1, bnc) * k2})`); };
+            const inA = ease(prog(t, tA, tA + .6));
+            s1.setAttribute('transform', `translate(${(1 - inA) * -400},0)`); s2.setAttribute('transform', `translate(${(1 - inA) * 400},0)`); s1.setAttribute('opacity', inA); s2.setAttribute('opacity', inA);
+            pop(tg1, tA + .9, 0, 0); pop(tg2, tA + (tAe - tA) * .55, 0, 0);
+            // the person (lazy walking back and forth), then relaxing while the agent works
+            const walkOn = t >= tB - .2 && t < tC + .3, fade = t >= tC ? 1 - ease(prog(t, tC, tC + .6)) * .65 : ease(prog(t, tB - .2, tB + .3));
+            const wt = Math.max(0, t - tB), ph = Math.sin(wt * .8), moving = t < tCe && t >= tB && t < tC, x = 450 + 170 * ph, dir = Math.cos(wt * .8) >= 0 ? 1 : -1;
+            pw.setAttribute('transform', `translate(${moving ? x : 450},560) scale(${moving ? dir : 1},1)`);
+            PP.set(0, 0, .62, Object.assign({ op: Math.max(0, fade), mood: t > (tB + tBe) / 2 && t < tC ? -1 : 1 }, moving ? walk(wt, 1.6) : {}));
+            const bq = prog(t, tB + (tBe - tB) * .5, tB + (tBe - tB) * .5 + .4) * (1 - prog(t, tBe, tBe + .4)); bub.setAttribute('opacity', bq); bub.setAttribute('transform', `translate(0,${(1 - bq) * 20})`);
+            // the agent visits both shops, then everything goes into the basket and is paid
+            const ak = prog(t, tC + .3, tD - .1), ax = ak < .25 ? lerp(450, 160, ease(ak / .25)) : ak < .6 ? lerp(160, 740, ease((ak - .25) / .35)) : lerp(740, 450, ease((ak - .6) / .4)), ay = 330 + Math.sin(ak * 12) * 10 - (ak > .25 ? 0 : 0);
+            const agOn = t >= tC + .2 && t < tD + .3; ag.setAttribute('opacity', agOn ? ease(prog(t, tC + .2, tC + .6)) * (1 - ease(prog(t, tD, tD + .3))) : 0); ag.setAttribute('transform', `translate(${ax},${ay - 40}) scale(${.8 + Math.sin(t * 6) * .03})`);
+            pop(t1, tC + .3 + (tD - tC) * .25 * .9, 0, 0); pop(t2, tC + .3 + (tD - tC) * .6 * .9, 0, 0);
+            const ba = prog(t, tD, tD + .5); bas.setAttribute('opacity', Math.min(1, ba * 3)); bas.setAttribute('transform', `translate(450,430) scale(${lerp(.3, 1, bounce(ba))})`);
+            fly.forEach((q, i) => { const f = prog(t, tD + .4 + i * .35, tD + 1.1 + i * .35), sx = [160, 220, 740, 690][i], sy = 440; q.setAttribute('opacity', f > 0 && f < 1 ? 1 : 0); q.setAttribute('transform', `translate(${lerp(sx, 450, ease(f))},${lerp(sy, 430, ease(f)) - Math.sin(f * Math.PI) * 120}) scale(${1 - f * .3})`); });
+            const pa = prog(t, tD + 2.0, tD + 2.5); paid.setAttribute('opacity', Math.min(1, pa * 3)); paid.setAttribute('transform', `translate(0,${(1 - bounce(pa)) * 30})`);
+          };
+        }
       }
       const brand = el('g', {}, g), third = el('g', {}, g);
       const cam = S.L.take && S.L.take.kind === 'video' ? S.L.take : null;
@@ -288,6 +332,7 @@
         brand.setAttribute('opacity', ease(prog(ts, 0, .5)));
         dots.setAttribute('transform', `translate(0,${-ts * 6})`);
         if (camG) camG.setAttribute('opacity', ease(prog(u * ctx.dur, 0, .35)));
+        if (storyFn) storyFn(u * ctx.dur);
         pops.forEach(p => { const t = u * ctx.dur - p.t0; if (t < 0 || t > p.life) { p.gg.setAttribute('opacity', 0); return; }
           const inn = bounce(prog(t, 0, .5)), out = 1 - ease(prog(t, p.life - .35, p.life)), sc = lerp(.3, 1, inn) * lerp(.7, 1, out) * (p.B || 1), bob = Math.sin(t * 3 + p.k) * 9, rot = Math.sin(t * 2.2 + p.k * 1.7) * 4, rg = prog(t, 0, .7);
           p.gg.setAttribute('opacity', Math.min(1, t / .15) * out); p.gg.setAttribute('transform', `translate(${p.px},${p.py + bob}) rotate(${rot}) scale(${sc})`);

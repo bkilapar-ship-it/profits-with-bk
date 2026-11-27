@@ -69,3 +69,6 @@ Same style as the studio: the whole script is one colour and scrolls past a fixe
 ## Trim a recording, and big visuals in Side by side
 - Under "Your recording" each scene now has Start and End sliders (0.05 s steps, plus - / + nudges). Moving End plays the last 3 seconds so you can stop before you reach for the camera. "Back to the automatic trim" undoes it.
 - In the presenter scene with the Side by side or Circle layout, the popups lines (line number | picture | word) show BIG on the empty half, one spoken line at a time (two or three pictures sit side by side). Other layouts keep the small popups beside you.
+
+## Animated story beside you (presenter, Side by side / Circle)
+Set "Animated story beside you" to the shops story: two shops with their tags (cheapest detergent and soap, best quality milk and cheese), a person walking back and forth ("Two shops? Such a hassle..."), then the AI agent visiting both shops with ticks, filling a basket and "Paid for you". It follows the spoken lines 3 to 6 (change the start with `storyFrom` in the scene data). Lines before that still use the big popups.
