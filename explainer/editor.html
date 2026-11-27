@@ -73,7 +73,7 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 18:05 tap end too</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 18:25 timing kept</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -192,9 +192,9 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=0027"></script>
+<script src="engine.js?v=0028"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=0027"></script>
+<script src="cutout.js?v=0028"></script>
 <script>
 (() => {
 'use strict';
@@ -228,7 +228,7 @@ async function loadEpisode(id) {
     if (draft && draft.ep) { ep = draft.ep; restored = true; } // unsaved edits are kept on this device automatically: no question asked
     if (!ep) ep = blankEpisode(id);
   }
-  store.set('ex.last', ep.id);
+  store.set('ex.last', ep.id); applyTimings();
   lang = Object.keys(ep.languages || { en: 1 })[0];
   dirty = restored; openScene = 0; tNow = 1.2;
   renderAll();
@@ -238,7 +238,7 @@ function renderEpList() {
   const box = $('epList'); if (!box) return;
   box.innerHTML = index.map(id => `<div class="row" style="align-items:center;gap:8px;margin-top:6px"><span class="grow">${esc(id)}${ep && ep.id === id ? ' <span class="pill">open</span>' : ''}</span>${store.get('ex.draft.' + id, null) ? `<button class="sm" data-revert="${esc(id)}" title="Throw away the unsaved changes on this device">Revert</button>` : ''}<button class="sm" data-open="${esc(id)}">Open</button><button class="sm" data-rm="${esc(id)}" style="color:var(--bad)">Delete</button></div>`).join('') || '<div class="muted">No episodes yet.</div>';
   box.querySelectorAll('[data-open]').forEach(b => b.onclick = async () => { fillEpSel(b.dataset.open); await loadEpisode(b.dataset.open); showTab('edit'); });
-  box.querySelectorAll('[data-revert]').forEach(b => b.onclick = async () => { if (!confirm('Throw away your unsaved changes to "' + b.dataset.revert + '" on this device and go back to the saved version?')) return; store.set('ex.draft.' + b.dataset.revert, null); fillEpSel(b.dataset.revert); await loadEpisode(b.dataset.revert); showTab('edit'); });
+  box.querySelectorAll('[data-revert]').forEach(b => b.onclick = async () => { if (!confirm('Throw away your unsaved changes to "' + b.dataset.revert + '" on this device and go back to the saved version?')) return; store.set('ex.draft.' + b.dataset.revert, null); try { localStorage.removeItem('ex.timing.' + b.dataset.revert); } catch (x) {} fillEpSel(b.dataset.revert); await loadEpisode(b.dataset.revert); showTab('edit'); });
   box.querySelectorAll('[data-rm]').forEach(b => b.onclick = () => deleteEpisode(b.dataset.rm));
 }
 async function deleteEpisode(id) {
@@ -252,7 +252,7 @@ async function deleteEpisode(id) {
     const files = new Set(); ((src && src.scenes) || []).forEach(s => Object.values(s.lang || {}).forEach(L => { if (L && L.take && L.take.file) { files.add(L.take.file); files.add(L.take.file + '.aud'); } }));
     for (const f of files) { try { await DB.del(f); } catch (e) {} delete blobs[f]; }
   } catch (e) {}
-  store.set('ex.draft.' + id, null);
+  store.set('ex.draft.' + id, null); try { localStorage.removeItem('ex.timing.' + id); } catch (x) {}
   let note = '';
   if (hasGH) {
     try {
@@ -450,7 +450,16 @@ $('play').onclick = () => (playing ? stop() : play());
 $('scrub').oninput = () => { stop(); tNow = app.duration * $('scrub').value / 1000; draw(); };
 
 // ---------- edits ----------
-function changed() { dirty = true; store.set('ex.draft.' + ep.id, { ep, __saved: null }); }
+function timingMap() { const o = {}; (ep.scenes || []).forEach((s, i) => Object.keys(s.lang || {}).forEach(l => { const t = s.lang[l] && s.lang[l].take; if (t && t.file) o[i + '|' + l] = { file: t.file, in: t.in, out: t.out, marks: t.marks, marksOn: t.marksOn }; })); return o; }
+function changed() {
+  dirty = true;
+  try { localStorage.setItem('ex.draft.' + ep.id, JSON.stringify({ ep, __saved: null })); } catch (e) { msg('This phone is out of browser storage, so your changes may not survive a refresh. Tap Save to GitHub now.', 'bad'); }
+  try { localStorage.setItem('ex.timing.' + ep.id, JSON.stringify(timingMap())); } catch (e) {} // small safety copy of the trim and line timing
+}
+function applyTimings() { // restores trim + line timing from the small safety copy whenever the recording is the same file
+  let tm = null; try { tm = JSON.parse(localStorage.getItem('ex.timing.' + ep.id) || 'null'); } catch (e) {} if (!tm) return;
+  Object.keys(tm).forEach(k => { const [i, l] = k.split('|'), s = ep.scenes[+i], t = s && s.lang && s.lang[l] && s.lang[l].take, v = tm[k]; if (t && v && t.file === v.file) { t.in = v.in; t.out = v.out; if (v.marksOn && Array.isArray(v.marks)) { t.marks = v.marks; t.marksOn = true; } else { delete t.marks; t.marksOn = false; } } });
+}
 $('epTitle').oninput = () => { ep.title = ep.title || {}; ep.title[lang] = $('epTitle').value; changed(); };
 $('lName').oninput = () => { ep.languages[lang].name = $('lName').value; changed(); renderLangTabs(); };
 $('lCur').oninput = () => { ep.languages[lang].currency = $('lCur').value; changed(); remountSoon(); };
@@ -507,7 +516,7 @@ $('save').onclick = async () => {
     if (channel.__dirty) { const c = clone(channel); delete c.__dirty; await putFile('explainer/channel.json', JSON.stringify(c, null, 1) + '\n', 'Channel settings edited in the episode editor'); delete channel.__dirty; }
     await putFile(`explainer/episodes/${ep.id}.json`, JSON.stringify(ep, null, 1) + '\n', `Episode ${ep.id}: edited in the episode editor`);
     { const cur = await gh('explainer/episodes/index.json?ref=main'); const list = cur ? (JSON.parse(unb64(cur.content)).episodes || []) : []; if (!list.includes(ep.id)) { list.push(ep.id); await putFile('explainer/episodes/index.json', JSON.stringify({ episodes: list }, null, 1) + '\n', `Episode list: add ${ep.id}`); } }
-    dirty = false; store.set('ex.draft.' + ep.id, null);
+    dirty = false; store.set('ex.draft.' + ep.id, null); try { localStorage.removeItem('ex.timing.' + ep.id); } catch (x) {}
     msg('Saved. The videos will be built in a few minutes: open your repository on GitHub, then Actions → "Explainer videos" to download them.', 'good');
   } catch (e) { msg(e.message, 'bad'); }
   $('save').disabled = false;
