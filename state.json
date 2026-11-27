@@ -19,7 +19,7 @@
    "target": 60.63,
    "stop": 46,
    "ocoOrderId": "d7b2ba9c-0295-4406-a6b1-ff6939a9d77d",
-   "now": 57.19
+   "now": 57.6
   },
   "VEEV": {
    "strategy": "dip",
@@ -34,22 +34,7 @@
    "target": 281.29,
    "stop": 239.9,
    "ocoOrderId": "3f3408af-1bf8-4f78-8777-f04398ac5d9a",
-   "now": 271.1
-  },
-  "W": {
-   "strategy": "dip",
-   "side": "long",
-   "tag": "normal",
-   "pool": "nonsp",
-   "signalDate": "2026-11-23",
-   "signalClose": 96.83,
-   "entryDate": "2026-11-24",
-   "entry": 95.01,
-   "shares": 52,
-   "target": 98.81,
-   "stop": 73.32,
-   "ocoOrderId": "9301e4d1-e5a4-48b6-a87c-e55cf99b354f",
-   "now": 98.04
+   "now": 271.08
   }
  },
  "pendingEntries": {},
@@ -1328,6 +1313,23 @@
    "how": "time",
    "usd": -140.72,
    "pct": -2.82
+  },
+  {
+   "ticker": "W",
+   "strategy": "dip",
+   "side": "long",
+   "tag": "normal",
+   "pool": "nonsp",
+   "signalDate": "2026-11-23",
+   "signalClose": 96.83,
+   "entryDate": "2026-11-24",
+   "exitDate": "2026-11-27",
+   "entry": 95.01,
+   "exit": 98.84,
+   "shares": 52,
+   "how": "target",
+   "usd": 199.03,
+   "pct": 4.03
   }
  ],
  "equity": [
@@ -1645,9 +1647,9 @@
   },
   {
    "d": "2026-11-27",
-   "value": 96194,
-   "pct": -3.81,
-   "spy": -5.26
+   "value": 96270,
+   "pct": -3.73,
+   "spy": -5.02
   }
  ],
  "lastOrders": {
