@@ -136,7 +136,7 @@
   const SCENES = {};
   /** Start of each spoken line, in seconds after the voice starts: matched to the pauses found in your recording (take.marks) when there are some, otherwise spread by line length. */
   function relStarts(lines, tk, span) {
-    if (tk && Array.isArray(tk.marks) && tk.marks.length === lines.length) return tk.marks.map((m, j) => j === 0 ? 0 : clamp(m - tk.in, 0, Math.max(0, span - .3)));
+    if (tk && tk.marksOn && Array.isArray(tk.marks) && tk.marks.length === lines.length) return tk.marks.map((m, j) => j === 0 ? 0 : clamp(m - tk.in, 0, Math.max(0, span - .3)));
     const tot = lines.reduce((a, q) => a + Math.max(12, String(q).length), 0); let acc = 0; return lines.map(q => { const x = acc; acc += span * Math.max(12, String(q).length) / tot; return x; });
   }
   /** When each spoken line starts and ends inside a scene (same split of the recording as the captions use). */

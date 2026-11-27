@@ -73,7 +73,7 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 16:30 sync to voice</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 16:20 timing restored</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -192,9 +192,9 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=0021"></script>
+<script src="engine.js?v=0022"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=0021"></script>
+<script src="cutout.js?v=0022"></script>
 <script>
 (() => {
 'use strict';
@@ -546,7 +546,7 @@ function takeStatus(s, o) {
   let st;
   if (t) {
     const up = deviceKeys.has(t.file) ? ' · kept on this device' : ' · <b style="color:var(--bad)">not on this device</b> (recorded on another phone or browser: record it again here before making the video)';
-    st = `${t.kind === 'video' ? '🎥' : '🎙'} ${(t.out - t.in).toFixed(1)}s of you speaking. In ${esc(L)} this scene lasts ${o ? o.dur.toFixed(1) : '?'}s${up}${t.marks ? ' · animation matched to your voice' : ''}`;
+    st = `${t.kind === 'video' ? '🎥' : '🎙'} ${(t.out - t.in).toFixed(1)}s of you speaking. In ${esc(L)} this scene lasts ${o ? o.dur.toFixed(1) : '?'}s${up}${t.marksOn ? ' · animation matched to your voice (experimental)' : ''}`;
   } else st = `No recording in ${esc(L)} yet. The scene uses the length below.`;
   return st;
 }
@@ -561,7 +561,7 @@ function takeHTML(s, i, o) {
     <div class="st" id="tst_${i}">${st}</div>
     <div class="row"><button class="sm pri" data-rec="${i}">${t ? '↺ Record again' : cam ? '🎥 Record yourself' : '🎙 Record voice'}</button>
     <label class="sm" style="padding:4px 8px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:13px">📁 Choose a ${cam ? 'video' : 'video or sound'} file<input type="file" accept="video/*,audio/*" data-tfile="${i}" style="display:none"></label>
-    ${t ? `<button class="sm" data-tsync="${i}">↻ Match animation to my voice</button><button class="sm" data-tprev="${i}">👁 Preview my recording</button><button class="sm" data-tplay="${i}">▶ Play scene with animation</button><button class="sm" data-tdl="${i}">⬇ Download to phone</button><button class="sm" data-tdel="${i}">✕ Discard recording</button>` : ''}</div>
+    ${t ? `<button class="sm" data-tsync="${i}">↻ Match animation to my voice (experimental)</button>${t.marksOn ? `<button class="sm" data-tsyncoff="${i}">✕ Back to automatic timing</button>` : ''}<button class="sm" data-tprev="${i}">👁 Preview my recording</button><button class="sm" data-tplay="${i}">▶ Play scene with animation</button><button class="sm" data-tdl="${i}">⬇ Download to phone</button><button class="sm" data-tdel="${i}">✕ Discard recording</button>` : ''}</div>
     ${t && t.dur > 1 ? `<div style="margin:8px 0 2px"><div class="muted" style="margin-bottom:4px">Choose where your recording starts and ends. Move End to just before you reach for the camera; the last few seconds play so you can check.</div>
       <div class="row" style="align-items:center;gap:6px"><span class="muted" style="width:40px">Start</span><button class="sm" data-tn="${i}:in:-0.2">−</button><input type="range" data-tin="${i}" min="0" max="${t.dur}" step="0.05" value="${t.in}" style="flex:1"><button class="sm" data-tn="${i}:in:0.2">+</button><input type="number" inputmode="decimal" step="0.01" min="0" max="${t.dur}" data-tinn="${i}" value="${t.in.toFixed(2)}" style="width:86px" title="seconds"><span class="muted">s</span></div>
       <div class="row" style="align-items:center;gap:6px"><span class="muted" style="width:40px">End</span><button class="sm" data-tn="${i}:out:-0.2">−</button><input type="range" data-tout="${i}" min="0" max="${t.dur}" step="0.05" value="${t.out}" style="flex:1"><button class="sm" data-tn="${i}:out:0.2">+</button><input type="number" inputmode="decimal" step="0.01" min="0" max="${t.dur}" data-toutn="${i}" value="${t.out.toFixed(2)}" style="width:86px" title="seconds"><span class="muted">s</span></div>
@@ -578,14 +578,15 @@ function wireTake(s, i) {
     if (which === 'in') t.in = Math.min(v, t.out - .5); else t.out = Math.max(v, t.in + .5);
     t.in = +t.in.toFixed(2); t.out = +t.out.toFixed(2);
     const a = q('tin'), b = q('tout'), av = q('tinn'), bv = q('toutn'); if (a) a.value = t.in; if (b) b.value = t.out; if (av && document.activeElement !== av) av.value = t.in.toFixed(2); if (bv && document.activeElement !== bv) bv.value = t.out.toFixed(2);
-    if (commit) { autoMarks(i).catch(() => {}); changed(); remount(); refreshTakeStatus(); openTakePreview(s, i, which === 'out' ? Math.max(t.in, t.out - 3) : t.in); } };
+    if (commit) { changed(); remount(); refreshTakeStatus(); openTakePreview(s, i, which === 'out' ? Math.max(t.in, t.out - 3) : t.in); } };
   const ti = q('tin'); if (ti) { ti.onclick = e => e.stopPropagation(); ti.oninput = () => trimSet('in', ti.value, false); ti.onchange = () => trimSet('in', ti.value, true); }
   const to = q('tout'); if (to) { to.onclick = e => e.stopPropagation(); to.oninput = () => trimSet('out', to.value, false); to.onchange = () => trimSet('out', to.value, true); }
   const tni = q('tinn'); if (tni) { tni.onclick = e => e.stopPropagation(); tni.onchange = () => { trimSet('in', tni.value, true); tni.value = ((((s.lang || {})[lang]) || {}).take || {}).in.toFixed(2); }; }
   const tno = q('toutn'); if (tno) { tno.onclick = e => e.stopPropagation(); tno.onchange = () => { trimSet('out', tno.value, true); tno.value = ((((s.lang || {})[lang]) || {}).take || {}).out.toFixed(2); }; }
   box.querySelectorAll(`[data-tn^="${i}:"]`).forEach(bt => bt.onclick = e => { e.stopPropagation(); const [, w, d] = bt.dataset.tn.split(':'), t = takeOf(s); if (t) trimSet(w, t[w] + +d, true); });
   const au = q('tauto'); if (au) au.onclick = e => { e.stopPropagation(); const t = (((s.lang || {})[lang]) || {}).take; if (t && t.auto) { t.in = t.auto[0]; t.out = t.auto[1]; changed(); renderScenes(); remount(); } };
-  const sy = q('tsync'); if (sy) sy.onclick = async e => { e.stopPropagation(); sy.disabled = true; sy.textContent = 'Listening…'; try { const n = await autoMarks(i); msg(n ? `Matched: found ${n} pause${n > 1 ? 's' : ''} between your lines. Play the scene to check.` : 'Could not find clear pauses, so the lines are spread by length. Leave a short pause between lines when you record.', n ? '' : 'bad'); } catch (x) { msg('Could not read the sound: ' + x.message, 'bad'); } sy.disabled = false; sy.textContent = '↻ Match animation to my voice'; };
+  const sy = q('tsync'); if (sy) sy.onclick = async e => { e.stopPropagation(); sy.disabled = true; sy.textContent = 'Listening…'; try { const n = await autoMarks(i, true); msg(n ? `Matched: found ${n} pause${n > 1 ? 's' : ''} between your lines. Play the scene to check.` : 'Could not find clear pauses, so the lines are spread by length. Leave a short pause between lines when you record.', n ? '' : 'bad'); } catch (x) { msg('Could not read the sound: ' + x.message, 'bad'); } sy.disabled = false; sy.textContent = '↻ Match animation to my voice (experimental)'; };
+  const so = q('tsyncoff'); if (so) so.onclick = e => { e.stopPropagation(); const t = (((s.lang || {})[lang]) || {}).take; if (t) { t.marksOn = false; delete t.marks; changed(); renderScenes(); remount(); msg('Back to the automatic timing.', ''); } };
   const pv = q('tprev'); if (pv) pv.onclick = e => { e.stopPropagation(); openTakePreview(s, i); };
   wireTake2(s, i);
 }
@@ -828,7 +829,7 @@ function storeTake(i, blob, kind, dur, a, b, ext, aud) {
   s.lang[lang].take = { file, kind, dur: +dur.toFixed(2), in: +a.toFixed(2), out: +b.toFixed(2), auto: [+a.toFixed(2), +b.toFixed(2)], store: 'device' };
   blobs[file] = blob; deviceKeys.add(file);
   if (aud) { s.lang[lang].take.aud = true; blobs[file + '.aud'] = aud; deviceKeys.add(file + '.aud'); saveBlob(file + '.aud', aud).catch(() => {}); }
-  changed(); renderScenes(); remount(); seekScene(i); autoMarks(i).catch(() => {});
+  changed(); renderScenes(); remount(); seekScene(i);
   saveBlob(file, blob).then(() => msg('Recording kept on this device. When all scenes are recorded, go to the Video tab and tap Make video.', 'good'))
     .catch(e => msg('Could not keep the recording in this browser (' + (e && e.message || e) + '). It works until you close the page. Free some space on the phone and record again.', 'bad'));
   if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
@@ -978,7 +979,7 @@ async function fontCssFor(text) { // fonts the picture needs, packed into the dr
 }
 
 // ---------- match the animation to your voice: find the pauses between your lines in the recording ----------
-async function autoMarks(i) {
+async function autoMarks(i, manual) {
   const s = ep.scenes[i], rec = (((s.lang || {})[lang]) || {}).take; if (!rec) return 0;
   const L = E.sceneLang(s, lang), lines = (L.lines || []).filter(x => String(x).trim());
   if (lines.length < 2) { delete rec.marks; return 0; }
@@ -996,7 +997,7 @@ async function autoMarks(i) {
     let best = null, bs = 1e9; gaps.forEach(g => { if (g.e <= prev + .6) return; const sc = Math.abs((g.a + g.e) / 2 - pred[k]) / span - Math.min(.6, g.len) * .25; if (Math.abs((g.a + g.e) / 2 - pred[k]) < span * .28 && sc < bs) { bs = sc; best = g; } });
     if (best) { marks.push(+(Math.max(prev + .5, best.e - .06)).toFixed(2)); found++; prev = marks[marks.length - 1]; } else { marks.push(+Math.max(prev + .5, pred[k]).toFixed(2)); prev = marks[marks.length - 1]; }
   }
-  rec.marks = marks; rec.marksFound = found; changed(); remount(); refreshTakeStatus(); return found;
+  rec.marks = marks; rec.marksFound = found; rec.marksOn = !!manual; changed(); remount(); refreshTakeStatus(); return found;
 }
 async function autoMarksAll() { for (let i = 0; i < ep.scenes.length; i++) { const r = (((ep.scenes[i].lang || {})[lang]) || {}).take; if (r && !r.marks && ((E.sceneLang(ep.scenes[i], lang).lines || []).length > 1)) { try { await autoMarks(i); } catch (e) {} } } }
 async function decodeSound(ac, blob) { try { return await ac.decodeAudioData(await blob.arrayBuffer()); } catch (e) { return null; } }
@@ -1430,7 +1431,7 @@ $('thReset').onclick = () => { try { localStorage.removeItem('ex.thumbPhoto'); }
 $('thDl').onclick = async () => { await thRender(); await thSaveFile($('thCv'), `${ep.id}-thumbnail-${$('thFmt').value}.png`); };
 $('thDlAll').onclick = async () => { const keep = $('thFmt').value; for (const f of ['video', 'short']) { $('thFmt').value = f; await thRender(); await thSaveFile($('thCv'), `${ep.id}-thumbnail-${f}.png`); } $('thFmt').value = keep; thRender(); };
 // no "leave this page?" popup: every change is kept on this device automatically (see changed())
-boot().then(refreshDeviceKeys).then(() => autoMarksAll()).catch(e => msg('Could not start: ' + e.message, 'bad'));
+boot().then(refreshDeviceKeys).catch(e => msg('Could not start: ' + e.message, 'bad'));
 })();
 </script>
 </body></html>
