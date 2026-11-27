@@ -19,7 +19,7 @@
    "target": 60.63,
    "stop": 46,
    "ocoOrderId": "d7b2ba9c-0295-4406-a6b1-ff6939a9d77d",
-   "now": 57.42
+   "now": 57.19
   },
   "VEEV": {
    "strategy": "dip",
@@ -34,7 +34,7 @@
    "target": 281.29,
    "stop": 239.9,
    "ocoOrderId": "3f3408af-1bf8-4f78-8777-f04398ac5d9a",
-   "now": 270.19
+   "now": 271.1
   },
   "W": {
    "strategy": "dip",
@@ -49,7 +49,7 @@
    "target": 98.81,
    "stop": 73.32,
    "ocoOrderId": "9301e4d1-e5a4-48b6-a87c-e55cf99b354f",
-   "now": 97.39
+   "now": 98.04
   }
  },
  "pendingEntries": {},
@@ -1645,9 +1645,9 @@
   },
   {
    "d": "2026-11-27",
-   "value": 96163,
-   "pct": -3.84,
-   "spy": -5.54
+   "value": 96194,
+   "pct": -3.81,
+   "spy": -5.26
   }
  ],
  "lastOrders": {
