@@ -215,15 +215,15 @@
       if (popSpec.length && popLines.length) {
         const tk = S.L.take, spanT = tk ? tk.out - tk.in : ctx.dur, offT = tk ? LEAD - .15 : 0, tot = popLines.reduce((a, q) => a + Math.max(12, q.length), 0); let acc = offT;
         const st = popLines.map(q => { const x = acc; acc += spanT * Math.max(12, q.length) / tot; return x; }), en = st.map((x, j) => (j + 1 < st.length ? st[j + 1] : offT + spanT + .35));
-        const slots = [[240, 310], [1680, 340], [240, 510], [1680, 530], [240, 650], [1680, 640]], per = {};
+        const slots = [[130, 330], [1790, 350], [130, 530], [1790, 550], [130, 730], [1790, 740]], per = {};
         popSpec.forEach(p => { if (st[p.line] != null) (per[p.line] = per[p.line] || []).push(p); });
         const popG = el('g', {}, g); let k = 0;
         Object.keys(per).forEach(j => { const arr = per[j], len = en[j] - st[j]; arr.forEach((p, i) => {
           const [px, py] = slots[k % slots.length], gg = el('g', { opacity: 0 }, popG);
-          const ring = el('circle', { r: 100, fill: 'none', stroke: '#ffd166', 'stroke-width': 5 }, gg);
-          el('circle', { r: 100, fill: '#0b1522', opacity: .9, stroke: '#ffd166', 'stroke-width': 6 }, gg);
-          const ic = el('g', { transform: 'scale(.95)' }, gg); cardIcon(ic, p.icon);
-          if (p.label) { const t = txt(gg, 0, 160, p.label, 40, 800, '#fff', { max: 330, attrs: { stroke: '#05101c', 'stroke-width': 7, 'paint-order': 'stroke' } }); void t; }
+          const ring = el('circle', { r: 78, fill: 'none', stroke: '#ffd166', 'stroke-width': 5 }, gg);
+          el('circle', { r: 78, fill: '#0b1522', opacity: .9, stroke: '#ffd166', 'stroke-width': 5 }, gg);
+          const ic = el('g', { transform: 'scale(.74)' }, gg); cardIcon(ic, p.icon);
+          if (p.label) { const t = txt(gg, 0, 134, p.label, 32, 800, '#fff', { max: 236, attrs: { stroke: '#05101c', 'stroke-width': 7, 'paint-order': 'stroke' } }); void t; }
           pops.push({ gg, ring, px, py, k, t0: st[j] + .12 + (len * .78) * (i / arr.length), life: Math.min(4.4, Math.max(2.6, len / arr.length * 1.5 + 1)) }); k++; }); });
       }
       const brand = el('g', {}, g), third = el('g', {}, g);

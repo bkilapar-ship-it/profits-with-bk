@@ -68,12 +68,12 @@ canvas.camv{object-fit:contain}
 #recDot{position:absolute;top:10px;left:10px;background:#c0392b;color:#fff;border-radius:999px;padding:3px 10px;font-size:13px;font-weight:700;display:none}
 #recMeter{position:absolute;left:10px;right:10px;bottom:10px;height:8px;border-radius:4px;background:rgba(255,255,255,.15)}
 #recMeter i{display:block;height:100%;width:0;border-radius:4px;background:#2a9d8f}
-.pbox{position:relative;height:48vh;min-height:240px;overflow:hidden;background:#0d1b2a;border-radius:10px;margin:10px 0;padding:0 12px}.pbox .pl{font-size:calc(var(--ps,1) * clamp(24px,5.4vw,40px));line-height:1.3;font-weight:700;padding:8px 0;color:#7d8aa0;transition:color .2s}.pbox .pl.now{color:#ffd166;font-size:calc(var(--ps,1) * clamp(24px,5.4vw,40px) + 3px)}.pbox .pl.next{color:#e8eef7}.pbox .pl.done{color:#46536a}.pbox .pad{height:12vh}.pbox:after{content:'';position:absolute;left:0;right:0;bottom:0;height:34px;background:linear-gradient(transparent,#0d1b2a);pointer-events:none}#recAnim{width:100%;max-height:18vh;border-radius:8px;background:#0d1b2a;display:block}.prompter{font-size:clamp(20px,4.2vw,30px);line-height:1.35;font-weight:700;margin:12px 2px;white-space:pre-wrap}
+.pbox{position:relative;height:48vh;min-height:240px;overflow:hidden;background:#0d1b2a;border-radius:10px;margin:10px 0}.pbox .pl{font-size:calc(var(--ps,1) * clamp(24px,5.4vw,40px));line-height:1.3;font-weight:700;padding:8px 0;color:#f1f5fb}.pbox .in{position:absolute;left:12px;right:12px;top:0;will-change:transform}.pbox .pad{height:60vh}.pbox.mir .in{transform-origin:center}#recLn{position:absolute;left:0;right:0;top:30%;height:0;border-top:2px dashed rgba(255,209,102,.7);pointer-events:none;z-index:2}#recLn:before{content:'▶';position:absolute;left:2px;top:-11px;font-size:14px;color:#ffd166}.pbox:after{content:'';position:absolute;left:0;right:0;bottom:0;height:34px;background:linear-gradient(transparent,#0d1b2a);pointer-events:none}#recAnim{width:100%;max-height:18vh;border-radius:8px;background:#0d1b2a;display:block}.prompter{font-size:clamp(20px,4.2vw,30px);line-height:1.35;font-weight:700;margin:12px 2px;white-space:pre-wrap}
 </style></head>
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 00:05 speed</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 08:30 wpm</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -163,7 +163,8 @@ canvas.camv{object-fit:contain}
   <div class="row"><b class="grow" id="recTitle">Record</b><button class="sm" id="recClose">✕ Close</button></div>
   <div class="rstage" style="margin-top:8px"><video id="recCam" playsinline muted autoplay class="mirror"></video><div id="recCount"></div><div id="recDot">● REC <span id="recTime">0.0s</span></div><div id="recMeter"><i></i></div></div>
   <div class="pbox" id="recScript"></div>
-  <div class="row" style="align-items:center;gap:8px"><span>Text</span><input type="range" id="recSize" min="80" max="170" value="100" style="width:90px"><span>Pace</span><input type="range" id="recPace" min="60" max="160" value="100" style="flex:1"><b id="recPaceV" style="min-width:44px">1.0×</b><label style="white-space:nowrap;font-size:13px"><input type="checkbox" id="recShowAnim" checked> Anim</label></div>
+  <div class="row" style="align-items:center;gap:6px"><span>Speed</span><button class="sm" id="wpmDn">−</button><b id="wpmV" style="min-width:34px;text-align:center">140</b><button class="sm" id="wpmUp">+</button><span class="muted" style="font-size:12px">words/min</span><button class="sm" id="recPause" style="margin-left:auto">❚❚ Pause</button></div>
+  <div class="row" style="align-items:center;gap:8px"><span>Text</span><input type="range" id="recSize" min="80" max="170" value="100" style="flex:1"><button class="sm" id="recMir">Mirror</button><label style="white-space:nowrap;font-size:13px"><input type="checkbox" id="recShowAnim" checked> Anim</label></div>
   <svg id="recAnim" style="margin-top:8px"></svg>
   <div class="row">
     <button class="pri" id="recGo">● Start recording</button>
@@ -174,9 +175,9 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=0005"></script>
+<script src="engine.js?v=0006"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=0005"></script>
+<script src="cutout.js?v=0006"></script>
 <script>
 (() => {
 'use strict';
@@ -634,34 +635,46 @@ function recButtons(state) { // ready | counting | recording | review
 }
 
 // ---- teleprompter: the line to read lights up in time with the animation ----
-const P = { app: null, dur: 0, caps: [], raf: 0, lines: [], pace: 1 };
-try { P.pace = Math.min(1.6, Math.max(.6, +localStorage.getItem('exPace') || 1)); } catch (e) {}
+const P = { app: null, dur: 0, caps: [], raf: 0, lines: [], wpm: 140, base: 140, el: 0, paused: false, cum: [], tot: 0 };
+try { P.wpm = Math.min(220, Math.max(80, +localStorage.getItem('exWpm') || 140)); } catch (e) {}
+const nWords = t => String(t).trim().split(/\s+/).filter(Boolean).length;
+function wpmShow() { $('wpmV').textContent = P.wpm; }
 function promptSetup(i) {
   const s = ep.scenes[i], L = E.sceneLang(s, lang), lines = (L.lines || []).filter(x => String(x).trim());
-  P.lines = lines; P.i = i; cancelAnimationFrame(P.raf);
-  $('recPace').value = Math.round(P.pace * 100); $('recPaceV').textContent = P.pace.toFixed(1) + '×';
-  const box = $('recScript'); box.innerHTML = '';
-  if (!lines.length) { box.innerHTML = '<div class="pl">(This scene has no lines yet. Add them first, then record.)</div>'; }
-  else { const pad = document.createElement('div'); pad.className = 'pad'; box.appendChild(pad); lines.forEach(t => { const d = document.createElement('div'); d.className = 'pl'; d.textContent = t; box.appendChild(d); }); const p2 = document.createElement('div'); p2.className = 'pad'; box.appendChild(p2); }
+  P.lines = lines; P.i = i; P.t = 0; P.paused = false; cancelAnimationFrame(P.raf); wpmShow(); $('recPause').textContent = '❚❚ Pause';
+  P.cum = []; P.tot = 0; lines.forEach(t => { P.cum.push(P.tot); P.tot += nWords(t); });
+  const box = $('recScript'); box.innerHTML = '<div id="recLn"></div>';
+  const inn = document.createElement('div'); inn.className = 'in'; box.appendChild(inn);
+  if (!lines.length) { inn.innerHTML = '<div class="pl">(This scene has no lines yet. Add them first, then record.)</div>'; }
+  else { lines.forEach(t => { const d = document.createElement('div'); d.className = 'pl'; d.textContent = t; inn.appendChild(d); }); const p2 = document.createElement('div'); p2.className = 'pad'; inn.appendChild(p2); }
   // the scene on its own, at its normal timing, for the little animation and the line timings
   const one = Object.assign({}, ep, { scenes: [Object.assign({}, s, { lang: Object.assign({}, s.lang, { [lang]: Object.assign({}, (s.lang || {})[lang], { take: null }) }) })] });
   try { P.app = E.mount($('recAnim'), one, lang, { channel, preview: true }); P.dur = P.app.duration; P.caps = P.app.timeline.captions; } catch (e) { P.app = null; P.dur = Math.max(2, +s.duration || 6); P.caps = []; }
+  // the speed the animation was timed for, so it stays in step when the WPM changes
+  const c0 = P.caps[0], c1 = P.caps[P.caps.length - 1];
+  const span = c0 && c1 ? Math.max(2, (c1.end != null ? c1.end : P.dur - .5) - c0.start) : Math.max(2, P.dur - 1);
+  P.base = Math.min(220, Math.max(80, P.tot / span * 60 || 140));
   $('recAnim').style.display = $('recShowAnim').checked && P.app ? 'block' : 'none';
-  promptFrame(0);
+  promptFrame();
 }
-function promptFrame(e) { // e = seconds on the scene clock
-  if (P.app) P.app.render(Math.min(e, P.dur - .01));
-  const els = $('recScript').querySelectorAll('.pl'); if (!P.lines.length) return;
-  let cur = -1; P.caps.forEach((c, j) => { if (e >= c.start - .15) cur = j; });
-  els.forEach((d, j) => { d.className = 'pl' + (cur < 0 ? (j === 0 ? ' next' : '') : j < cur ? ' done' : j === cur ? ' now' : j === cur + 1 ? ' next' : ''); });
-  const t = els[Math.max(0, cur)]; if (t) $('recScript').scrollTo({ top: t.offsetTop - $('recScript').clientHeight * .3, behavior: cur < 0 ? 'auto' : 'smooth' });
+function promptFrame() { // P.t = seconds on the scene clock; words read follow from it at the base rate
+  if (P.app) P.app.render(Math.max(0, Math.min(P.t, P.dur - .01)));
+  const inn = $('recScript').querySelector('.in'), els = inn ? inn.querySelectorAll('.pl') : []; if (!P.lines.length || !els.length) return;
+  const w = Math.max(0, (P.t - (P.caps[0] ? P.caps[0].start : 0)) * P.base / 60);
+  let j = 0; P.cum.forEach((c, k) => { if (w >= c) j = k; });
+  const d = els[j], n = Math.max(1, nWords(P.lines[j])), fr = Math.min(1, Math.max(0, (w - P.cum[j]) / n));
+  const y = d.offsetTop + fr * d.offsetHeight;
+  inn.style.transform = 'translateY(' + Math.round($('recScript').clientHeight * .3 - y) + 'px)' + ($('recScript').classList.contains('mir') ? ' scaleX(-1)' : '');
 }
 function promptRun() { // starts when recording starts
-  cancelAnimationFrame(P.raf);
-  const tick = () => { if (R.state !== 'recording') return; const e = (performance.now() - R.t0) / 1000 * P.pace; promptFrame(e); P.raf = requestAnimationFrame(tick); };
+  cancelAnimationFrame(P.raf); P.t = 0; P.paused = false; let last = performance.now();
+  const tick = now => { if (R.state !== 'recording') return; const dt = Math.min(.1, (now - last) / 1000); last = now; if (!P.paused) P.t += dt * P.wpm / P.base; promptFrame(); P.raf = requestAnimationFrame(tick); };
   P.raf = requestAnimationFrame(tick);
 }
-$('recPace').oninput = () => { P.pace = +$('recPace').value / 100; $('recPaceV').textContent = P.pace.toFixed(1) + '×'; try { localStorage.setItem('exPace', P.pace); } catch (e) {} };
+function wpmSet(v) { P.wpm = Math.min(220, Math.max(80, Math.round(v / 5) * 5)); wpmShow(); try { localStorage.setItem('exWpm', P.wpm); } catch (e) {} }
+$('wpmDn').onclick = () => wpmSet(P.wpm - 5); $('wpmUp').onclick = () => wpmSet(P.wpm + 5);
+$('recPause').onclick = () => { P.paused = !P.paused; $('recPause').textContent = P.paused ? '▶ Resume' : '❚❚ Pause'; };
+$('recMir').onclick = () => { $('recScript').classList.toggle('mir'); $('recMir').classList.toggle('on'); promptFrame(); };
 try { const z = +localStorage.getItem('exSize') || 100; $('recSize').value = z; $('rec').style.setProperty('--ps', z / 100); } catch (e) {}
 $('recSize').oninput = () => { $('rec').style.setProperty('--ps', $('recSize').value / 100); try { localStorage.setItem('exSize', $('recSize').value); } catch (e) {} };
 $('recShowAnim').onchange = () => { $('recAnim').style.display = $('recShowAnim').checked && P.app ? 'block' : 'none'; };
@@ -671,7 +684,7 @@ async function openRecorder(i) {
   R.i = i; R.blob = null;
   $('recTitle').textContent = `Scene ${i + 1} in ${ep.languages[lang].name || lang}: ${kind === 'video' ? 'record yourself' : 'record your voice'}`;
   promptSetup(i);
-  $('rec').classList.add('on'); recButtons('ready'); recMsg(kind === 'video' ? 'Hold the phone at eye level, in good light. When the countdown ends, read the line that lights up. Use Pace to slow it down or speed it up, then tap Stop.' : 'When the countdown ends, read the line that lights up. Use Pace to slow it down or speed it up, then tap Stop. A quiet room works best.');
+  $('rec').classList.add('on'); recButtons('ready'); recMsg(kind === 'video' ? 'Hold the phone at eye level, in good light. When the countdown ends, read along the script as it scrolls past the line. Use Speed (words per minute) to slow it down or speed it up, then tap Stop.' : 'When the countdown ends, read along the script as it scrolls past the line. Use Speed (words per minute) to slow it down or speed it up, then tap Stop. A quiet room works best.');
   if (!window.MediaRecorder || !navigator.mediaDevices) return recMsg('This browser cannot record. Use Safari on iPhone or Chrome on Android or a laptop.', 'bad');
   if (R.stream && R.kind !== kind) closeStream();
   if (!R.stream) {
@@ -735,7 +748,7 @@ $('recGo').onclick = async () => {
   R.rec.start(250); if (R.arec) { try { R.arec.start(250); } catch (e) { R.arec = null; } } R.t0 = performance.now(); R.state = 'recording'; recButtons('recording'); promptRun();
 };
 $('recStop').onclick = () => { if (R.arec && R.arec.state !== 'inactive') { try { R.arec.stop(); } catch (e) {} } if (R.rec && R.rec.state !== 'inactive') R.rec.stop(); };
-$('recAgain').onclick = () => { R.blob = null; R.state = 'ready'; recButtons('ready'); showLive(); promptFrame(0); recMsg('Ready when you are.'); };
+$('recAgain').onclick = () => { R.blob = null; R.state = 'ready'; recButtons('ready'); showLive(); promptFrame(); recMsg('Ready when you are.'); };
 $('recClose').onclick = () => { if (R.state === 'review' && R.blob && !confirm('Close without keeping this take?')) return; if (R.arec && R.arec.state !== 'inactive') { R.arec.onstop = null; try { R.arec.stop(); } catch (e) {} } if (R.rec && R.rec.state !== 'inactive') { R.rec.onstop = null; R.rec.stop(); } R.state = 'ready'; closeRecorder(); };
 $('recKeep').onclick = () => { keepTake(); closeRecorder(); };
 $('recNext').onclick = () => { const n = R.i + 1; keepTake(); openScene = n; renderScenes(); openRecorder(n); };
