@@ -237,7 +237,7 @@
           const ic = el('g', { transform: 'scale(.74)' }, gg); cardIcon(ic, p.icon);
           if (p.label) { const t = txt(gg, 0, 134, p.label, 32, 800, '#fff', { max: 236, attrs: { stroke: '#05101c', 'stroke-width': 7, 'paint-order': 'stroke' } }); void t; }
           const Bz = bigSd ? (arr.length > 2 ? 1.1 : arr.length > 1 ? 1.45 : 1.9) : 1, bx = bigSd ? bigCx + (i - (arr.length - 1) / 2) * (arr.length > 2 ? 300 : 380) : px, by = bigSd ? 470 : py;
-          pops.push({ gg, ring, B: Bz, px: bx, py: by, k, t0: st[j] + .12 + (len * .78) * (i / arr.length), life: Math.min(4.4, Math.max(2.6, len / arr.length * 1.5 + 1)) }); k++; }); });
+          pops.push({ gg, ring, B: Bz, px: bx, py: by, k, t0: st[j] + .12 + (len * .78) * (i / arr.length), life: (bigSd ? (l0 => Math.max(1, Math.min(l0, en[j] - (st[j] + .12 + (len * .78) * (i / arr.length)) - .05)))(Math.min(4.4, Math.max(2.6, len / arr.length * 1.5 + 1))) : Math.min(4.4, Math.max(2.6, len / arr.length * 1.5 + 1))) }); k++; }); });
         if (storyOn) { // the animated story on the empty half, timed to the spoken lines
           const sc0 = Math.min(1, (bigSd.free - 40) / 940), sg = el('g', { transform: `translate(${Math.round(bigCx - 450 * sc0)},${Math.round(150 + (1 - sc0) * 40)}) scale(${sc0})` }, g);
           const L1 = (i2, f) => i2 < st.length ? (f ? en[i2] : st[i2]) : (f ? offT + spanT : offT + spanT * .9), tA = L1(SA), tB = L1(SA + 1), tC = L1(SA + 2), tD = L1(SA + 3), tE = L1(SA + 3, 1), tAe = L1(SA, 1), tBe = L1(SA + 1, 1), tCe = L1(SA + 2, 1);
