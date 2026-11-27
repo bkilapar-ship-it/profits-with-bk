@@ -227,7 +227,7 @@
         // side by side (or circle): the whole empty half becomes a stage where each spoken line's picture pops up BIG, one line at a time
         const bigSd = sides.length === 1 && sides[0].free >= 700 ? sides[0] : null, bigCx = bigSd ? (bigSd.dir < 0 ? bigSd.edge / 2 : bigSd.edge + bigSd.free / 2) : 0;
         const per = {};
-        const storyOn = !!bigSd && S.data.story === 'shops', SA = Math.max(0, (+S.data.storyFrom || 3) - 1);
+        const storyOn = !!bigSd && (S.data.story === 'shops' || (S.data.story == null && popSpec.some(p => p.icon === 'shop'))), SA = Math.max(0, (+S.data.storyFrom || 3) - 1);
         popSpec.forEach(p => { if (st[p.line] != null && !(storyOn && p.line >= SA)) (per[p.line] = per[p.line] || []).push(p); });
         const popG = el('g', {}, g); let k = 0;
         Object.keys(per).forEach(j => { const arr = per[j], len = en[j] - st[j]; arr.forEach((p, i) => {
