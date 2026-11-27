@@ -73,7 +73,7 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 19:35 old taps repaired</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 19:55 timing readout</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -192,9 +192,9 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=0031"></script>
+<script src="engine.js?v=0032"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=0031"></script>
+<script src="cutout.js?v=0032"></script>
 <script>
 (() => {
 'use strict';
@@ -440,6 +440,8 @@ function draw() {
   $('time').textContent = `${tNow.toFixed(1)} / ${app.duration.toFixed(1)}s`;
   const o = app.timeline.scenes.find(x => tNow >= x.start && tNow < x.end) || app.timeline.scenes[app.timeline.scenes.length - 1];
   $('sceneAt').textContent = o ? `Scene ${o.i + 1}: ${E.SCENES[o.scene.type].label}` : '';
+  if (o && o.take) { const tk = o.take, ls = (E.sceneLang(o.scene, lang).lines || []).filter(x => String(x).trim()), ex = tk.marksOn && Array.isArray(tk.marks) && tk.marks.length >= ls.length, cm = media[tk.file];
+    $('sceneAt').textContent += ` · line starts (s in recording): ${ex ? 'YOUR TIMES ' + tk.marks.slice(1, ls.length).map(x => (+x).toFixed(1)).join(', ') : 'AUTOMATIC GUESS ' + E.relStarts(ls, tk, tk.out - tk.in).slice(1).map(x => (tk.in + x).toFixed(1)).join(', ')} · recording at ${cm && !isNaN(cm.currentTime) ? cm.currentTime.toFixed(1) : '-'}s`; }
   syncMedia(o);
 }
 function seekScene(i) { const o = app && app.timeline.scenes.find(x => x.i === i); if (o) { tNow = o.start + .01; draw(); } }
