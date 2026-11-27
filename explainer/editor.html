@@ -73,7 +73,7 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 00:10 custom Shorts</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 00:50 Instagram</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -112,6 +112,14 @@ canvas.camv{object-fit:contain}
       <details class="box" id="ytConn" data-tab="config" open><summary><b>YouTube connection</b> <span class="muted">(needed once, for uploading)</span></summary>
         <div class="fld"><label for="ytId">Google OAuth client ID</label><input id="ytId" placeholder="…apps.googleusercontent.com" autocomplete="off"></div>
         <p class="muted">Create it once at console.cloud.google.com: new project, enable <b>YouTube Data API v3</b>, OAuth consent screen set to External with your own Google account as a test user, then Credentials / Create client / <b>Web application</b> with <code>https://bkilapar-ship-it.github.io</code> as the authorised JavaScript origin. Paste the client ID here. When Google asks which account to use, pick the <b>Oh, I Get It</b> channel. The studio page uses the same ID, so it is shared.</p>
+      </details>
+      <details class="box" id="igConn" data-tab="config"><summary><b>Instagram connection</b> <span class="muted">(needed once, for posting Reels)</span></summary>
+        <div class="fld"><label for="igId">Instagram account ID</label><input id="igId" inputmode="numeric" placeholder="numbers only, for example 17841400000000000" autocomplete="off"></div>
+        <div class="fld"><label for="igTok">Access token</label><input id="igTok" type="password" placeholder="paste it here" autocomplete="off"></div>
+        <div class="fld"><label for="igApi">Token type</label><select id="igApi"><option value="graph.instagram.com">Instagram login (Generate token in the Meta app)</option><option value="graph.facebook.com">Facebook login (token from Graph API Explorer)</option></select></div>
+        <div class="fld"><label for="igVer">API version</label><input id="igVer" value="v23.0" autocomplete="off"></div>
+        <p class="muted">One-time setup: 1) your Instagram must be a <b>Professional</b> (Creator or Business) account. 2) At developers.facebook.com create an app (type Business), add the <b>Instagram</b> product, and add your Instagram account as a tester or role. 3) In the app's Instagram setup tap <b>Generate token</b> for that account (permissions: instagram_business_basic and instagram_business_content_publish) and paste the token above with the account ID shown there. The token lasts about 60 days, then you generate a new one. It stays on this phone only. Meta may change these screens, so follow its current wording if it differs.</p>
+        <p class="muted">Posting needs your video at a public web address. The editor puts it on a spare branch of your GitHub repository (it uses the GitHub connection above), tells Instagram to fetch it, then deletes it again.</p>
       </details>
   </section>
   <section class="pv">
@@ -192,9 +200,9 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=0040"></script>
+<script src="engine.js?v=0041"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=0040"></script>
+<script src="cutout.js?v=0041"></script>
 <script>
 (() => {
 'use strict';
@@ -1173,6 +1181,53 @@ function ytTagDefault(short) { // starting tags from the episode title, the chan
   if (short) t.push('Shorts');
   const seen = new Set(); return t.map(x => String(x).trim()).filter(x => x && !seen.has(x.toLowerCase()) && seen.add(x.toLowerCase())).join(', ');
 }
+const igCaptionDefault = short => { const name = ((channel.names || {})[lang] || (channel.names || {}).en || 'Oh, I Get It!!'), t = ((ep.title || {})[lang] || ep.id || '').replace(/^Short:\s*/i, '');
+  return `${t}\n\nComplex things, explained with everyday life. Example prices are made up. Education only, not advice.\n\n${short ? 'What else could an AI agent pay for? Comment below! ' : 'Comment your ideas below! '}\n\n#OhIGetIt #explained #agenticpayments #AIagents #fintech`; };
+function igCard(short) {
+  return `<div class="box" style="margin-top:10px"><b>Post to Instagram as a Reel</b>
+    <div class="fld"><label>Caption</label><textarea id="igCap" rows="6">${esc(igCaptionDefault(short))}</textarea></div>
+    <label class="row" style="gap:8px;align-items:center"><input type="checkbox" id="igFeed" checked style="width:auto"> Also show on my profile grid</label>
+    <div class="row" style="margin-top:6px"><button class="pri" id="igGo">📸 Post Reel to Instagram</button></div>
+    <div id="igSt" class="msg"></div>
+    <p class="muted">Needs the <b>Instagram connection</b> and <b>GitHub connection</b> in the Configuration tab (once). A Reel is vertical (9:16), 3 to 90 seconds long. Posts appear on your account straight away, so check the caption first.</p></div>`;
+}
+async function igPost() {
+  const st = (h, c) => { const n = $('igSt'); n.innerHTML = h || ''; n.className = 'msg ' + (c || ''); }, btn = $('igGo');
+  const id = $('igId').value.trim(), tok = $('igTok').value.trim(), host = $('igApi').value || 'graph.instagram.com', ver = $('igVer').value.trim() || 'v23.0', repo = $('ghRepo').value.trim(), gtok = $('ghTok').value.trim();
+  if (!mk.blob) return st('Make the video first.', 'bad');
+  if (!/^\d{6,}$/.test(id) || !tok) return st('Open Configuration, then Instagram connection, and add the account ID (numbers) and access token first.', 'bad');
+  if (!repo || !gtok) return st('Open Configuration, then GitHub connection, and add your repository and token first. The video is placed there briefly so Instagram can fetch it.', 'bad');
+  if (mk.blob.size > 45 * 1048576) return st('This video is over 45 MB, which is too big to place on GitHub this way. Make a shorter Short.', 'bad');
+  btn.disabled = true; const ghh = { Authorization: 'Bearer ' + gtok, Accept: 'application/vnd.github+json', 'Content-Type': 'application/json' }, api = p => `https://api.github.com/repos/${repo}/${p}`;
+  let fileSha = null, path = null; const base = `https://${host}/${ver}`;
+  const graph = async (url, opt) => { const r = await fetch(url, opt), j = await r.json().catch(() => ({})); if (!r.ok || j.error) throw new Error((j.error && (j.error.error_user_msg || j.error.message)) || ('Instagram said ' + r.status)); return j; };
+  try {
+    st('Step 1 of 5: putting the video where Instagram can fetch it…');
+    const br = await fetch(api('branches/ig-media'), { headers: ghh });
+    if (br.status === 404) { const m = await (await fetch(api('git/ref/heads/main'), { headers: ghh })).json(); const cr = await fetch(api('git/refs'), { method: 'POST', headers: ghh, body: JSON.stringify({ ref: 'refs/heads/ig-media', sha: m.object.sha }) }); if (!cr.ok) throw new Error('Could not create the spare branch on GitHub (' + cr.status + '). Check the token can write to the repository.'); }
+    else if (!br.ok) throw new Error('GitHub said ' + br.status + ' while checking the spare branch.');
+    const b64v = await new Promise((res, rej) => { const fr = new FileReader(); fr.onload = () => res(String(fr.result).split(',')[1]); fr.onerror = () => rej(fr.error); fr.readAsDataURL(mk.blob); });
+    path = `ig-media/${ep.id}-${lang}-${Date.now()}.mp4`;
+    const up = await fetch(api('contents/' + path), { method: 'PUT', headers: ghh, body: JSON.stringify({ message: 'Temporary video for Instagram [skip scan]', content: b64v, branch: 'ig-media' }) });
+    if (!up.ok) throw new Error('GitHub said ' + up.status + ' while saving the video: ' + (await up.text()).slice(0, 140)); fileSha = (await up.json()).content.sha;
+    const url = `https://raw.githubusercontent.com/${repo}/ig-media/${path}`;
+    st('Step 2 of 5: asking Instagram to fetch it…');
+    const cont = await graph(`${base}/${id}/media`, { method: 'POST', body: new URLSearchParams({ media_type: 'REELS', video_url: url, caption: $('igCap').value.slice(0, 2150), share_to_feed: $('igFeed').checked ? 'true' : 'false', access_token: tok }) });
+    st('Step 3 of 5: Instagram is processing the video (this can take a minute or two)…');
+    let done = false, last = '';
+    for (let k = 0; k < 72 && !done; k++) { await new Promise(r => setTimeout(r, 5000)); const s = await graph(`${base}/${cont.id}?fields=status_code,status&access_token=${encodeURIComponent(tok)}`); last = s.status_code + (s.status ? ' (' + s.status + ')' : '');
+      if (s.status_code === 'FINISHED') done = true; else if (s.status_code === 'ERROR' || s.status_code === 'EXPIRED') throw new Error('Instagram could not use the video: ' + last); }
+    if (!done) throw new Error('Instagram is still processing after 6 minutes (' + last + '). Check the Instagram app in a few minutes; if it is not there, try again.');
+    st('Step 4 of 5: publishing…');
+    const pub = await graph(`${base}/${id}/media_publish`, { method: 'POST', body: new URLSearchParams({ creation_id: cont.id, access_token: tok }) });
+    let link = ''; try { link = (await graph(`${base}/${pub.id}?fields=permalink&access_token=${encodeURIComponent(tok)}`)).permalink || ''; } catch (e) {}
+    st(`Posted to Instagram. ${link ? `<a href="${esc(link)}" target="_blank" rel="noopener">Open the Reel</a>` : 'Open Instagram to see it.'}`, 'good');
+  } catch (err) { st(esc(err.message || String(err)) + ' If this says the request was blocked, the browser may not be allowed to call Instagram directly; tell Claude exactly what it says.', 'bad'); }
+  finally {
+    if (fileSha && path) { try { await fetch(api('contents/' + path), { method: 'DELETE', headers: ghh, body: JSON.stringify({ message: 'Remove temporary video [skip scan]', sha: fileSha, branch: 'ig-media' }) }); } catch (e) {} }
+    btn.disabled = false;
+  }
+}
 function ytCard() {
   const L = ep.languages[lang] || {}, lines = []; ep.scenes.forEach(sc => ((sc.lang || {})[lang] || {}).lines && lines.push(...sc.lang[lang].lines.filter(x => String(x).trim())));
   const tag = ((channel.taglines || {})[lang] || (channel.taglines || {}).en || ''), name = ((channel.names || {})[lang] || (channel.names || {}).en || 'Oh, I Get It');
@@ -1205,8 +1260,9 @@ function mkResult(blob, type, name, info, restored) {
   $(mk.ids.out).innerHTML = `<video controls playsinline src="${mk.url}" style="${isSh ? 'max-height:60vh;' : 'width:100%;'}border-radius:8px;margin-top:8px"></video>
     <div class="row" style="margin-top:8px"><a class="sm" href="${mk.url}" download="${name}" style="padding:7px 12px;border:1px solid var(--line);border-radius:8px;text-decoration:none;color:inherit">⬇ Save the ${isSh ? 'Short' : 'video'}</a>
     <button class="sm pri" id="mkShare">Share… (Save Video, YouTube, WhatsApp)</button></div>
-    <p class="muted">Watch it once before publishing. If Save does nothing on iPhone, tap Share and choose Save Video.</p>${isSh ? shUpCard() : ytCard()}`;
+    <p class="muted">Watch it once before publishing. If Save does nothing on iPhone, tap Share and choose Save Video.</p>${isSh ? shUpCard() : ytCard()}${igCard(isSh)}`;
   if (isSh) $('shUp').onclick = shUpload; else $('ytGo').onclick = () => ytUpload();
+  $('igGo').onclick = igPost;
   $('mkShare').onclick = async () => {
     const f = new File([blob], name, { type });
     if (navigator.canShare && navigator.canShare({ files: [f] })) { try { await navigator.share({ files: [f], title: (ep.title || {})[lang] || ep.id }); } catch (e) {} }
@@ -1425,6 +1481,7 @@ async function makeOnDevice(opts) {
   }
 }
 try { $('ytId').value = localStorage.getItem('bkstudio-ytid') || ''; } catch (e) {}
+{ const ig = store.get('ex.ig', {}); ['igId', 'igTok', 'igApi', 'igVer'].forEach(k => { if (ig[k]) $(k).value = ig[k]; $(k).onchange = () => { const o = store.get('ex.ig', {}); o[k] = $(k).value.trim(); store.set('ex.ig', o); }; }); }
 const ytHintUpd = () => { const h = $('ytHint'); if (h) h.style.display = /\.apps\.googleusercontent\.com$/.test($('ytId').value.trim()) ? 'none' : ''; }; ytHintUpd();
 $('ytId').oninput = ytHintUpd;
 $('ytId').onchange = () => { try { localStorage.setItem('bkstudio-ytid', $('ytId').value.trim()); } catch (e) {} };

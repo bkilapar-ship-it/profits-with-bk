@@ -89,3 +89,9 @@ EXPERIMENTAL and OFF by default (it made well-timed scenes worse). Tapping "Matc
 ## Line timing (exact sync)
 - While recording a scene with several lines, tap **Next line ▶** the moment you start each new line. The animation then follows your real voice (take.marks, marksOn).
 - Under every recording, "⏱ Line timing" lets you type the second where each line starts (▶ plays from just before it). "Back to automatic timing" returns to the length-based estimate, which stays the default.
+
+## Custom Shorts (own script, own recording)
+`episodes/short-robot-shopping.json` and `short-cheapest-total.json` are one-scene episodes written for Shorts. Record the scene, set the line times, then Video tab, Shorts, tick scene 1. New presenter stories (data.story): `agentshop` (you say what you need, the agent visits both shops, totals, limit, winner, question) and `compare` (two price boards, totals, winner, agent). `storyFrom` is the line where the story starts (it uses that line plus the next four).
+
+## Instagram Reels
+Configuration > Instagram connection (account ID, token, token type, API version; stored only on the device). Video tab: "Post Reel to Instagram" under the YouTube card. Flow: the video is committed to a spare `ig-media` branch of the repo via the GitHub connection, Instagram is asked to fetch it (`video_url`), the container is polled until FINISHED, published, and the temporary file is deleted. Needs a Professional Instagram account. Unverified on a real account: browser CORS to graph.instagram.com/graph.facebook.com, and whether Instagram accepts the raw.githubusercontent.com content type (application/octet-stream).
