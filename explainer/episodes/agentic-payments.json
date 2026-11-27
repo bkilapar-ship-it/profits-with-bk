@@ -256,7 +256,9 @@
   },
   {
    "type": "outro",
-   "data": {},
+   "data": {
+    "cam": "side-right"
+   },
    "lang": {
     "en": {
      "heading": "Want complex things in simple language?",
@@ -266,8 +268,12 @@
      "subbedLabel": "Subscribed",
      "small": "Education only, not financial advice. Example prices are made up.",
      "lines": [
+      "Robots could shop for us in the future.",
+      "If you know more use cases of agentic payments, comment below.",
       "If you want to know the complex things in simple language, please like, share, and hit the bell button to subscribe."
-     ]
+     ],
+     "head1": "Robots could shop for us in future",
+     "head2": "More use cases? Comment below"
     }
    }
   }

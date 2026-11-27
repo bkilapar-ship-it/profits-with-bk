@@ -146,6 +146,14 @@
     wide: { label: 'Wide: large centred picture under the title', slot: { x: 400, y: 245, w: 1120, h: 630, r: 32 } },
     full: { label: 'Full width: picture fills the top, captions underneath', slot: { x: 0, y: 0, w: 1920, h: 925, r: 0 } },
   };
+  // "My video" in any scene: a round bubble in a corner, or the scene shrunk to one side with your video beside it
+  const CAM_LAYOUTS = {
+    'bubble-right': { label: 'Round bubble, bottom right', slot: { x: 1560, y: 600, w: 330, h: 330, r: 165 } },
+    'bubble-left': { label: 'Round bubble, bottom left', slot: { x: 30, y: 600, w: 330, h: 330, r: 165 } },
+    'side-right': { label: 'Scene on the left, my video on the right', slot: { x: 1250, y: 150, w: 620, h: 760, r: 36 }, panel: { x: 50, y: 190, s: .6 } },
+    'side-left': { label: 'My video on the left, scene on the right', slot: { x: 50, y: 150, w: 620, h: 760, r: 36 }, panel: { x: 718, y: 190, s: .6 } },
+  };
+  const camSlot = scene => { const T = SCENES[scene.type]; if (!T) return null; if (T.camera) return T.slot(sceneData(scene)); const c = CAM_LAYOUTS[sceneData(scene).cam]; return c ? c.slot : null; };
   const presLayout = d => { d = d || {}; return d.layout && PRES_LAYOUTS[d.layout] ? d.layout : (d.side === 'wide' ? 'wide' : 'side'); };
   /** Chart-style decoration for the talking-head background: candles and a rising line on each side (drawn from scratch, no logos). */
   /** Background of the channel banner: soft glow, golden dots, and the line that starts tangled and becomes straight, ending in a sparkle. */
@@ -758,7 +766,9 @@
   SCENES.outro = {
     label: 'Like, share, subscribe (animated end scene)', base: 10, captions: true,
     fields: [
-      { k: 'heading', per: 'lang', kind: 'text', label: 'Heading' },
+      { k: 'head1', per: 'lang', kind: 'text', label: 'Heading while the first line is spoken (robot shopping)' },
+      { k: 'head2', per: 'lang', kind: 'text', label: 'Heading while the second line is spoken (comments)' },
+      { k: 'heading', per: 'lang', kind: 'text', label: 'Heading for the like, share and subscribe part' },
       { k: 'likeLabel', per: 'lang', kind: 'text', label: 'Word under the like button' },
       { k: 'shareLabel', per: 'lang', kind: 'text', label: 'Word under the share button' },
       { k: 'subLabel', per: 'lang', kind: 'text', label: 'Subscribe button word' },
@@ -807,11 +817,44 @@
       const cur = el('g', {}, g); el('path', { d: 'M0 0 L0 44 L12 34 L21 54 L31 49 L22 30 L38 30 Z', fill: '#fff', stroke: '#05101c', 'stroke-width': 3, 'stroke-linejoin': 'round' }, cur);
       const spark = el('g', {}, g), sp = []; for (let i = 0; i < 6; i++) sp.push(el('path', { d: 'M0 -16 l4 12 l12 4 l-12 4 l-4 12 l-4 -12 l-12 -4 l12 -4z', fill: '#fff6dc' }, spark));
       txt(g, 960, 880, S.L.small || '', 28, 500, '#8fa6bd', { max: 1700 });
+      // three spoken lines -> three scenes of animation: a robot shopping, comments, then like / share / subscribe
+      const lt = (() => { const lines = (S.L.lines || []).filter(x => String(x).trim()), tk = S.L.take, spanT = tk ? tk.out - tk.in : ctx.dur, offT = tk ? LEAD - .15 : 0, tot = lines.reduce((a, q) => a + Math.max(12, q.length), 0); let acc = offT; const st = lines.map(q => { const x = acc; acc += spanT * Math.max(12, q.length) / tot; return x; }); return { n: lines.length, st, en: st.map((x, j) => j + 1 < st.length ? st[j + 1] : offT + spanT + .35) }; })();
+      const PH = lt.n >= 3, ic = (par, name, k) => { const q = el('g', {}, par); cardIcon(el('g', { transform: `scale(${k})` }, q), name); return q; };
+      const rob = el('g', { opacity: 0 }, g), cmt = el('g', { opacity: 0 }, g);
+      el('rect', { x: 150, y: 770, width: 1620, height: 12, rx: 6, fill: '#3a4a60' }, rob);
+      { const sx = 1280; el('rect', { x: sx, y: 480, width: 300, height: 290, fill: '#e9edf2' }, rob); el('rect', { x: sx, y: 462, width: 300, height: 30, fill: '#c9d2dc' }, rob);
+        for (let i = 0; i < 6; i++) el('path', { d: `M${sx + i * 50} 492 h50 v36 q-25 20 -50 0 z`, fill: i % 2 ? '#fff' : '#2a9d8f' }, rob);
+        el('rect', { x: sx + 20, y: 405, width: 260, height: 50, rx: 10, fill: '#264653' }, rob); txt(rob, sx + 150, 441, 'SHOP', 34, 800, '#ffd166', { max: 220 });
+        el('rect', { x: sx + 30, y: 560, width: 150, height: 120, rx: 8, fill: '#bde0fe', stroke: '#264653', 'stroke-width': 6 }, rob); el('rect', { x: sx + 210, y: 600, width: 70, height: 170, fill: '#264653' }, rob); }
+      const rbt = el('g', {}, rob); el('circle', { r: 80, fill: '#0b1522', stroke: '#ffd166', 'stroke-width': 6 }, rbt); ic(rbt, 'agent', .95);
+      const bkt = el('g', {}, rob); el('circle', { r: 58, fill: '#0b1522', stroke: '#ffd166', 'stroke-width': 5 }, bkt); ic(bkt, 'basket', .75);
+      const paidTag = el('g', {}, rob); el('rect', { x: -150, y: -34, width: 300, height: 68, rx: 34, fill: '#2a9d8f', stroke: '#05101c', 'stroke-width': 3 }, paidTag); txt(paidTag, 0, 12, 'Paid ✓', 38, 800, '#fff', { max: 260 });
+      el('rect', { x: 360, y: 650, width: 1200, height: 110, rx: 55, fill: '#f1f5fb' }, cmt);
+      el('circle', { cx: 432, cy: 705, r: 36, fill: '#ffd166' }, cmt); el('circle', { cx: 432, cy: 695, r: 12, fill: '#0d1b2a' }, cmt); el('path', { d: 'M410 726 q22 -22 44 0', fill: '#0d1b2a' }, cmt);
+      const ph = txt(cmt, 496, 718, 'Add a comment…', 38, 600, '#7d8aa0', { anchor: 'start', max: 600 });
+      const typed = [0, 1, 2].map(i => el('rect', { x: 496 + i * 250, y: 695, width: 0, height: 20, rx: 10, fill: '#52617a' }, cmt)), caret = el('rect', { x: 496, y: 684, width: 4, height: 42, fill: '#0d1b2a' }, cmt);
+      const bub = [[540, 480], [1100, 520], [820, 405]].map(([bx, by], i) => { const q = el('g', {}, cmt); el('rect', { x: 0, y: 0, width: 520, height: 120, rx: 30, fill: '#13263b', stroke: '#ffd166', 'stroke-width': 5 }, q); el('circle', { cx: 62, cy: 60, r: 34, fill: ['#2a9d8f', '#f4a261', '#8ecae6'][i] }, q); el('rect', { x: 120, y: 34, width: 300, height: 18, rx: 9, fill: '#8fa6bd' }, q); el('rect', { x: 120, y: 66, width: 220 - i * 30, height: 18, rx: 9, fill: '#5d7188' }, q); return { q, bx, by }; });
+      const dn = el('g', {}, cmt); el('path', { d: 'M-34 -30 h68 v34 h34 l-68 66 l-68 -66 h34 z', fill: '#ffd166', stroke: '#05101c', 'stroke-width': 4, 'stroke-linejoin': 'round' }, dn);
       const LX = 330, SX = 640, BX = 1190, BLX = 1560;
       return u => {
-        const ts = u * this.base, ez = ease, b = bounce;
-        brand.setAttribute('opacity', ez(prog(ts, 0, .6))); lg.setAttribute('transform', `translate(760,${150 + Math.sin(ts * 3) * 5}) scale(${1.5 + .04 * Math.sin(ts * 3)})`);
-        head.setAttribute('opacity', ez(prog(ts, .4, 1.2)));
+        const tt = u * ctx.dur, p3 = PH ? lt.st[2] + (lt.en[2] - lt.st[2]) * .36 : 0;
+        const ts = PH ? (tt < p3 ? 3.0 : 3.9 + clamp((tt - p3) / Math.max(1.5, lt.en[2] + .3 - p3)) * 5.9) : u * this.base, ez = ease, b = bounce;
+        if (PH) { // robot shopping while line 1 is spoken, comments for line 2
+          const ph1 = tt < lt.st[1], ph2 = tt >= lt.st[1] && tt < lt.st[2], hs = ph1 ? 0 : ph2 ? 1 : 2, h0 = lt.st[hs], want = hs === 0 ? (S.L.head1 || '') : hs === 1 ? (S.L.head2 || '') : (S.L.heading || '');
+          if (head.textContent !== want) { head.textContent = want; fit(head, 1700); }
+          head.setAttribute('opacity', ez(prog(tt, h0 - .05, h0 + .45))); brand.setAttribute('opacity', 1);
+          const a1 = prog(tt, lt.st[0], lt.st[0] + .5) * (1 - prog(tt, lt.st[1] - .3, lt.st[1] + .1)); rob.setAttribute('opacity', a1);
+          const w1 = clamp((tt - lt.st[0]) / Math.max(1.5, lt.en[0] - lt.st[0] - .2)), go = clamp(w1 / .55), back = clamp((w1 - .62) / .38), rx = w1 < .55 ? lerp(240, 1190, ez(go)) : lerp(1190, 700, ez(back));
+          rbt.setAttribute('transform', `translate(${rx},${690 - Math.abs(Math.sin(tt * 7)) * (w1 < .55 || w1 > .62 ? 14 : 0)})`);
+          const bp = prog(tt, lt.st[0] + (lt.en[0] - lt.st[0]) * .55, lt.st[0] + (lt.en[0] - lt.st[0]) * .55 + .4); bkt.setAttribute('opacity', Math.min(1, bp * 3)); bkt.setAttribute('transform', `translate(${w1 < .62 ? 1430 : rx + 120},${w1 < .62 ? 570 - (1 - bounce(bp)) * 40 : 640}) scale(${lerp(.3, 1, bounce(bp))})`);
+          const pp = prog(tt, lt.st[0] + (lt.en[0] - lt.st[0]) * .78, lt.st[0] + (lt.en[0] - lt.st[0]) * .78 + .4); paidTag.setAttribute('opacity', Math.min(1, pp * 3)); paidTag.setAttribute('transform', `translate(960,${520 - (1 - bounce(pp)) * 30}) scale(${lerp(.4, 1, bounce(pp))})`);
+          const c1 = prog(tt, lt.st[1] + .1, lt.st[1] + .6) * (1 - prog(tt, lt.st[2] - .3, lt.st[2] + .05)); cmt.setAttribute('opacity', c1);
+          const L2 = Math.max(1.5, lt.en[1] - lt.st[1]), tq = (tt - lt.st[1]) / L2;
+          bub.forEach((o, i) => { const k = prog(tq, .1 + i * .18, .3 + i * .18); o.q.setAttribute('opacity', Math.min(1, k * 3)); o.q.setAttribute('transform', `translate(${o.bx},${o.by + (1 - bounce(k)) * 30}) scale(${lerp(.6, 1, bounce(k))})`); });
+          const ty = clamp((tq - .35) / .45); typed.forEach((r, i) => r.setAttribute('width', 200 * clamp(ty * 3 - i))); ph.setAttribute('opacity', ty > 0 ? 0 : 1); caret.setAttribute('x', 496 + (ty > 0 ? Math.min(3, ty * 3) * 200 + Math.floor(Math.min(2, ty * 3)) * 50 : 0)); caret.setAttribute('opacity', Math.sin(tt * 9) > 0 ? 1 : .2);
+          dn.setAttribute('transform', `translate(960,${822 + Math.sin(tt * 6) * 12})`); dn.setAttribute('opacity', prog(tq, .5, .7));
+        } else brand.setAttribute('opacity', ez(prog(ts, 0, .6))); lg.setAttribute('transform', `translate(760,${150 + Math.sin(ts * 3) * 5}) scale(${1.5 + .04 * Math.sin(ts * 3)})`);
+        if (!PH) head.setAttribute('opacity', ez(prog(ts, .4, 1.2)));
         // like: pops in, thumb tilts, rays burst, +1 floats up
         const lp = prog(ts, 3.9, 4.5); like.setAttribute('opacity', ez(lp)); like.setAttribute('transform', `translate(${LX},${cy}) scale(${lerp(.3, 1, b(lp))})`);
         const tilt = ts > 4.3 && ts < 5.2 ? -22 * Math.sin(prog(ts, 4.3, 5.2) * Math.PI) : 0; thumb.setAttribute('transform', `scale(1.55) rotate(${tilt})`);
@@ -918,11 +961,19 @@
     const tagline = (channel.taglines || {})[lang] || (channel.taglines || {}).en || '';
     const tl = timeline(ep, lang);
     const built = tl.scenes.map((o, idx) => {
-      const g = el('g', { opacity: 0 }, svg);
+      const g = el('g', { opacity: 0 }, svg), cl = (SCENES[o.scene.type] || {}).camera ? null : CAM_LAYOUTS[sceneData(o.scene).cam];
+      let body = g, camG = null;
+      if (cl) { // the scene is drawn inside a smaller panel (or in full under a corner bubble), with a gold frame where your video goes
+        if (cl.panel) { const bgG = el('linearGradient', { id: 'cb' + idx, x1: 0, y1: 0, x2: 1, y2: 1 }, defs); el('stop', { offset: 0, 'stop-color': '#0d1b2a' }, bgG); el('stop', { offset: 1, 'stop-color': '#10294a' }, bgG); el('rect', { width: W, height: H, fill: `url(#cb${idx})` }, g);
+          const cp = el('clipPath', { id: 'cc' + idx }, defs); el('rect', { x: cl.panel.x, y: cl.panel.y, width: W * cl.panel.s, height: H * cl.panel.s, rx: 28 }, cp);
+          const clipG = el('g', { 'clip-path': `url(#cc${idx})` }, g); body = el('g', { transform: `translate(${cl.panel.x},${cl.panel.y}) scale(${cl.panel.s})` }, clipG);
+          el('rect', { x: cl.panel.x, y: cl.panel.y, width: W * cl.panel.s, height: H * cl.panel.s, rx: 28, fill: 'none', stroke: '#ffd166', 'stroke-width': 5 }, g); }
+        camG = cl; }
       const S = { data: sceneData(o.scene), L: sceneLang(o.scene, lang) };
       const ctx = { uid: 's' + idx, defs, L, lang, money, preview: !!opts.preview, channelName, tagline, dur: o.dur };
       let draw = () => {};
-      try { draw = SCENES[o.scene.type].build.call(SCENES[o.scene.type], g, S, ctx); } catch (e) { console.error('Scene', idx, o.scene.type, e); txt(g, 960, 540, 'Scene error: ' + e.message, 40, 700, '#d62828'); }
+      try { draw = SCENES[o.scene.type].build.call(SCENES[o.scene.type], body, S, ctx); } catch (e) { console.error('Scene', idx, o.scene.type, e); txt(g, 960, 540, 'Scene error: ' + e.message, 40, 700, '#d62828'); }
+      if (camG) { const r = camG.slot, fr = el('g', {}, g); el('rect', { x: r.x, y: r.y, width: r.w, height: r.h, rx: r.r, fill: '#0b1522', opacity: o.take ? 0 : .55 }, fr); el('rect', { x: r.x, y: r.y, width: r.w, height: r.h, rx: r.r, fill: 'none', stroke: '#ffd166', 'stroke-width': 6 }, fr); if (!o.take) txt(fr, r.x + r.w / 2, r.y + r.h / 2 + 8, 'YOUR CAMERA', 30, 800, '#ffd166', { max: r.w - 40 }); }
       fitAll(g);
       return { o, g, draw };
     });
@@ -976,5 +1027,6 @@
     return s;
   }
 
-  root.Explainer = { SCENES, ITEM_KINDS, mount, timeline, speechNeed, srt, script, newScene, sceneLang, sceneData, langOf, takeOf, takeSig, W, H, LEAD, TAIL, FADE };
+  Object.keys(SCENES).forEach(k => { const T = SCENES[k]; if (!T.camera && T.fields && !T.fields.some(f => f.k === 'cam')) T.fields.push({ k: 'cam', per: 'data', kind: 'select', options: [['', 'No video of me in this scene']].concat(Object.keys(CAM_LAYOUTS).map(c => [c, CAM_LAYOUTS[c].label])), label: 'My video in this scene (record yourself for it)' }); });
+  root.Explainer = { CAM_LAYOUTS, camSlot, SCENES, ITEM_KINDS, mount, timeline, speechNeed, srt, script, newScene, sceneLang, sceneData, langOf, takeOf, takeSig, W, H, LEAD, TAIL, FADE };
 })(typeof window !== 'undefined' ? window : globalThis);

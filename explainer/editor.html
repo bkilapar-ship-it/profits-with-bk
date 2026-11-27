@@ -73,7 +73,7 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 13:20 thumbnails</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 13:50 scene video + outro</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -192,9 +192,9 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=0016"></script>
+<script src="engine.js?v=0017"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=0016"></script>
+<script src="cutout.js?v=0017"></script>
 <script>
 (() => {
 'use strict';
@@ -539,7 +539,7 @@ async function loadBlob(file) {
 }
 let deviceKeys = new Set();
 async function refreshDeviceKeys() { try { deviceKeys = new Set(await DB.keys()); } catch (e) { deviceKeys = new Set(); } Object.keys(blobs).forEach(k => deviceKeys.add(k)); refreshTakeStatus(); }
-const isCam = s => !!(E.SCENES[s.type] || {}).camera;
+const isCam = s => !!E.camSlot(s);
 const takeOf = (s, l = lang) => E.takeOf(s, l);
 function takeStatus(s, o) {
   const t = takeOf(s), L = ep.languages[lang].name || lang;
@@ -640,7 +640,7 @@ function syncMedia(o) {
   if (!cur) return;
   const t = o.take, local = t.in + (tNow - o.start - E.LEAD), inside = local >= t.in && local < t.out;
   if (cur.tagName === 'VIDEO') {
-    const r = E.SCENES[o.scene.type].slot(E.sceneData(o.scene)), sw = $('stageBox').clientWidth / E.W;
+    const r = E.camSlot(o.scene), sw = $('stageBox').clientWidth / E.W;
     Object.assign(cur.style, { display: 'block', left: r.x * sw + 'px', top: r.y * sw + 'px', width: r.w * sw + 'px', height: r.h * sw + 'px', borderRadius: r.r * sw + 'px' });
     const free = r.mode === 'soft' || r.mode === 'cut'; cur.classList.toggle('free', !!free); cur.style.objectFit = free ? 'contain' : '';
     const mk2 = free ? FEATHER_CSS : 'none'; cur.style.webkitMaskImage = cur.style.maskImage = mk2; cur.style.webkitMaskComposite = 'source-in'; cur.style.maskComposite = 'intersect';
@@ -1190,7 +1190,7 @@ async function makeOnDevice(opts) {
       const d = buf.getChannelData(0), a0 = Math.floor(t.in * buf.sampleRate), b0 = Math.min(d.length, Math.floor(t.out * buf.sampleRate)); let sq = 0;
       for (let i = a0; i < b0; i++) sq += d[i] * d[i];
       const rms = Math.sqrt(sq / Math.max(1, b0 - a0)) || .05;
-      const k = { o, t, buf, gain: Math.min(6, Math.max(.5, .1 / rms)), at: o.start + E.LEAD, slot: T.camera && t.kind === 'video' ? T.slot(E.sceneData(o.scene)) : null, el: null };
+      const k = { o, t, buf, gain: Math.min(6, Math.max(.5, .1 / rms)), at: o.start + E.LEAD, slot: t.kind === 'video' ? E.camSlot(o.scene) : null, el: null };
       if (k.slot) {
         const v = document.createElement('video'); v.playsInline = true; v.setAttribute('playsinline', ''); v.muted = true; v.preload = 'auto'; v.src = URL.createObjectURL(main); urls.push(v.src);
         await new Promise(res => { v.onloadeddata = res; v.onerror = res; setTimeout(res, 5000); });
