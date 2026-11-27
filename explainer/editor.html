@@ -73,7 +73,7 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 21:00 tap from start</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 21:20 sound check</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -192,9 +192,9 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=0035"></script>
+<script src="engine.js?v=0036"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=0035"></script>
+<script src="cutout.js?v=0036"></script>
 <script>
 (() => {
 'use strict';
@@ -578,6 +578,7 @@ function timingHTML(s, i, t) {
     <div class="muted" style="margin:6px 0">Each line starts at a time in your recording (seconds). Type the time where you really start saying it. Tap ▶ to listen from just before it. Tip: next time, tap “Next line” while recording and this is done for you.</div>
     <div class="muted" style="margin:6px 0 2px">Everything early or late by the same amount? Shift all lines:</div>
     <div class="row" style="gap:6px;margin-bottom:6px">${[-1, -.5, -.1, .1, .5, 1].map(d => `<button class="sm" data-lsh="${i}:${d}">${d > 0 ? '+' : ''}${d}s</button>`).join('')}</div>
+    <button class="sm" data-lchk="${i}" style="margin:6px 0">🔬 Check sound alignment (for me to read)</button><div id="lchk_${i}" class="muted" style="font-size:13px;margin-bottom:6px"></div>
     <button class="pri" data-ltap="${i}" style="margin:6px 0">🎯 Play my recording and tap where each line starts</button>
     ${lines.map((x, j) => j === 0 ? '' : `<div class="row" style="align-items:center;gap:6px;margin:4px 0"><span class="muted" style="width:56px">Line ${j + 1}</span><input type="number" inputmode="decimal" step="0.1" min="0" max="${t.out}" data-lm="${i}:${j}" value="${abs[j].toFixed(1)}" style="width:84px"><span class="muted">s</span><button class="sm" data-lp="${i}:${j}">▶</button><span class="muted" style="flex:1;font-size:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(String(x).slice(0, 48))}</span></div>`).join('')}</details>`;
 }
@@ -621,6 +622,16 @@ function wireTake(s, i) {
   box.querySelectorAll(`[data-lsh^="${i}:"]`).forEach(bt => bt.onclick = ev => { ev.stopPropagation(); const t = (((s.lang || {})[lang]) || {}).take; if (!t) return; const d = +bt.dataset.lsh.split(':')[1], { abs } = lineStartsAbs(s, t);
     let prev = t.in; const marks = [t.in]; abs.forEach((v, j) => { if (j === 0) return; let x = v + d; x = Math.max(prev + .3, Math.min(t.out - .3, x)); marks.push(+x.toFixed(2)); prev = x; });
     t.marks = marks; t.marksOn = true; changed(); remount(); refreshTakeStatus(); box.querySelectorAll(`[data-lm^="${i}:"]`).forEach(inp => { const k = +inp.dataset.lm.split(':')[1]; if (marks[k] != null) inp.value = marks[k].toFixed(1); }); });
+  { const ck = box.querySelector(`[data-lchk="${i}"]`); if (ck) ck.onclick = async ev => { ev.stopPropagation(); const out = $('lchk_' + i); const t = (((s.lang || {})[lang]) || {}).take; if (!t) return; out.textContent = 'Reading the sound…';
+    try { const AC = window.AudioContext || window.webkitAudioContext, ac = new AC(); const main = blobs[t.file] || await loadBlob(t.file), aud = t.aud ? (blobs[t.file + '.aud'] || await loadBlob(t.file + '.aud')) : null;
+      const env = b => { const d = b.getChannelData(0), w = Math.floor(b.sampleRate / 50), n = Math.min(Math.floor(d.length / w), 50 * 45), r = new Float32Array(n); for (let k = 0; k < n; k++) { let q2 = 0; for (let j = k * w; j < (k + 1) * w; j++) q2 += d[j] * d[j]; r[k] = Math.sqrt(q2 / w); } return r; };
+      const onset = (r, f) => { const mx = Math.max(...r); for (let k = 0; k < r.length; k++) if (r[k] > mx * .15) return k / f; return -1; };
+      const bm = await decodeSound(ac, main), ba = aud ? await decodeSound(ac, aud) : null, lines = [];
+      lines.push(`video file: duration ${t.dur}s, sound decoded ${bm ? bm.duration.toFixed(2) + 's' : 'NO'}${bm ? ', first speech at ' + onset(env(bm), 50).toFixed(2) + 's' : ''}`);
+      lines.push(`voice copy: ${ba ? 'duration ' + ba.duration.toFixed(2) + 's, first speech at ' + onset(env(ba), 50).toFixed(2) + 's' : 'none'}`);
+      if (bm && ba) { const x = env(bm), y = env(ba); let best = 0, bl = 0; for (let l = -200; l <= 200; l++) { let c = 0; for (let k = 0; k < x.length; k++) { const j = k + l; if (j >= 0 && j < y.length) c += x[k] * y[j]; } if (c > best) { best = c; bl = l; } } lines.push(`voice copy runs ${(bl / 50).toFixed(2)}s ${bl > 0 ? 'LATER' : 'earlier'} than the video file's sound`); }
+      const el = mediaFor(t, true); lines.push(`player: duration ${isFinite(el.duration) ? el.duration.toFixed(2) : '?'}s`);
+      out.innerHTML = lines.map(esc).join('<br>'); } catch (err) { out.textContent = 'Could not check: ' + err.message; } }; }
   { const lt = q('ltap'); if (lt) lt.onclick = ev => { ev.stopPropagation(); const t = (((s.lang || {})[lang]) || {}).take; if (t) openTakePreview(s, i, Math.max(0, t.in), true); }; }
   const so = q('tsyncoff'); if (so) so.onclick = e => { e.stopPropagation(); const t = (((s.lang || {})[lang]) || {}).take; if (t) { t.marksOn = false; delete t.marks; changed(); renderScenes(); remount(); msg('Back to the automatic timing.', ''); } };
   const pv = q('tprev'); if (pv) pv.onclick = e => { e.stopPropagation(); openTakePreview(s, i); };
