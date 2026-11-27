@@ -223,6 +223,8 @@
         const slots = [], rows = [340, 520, 700];
         rows.forEach((yy, ri) => [0, 1].forEach(ci => sides.forEach((sd, si) => { if (sd.free < 240 + ci * 260) return; slots.push([Math.round(sd.edge + sd.dir * (125 + ci * 250)), yy + ((ri + ci + si) % 2) * 25]); })));
         if (!slots.length) slots.push([960, 330]);
+        // side by side (or circle): the whole empty half becomes a stage where each spoken line's picture pops up BIG, one line at a time
+        const bigSd = sides.length === 1 && sides[0].free >= 700 ? sides[0] : null, bigCx = bigSd ? (bigSd.dir < 0 ? bigSd.edge / 2 : bigSd.edge + bigSd.free / 2) : 0;
         const per = {};
         popSpec.forEach(p => { if (st[p.line] != null) (per[p.line] = per[p.line] || []).push(p); });
         const popG = el('g', {}, g); let k = 0;
@@ -232,7 +234,8 @@
           el('circle', { r: 78, fill: '#0b1522', opacity: .9, stroke: '#ffd166', 'stroke-width': 5 }, gg);
           const ic = el('g', { transform: 'scale(.74)' }, gg); cardIcon(ic, p.icon);
           if (p.label) { const t = txt(gg, 0, 134, p.label, 32, 800, '#fff', { max: 236, attrs: { stroke: '#05101c', 'stroke-width': 7, 'paint-order': 'stroke' } }); void t; }
-          pops.push({ gg, ring, px, py, k, t0: st[j] + .12 + (len * .78) * (i / arr.length), life: Math.min(4.4, Math.max(2.6, len / arr.length * 1.5 + 1)) }); k++; }); });
+          const Bz = bigSd ? (arr.length > 2 ? 1.1 : arr.length > 1 ? 1.45 : 1.9) : 1, bx = bigSd ? bigCx + (i - (arr.length - 1) / 2) * (arr.length > 2 ? 300 : 380) : px, by = bigSd ? 470 : py;
+          pops.push({ gg, ring, B: Bz, px: bx, py: by, k, t0: st[j] + .12 + (len * .78) * (i / arr.length), life: Math.min(4.4, Math.max(2.6, len / arr.length * 1.5 + 1)) }); k++; }); });
       }
       const brand = el('g', {}, g), third = el('g', {}, g);
       const cam = S.L.take && S.L.take.kind === 'video' ? S.L.take : null;
@@ -286,7 +289,7 @@
         dots.setAttribute('transform', `translate(0,${-ts * 6})`);
         if (camG) camG.setAttribute('opacity', ease(prog(u * ctx.dur, 0, .35)));
         pops.forEach(p => { const t = u * ctx.dur - p.t0; if (t < 0 || t > p.life) { p.gg.setAttribute('opacity', 0); return; }
-          const inn = bounce(prog(t, 0, .5)), out = 1 - ease(prog(t, p.life - .35, p.life)), sc = lerp(.3, 1, inn) * lerp(.7, 1, out), bob = Math.sin(t * 3 + p.k) * 9, rot = Math.sin(t * 2.2 + p.k * 1.7) * 4, rg = prog(t, 0, .7);
+          const inn = bounce(prog(t, 0, .5)), out = 1 - ease(prog(t, p.life - .35, p.life)), sc = lerp(.3, 1, inn) * lerp(.7, 1, out) * (p.B || 1), bob = Math.sin(t * 3 + p.k) * 9, rot = Math.sin(t * 2.2 + p.k * 1.7) * 4, rg = prog(t, 0, .7);
           p.gg.setAttribute('opacity', Math.min(1, t / .15) * out); p.gg.setAttribute('transform', `translate(${p.px},${p.py + bob}) rotate(${rot}) scale(${sc})`);
           p.ring.setAttribute('r', lerp(105, 190, rg)); p.ring.setAttribute('opacity', 1 - rg); });
         if (img) { // video frames prepared by render.js: frame number = time since the voice started

@@ -73,7 +73,7 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 11:40 clean patches</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 12:10 trim + big visuals</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -175,9 +175,9 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=0011"></script>
+<script src="engine.js?v=0012"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=0011"></script>
+<script src="cutout.js?v=0012"></script>
 <script>
 (() => {
 'use strict';
@@ -545,6 +545,10 @@ function takeHTML(s, i, o) {
     <div class="row"><button class="sm pri" data-rec="${i}">${t ? '↺ Record again' : cam ? '🎥 Record yourself' : '🎙 Record voice'}</button>
     <label class="sm" style="padding:4px 8px;border:1px solid var(--line);border-radius:8px;cursor:pointer;font-size:13px">📁 Choose a ${cam ? 'video' : 'video or sound'} file<input type="file" accept="video/*,audio/*" data-tfile="${i}" style="display:none"></label>
     ${t ? `<button class="sm" data-tprev="${i}">👁 Preview my recording</button><button class="sm" data-tplay="${i}">▶ Play scene with animation</button><button class="sm" data-tdl="${i}">⬇ Download to phone</button><button class="sm" data-tdel="${i}">✕ Discard recording</button>` : ''}</div>
+    ${t && t.dur > 1 ? `<div style="margin:8px 0 2px"><div class="muted" style="margin-bottom:4px">Choose where your recording starts and ends. Move End to just before you reach for the camera; the last few seconds play so you can check.</div>
+      <div class="row" style="align-items:center;gap:6px"><span class="muted" style="width:40px">Start</span><button class="sm" data-tn="${i}:in:-0.2">−</button><input type="range" data-tin="${i}" min="0" max="${t.dur}" step="0.05" value="${t.in}" style="flex:1"><button class="sm" data-tn="${i}:in:0.2">+</button><b data-tinv="${i}" style="width:50px;text-align:right">${t.in.toFixed(2)}s</b></div>
+      <div class="row" style="align-items:center;gap:6px"><span class="muted" style="width:40px">End</span><button class="sm" data-tn="${i}:out:-0.2">−</button><input type="range" data-tout="${i}" min="0" max="${t.dur}" step="0.05" value="${t.out}" style="flex:1"><button class="sm" data-tn="${i}:out:0.2">+</button><b data-toutv="${i}" style="width:50px;text-align:right">${t.out.toFixed(2)}s</b></div>
+      ${t.auto ? `<button class="sm" data-tauto="${i}" style="margin-top:4px">↺ Back to the automatic trim</button>` : ''}</div>` : ''}
     <div id="tpv_${i}"></div>
     <div class="ref">Record ${what} reading this scene's lines. The scene stretches to fit, and quiet bits at the start and end are trimmed. Recordings stay on this device; only their timings are saved.</div></div>`;
 }
@@ -553,17 +557,32 @@ function wireTake(s, i) {
   const r = q('rec'); if (r) r.onclick = e => { e.stopPropagation(); openRecorder(i); };
   const f = q('tfile'); if (f) { f.onclick = e => e.stopPropagation(); f.onchange = () => { const file = f.files[0]; f.value = ''; if (file) useFile(i, file); }; }
   const p = q('tplay'); if (p) p.onclick = e => { e.stopPropagation(); seekScene(i); play(); };
-  const pv = q('tprev'); if (pv) pv.onclick = async e => { // watch or listen to your trimmed recording right here, no build needed
-    e.stopPropagation(); const t = takeOf(s), box = $('tpv_' + i); if (!t) return;
+  const trimSet = (which, v, commit) => { const t = (((s.lang || {})[lang]) || {}).take; if (!t || !takeOf(s)) return; v = Math.max(0, Math.min(t.dur, +v));
+    if (which === 'in') t.in = Math.min(v, t.out - .5); else t.out = Math.max(v, t.in + .5);
+    t.in = +t.in.toFixed(2); t.out = +t.out.toFixed(2);
+    const a = q('tin'), b = q('tout'), av = q('tinv'), bv = q('toutv'); if (a) a.value = t.in; if (b) b.value = t.out; if (av) av.textContent = t.in.toFixed(2) + 's'; if (bv) bv.textContent = t.out.toFixed(2) + 's';
+    if (commit) { changed(); remount(); refreshTakeStatus(); openTakePreview(s, i, which === 'out' ? Math.max(t.in, t.out - 3) : t.in); } };
+  const ti = q('tin'); if (ti) { ti.onclick = e => e.stopPropagation(); ti.oninput = () => trimSet('in', ti.value, false); ti.onchange = () => trimSet('in', ti.value, true); }
+  const to = q('tout'); if (to) { to.onclick = e => e.stopPropagation(); to.oninput = () => trimSet('out', to.value, false); to.onchange = () => trimSet('out', to.value, true); }
+  box.querySelectorAll(`[data-tn^="${i}:"]`).forEach(bt => bt.onclick = e => { e.stopPropagation(); const [, w, d] = bt.dataset.tn.split(':'), t = takeOf(s); if (t) trimSet(w, t[w] + +d, true); });
+  const au = q('tauto'); if (au) au.onclick = e => { e.stopPropagation(); const t = (((s.lang || {})[lang]) || {}).take; if (t && t.auto) { t.in = t.auto[0]; t.out = t.auto[1]; changed(); renderScenes(); remount(); } };
+  const pv = q('tprev'); if (pv) pv.onclick = e => { e.stopPropagation(); openTakePreview(s, i); };
+  wireTake2(s, i);
+}
+async function openTakePreview(s, i, from) { // watch or listen to your trimmed recording right here, no build needed
+  { const box = $('tpv_' + i); const t = takeOf(s); if (!t || !box) return;
     box.innerHTML = '<div class="muted">Opening your recording…</div>';
     const b = blobs[t.file] || await loadBlob(t.file);
     if (!b) { box.innerHTML = '<div class="msg bad">This recording is not on this device. Record it again here.</div>'; return; }
     const m = document.createElement(t.kind === 'video' ? 'video' : 'audio'); m.controls = true; m.playsInline = true; m.setAttribute('playsinline', ''); m.style.cssText = 'width:100%;margin-top:8px;border-radius:8px'; m.src = URL.createObjectURL(b);
-    m.onloadedmetadata = () => { try { m.currentTime = t.in; } catch (x) {} };
+    m.onloadedmetadata = () => { try { m.currentTime = from != null ? from : t.in; } catch (x) {} };
     m.ontimeupdate = () => { if (m.currentTime >= t.out) { m.pause(); try { m.currentTime = t.in; } catch (x) {} } };
     box.innerHTML = ''; box.appendChild(m); m.play().catch(() => {});
     const hint = document.createElement('div'); hint.className = 'muted'; hint.textContent = 'This is the part that will be used (quiet bits at the start and end are already cut). Not happy? Tap Discard recording and record again.'; box.appendChild(hint);
-  };
+  }
+}
+function wireTake2(s, i) {
+  const box = $('scenes'), q = k => box.querySelector(`[data-${k}="${i}"]`);
   const dl = q('tdl'); if (dl) dl.onclick = async e => {
     e.stopPropagation(); const t = takeOf(s); if (!t) return; const b = blobs[t.file] || await loadBlob(t.file);
     if (!b) return msg('This recording is not on this device.', 'bad');
@@ -786,7 +805,7 @@ function storeTake(i, blob, kind, dur, a, b, ext, aud) {
   const stamp = new Date().toISOString().replace(/[-:]/g, '').replace(/\..*/, '').replace('T', '-');
   const file = `takes/${ep.id}/${lang}/scene${i + 1}-${stamp}.${ext}`;
   s.lang = s.lang || {}; s.lang[lang] = s.lang[lang] || {};
-  s.lang[lang].take = { file, kind, dur: +dur.toFixed(2), in: +a.toFixed(2), out: +b.toFixed(2), store: 'device' };
+  s.lang[lang].take = { file, kind, dur: +dur.toFixed(2), in: +a.toFixed(2), out: +b.toFixed(2), auto: [+a.toFixed(2), +b.toFixed(2)], store: 'device' };
   blobs[file] = blob; deviceKeys.add(file);
   if (aud) { s.lang[lang].take.aud = true; blobs[file + '.aud'] = aud; deviceKeys.add(file + '.aud'); saveBlob(file + '.aud', aud).catch(() => {}); }
   changed(); renderScenes(); remount(); seekScene(i);

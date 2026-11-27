@@ -65,3 +65,7 @@ A new kind of scene (for example a padlock for an encryption episode) is a new e
 
 ## Teleprompter (recording)
 Same style as the studio: the whole script is one colour and scrolls past a fixed dashed reading line (30% down the box). Speed is set in words per minute (- / + in steps of 5, 80 to 220, remembered as `exWpm`). The animation and popups follow the same clock, so they stay in step when the speed changes. Pause/Resume, Mirror and Text size are on the recorder. Popups now sit in the side margins (x 130 and 1790) so the presenter's body never covers them.
+
+## Trim a recording, and big visuals in Side by side
+- Under "Your recording" each scene now has Start and End sliders (0.05 s steps, plus - / + nudges). Moving End plays the last 3 seconds so you can stop before you reach for the camera. "Back to the automatic trim" undoes it.
+- In the presenter scene with the Side by side or Circle layout, the popups lines (line number | picture | word) show BIG on the empty half, one spoken line at a time (two or three pictures sit side by side). Other layouts keep the small popups beside you.
