@@ -73,7 +73,7 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 20:40 starts at 0</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 21:00 tap from start</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -192,9 +192,9 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=0034"></script>
+<script src="engine.js?v=0035"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=0034"></script>
+<script src="cutout.js?v=0035"></script>
 <script>
 (() => {
 'use strict';
@@ -632,7 +632,7 @@ async function openTakePreview(s, i, from, tap) { // watch or listen to your tri
     const b = blobs[t.file] || await loadBlob(t.file);
     if (!b) { box.innerHTML = '<div class="msg bad">This recording is not on this device. Record it again here.</div>'; return; }
     const m = document.createElement(t.kind === 'video' ? 'video' : 'audio'); m.controls = true; m.playsInline = true; m.setAttribute('playsinline', ''); m.style.cssText = 'width:100%;margin-top:8px;border-radius:8px'; m.src = URL.createObjectURL(b);
-    m.onloadedmetadata = () => { try { m.currentTime = from != null ? from : t.in; } catch (x) {} };
+    m.onloadedmetadata = () => { if (tap) return; try { m.currentTime = from != null ? from : t.in; } catch (x) {} }; // tapping plays from the very start: no seek, so the clock you tap on is exact
     m.ontimeupdate = () => { if (m.currentTime >= t.out) { m.pause(); try { m.currentTime = t.in; } catch (x) {} } };
     box.innerHTML = ''; box.appendChild(m); m.play().catch(() => {});
     if (tap) {
