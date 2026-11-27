@@ -17,7 +17,7 @@
       seg = s;
     })().catch(e => { loading = null; throw e; }));
   }
-  const mcv = document.createElement('canvas');
+  const mcv = document.createElement('canvas'), fcv = document.createElement('canvas');
   /** The mask comes back as alpha on some browsers and as a red-on-opaque picture on others (iPhone). Returns a small canvas where alpha = person. */
   function maskAlpha(m, tm) {
     const mw = m.width || 256, mh = m.height || 144; mcv.width = mw; mcv.height = mh;
@@ -32,8 +32,7 @@
     for (let i = 0, k = 0; i < d.length; i += 4, k++) {
       let v = (opaque ? Math.max(d[i], d[i + 1], d[i + 2]) : d[i + 3]) / 255;
       if (same) v = v * .55 + prevA[k] * .45; prevA[k] = v;
-      let q = (v - .52) / .30; q = q < 0 ? 0 : q > 1 ? 1 : q; q = q * q * (3 - 2 * q);
-      d[i] = d[i + 1] = d[i + 2] = 255; d[i + 3] = Math.round(q * 255);
+      d[i] = d[i + 1] = d[i + 2] = 255; d[i + 3] = Math.round(v * 255);
     }
     prevT = nowT; x.putImageData(id, 0, 0);
     return mcv;
@@ -50,7 +49,12 @@
       // picture first, then trim it with the mask canvas (canvas-to-canvas blending; blending a <video> directly is unreliable on iPhone Safari)
       const mk = maskAlpha(last.segmentationMask, video.currentTime);
       c.globalCompositeOperation = 'source-over'; c.drawImage(video, 0, 0, w, h);
-      c.globalCompositeOperation = 'destination-in'; c.drawImage(mk, 0, 0, w, h);
+      // stretch the soft mask smoothly to full size FIRST, then firm up the edge there: a clean curved outline instead of low-resolution steps
+      fcv.width = w; fcv.height = h; const fx = fcv.getContext('2d', { willReadFrequently: true }); fx.clearRect(0, 0, w, h); fx.imageSmoothingEnabled = true; fx.imageSmoothingQuality = 'high'; fx.drawImage(mk, 0, 0, w, h);
+      const fi = fx.getImageData(0, 0, w, h), fd = fi.data;
+      for (let i = 3; i < fd.length; i += 4) { let q = (fd[i] / 255 - .5) / .3; q = q < 0 ? 0 : q > 1 ? 1 : q; fd[i] = Math.round(q * q * (3 - 2 * q) * 255); }
+      fx.putImageData(fi, 0, 0);
+      c.globalCompositeOperation = 'destination-in'; c.drawImage(fcv, 0, 0);
       // soft fade at the bottom edge, so there is no hard straight line across the body
       const fg = c.createLinearGradient(0, h * .84, 0, h); fg.addColorStop(0, 'rgba(0,0,0,1)'); fg.addColorStop(1, 'rgba(0,0,0,0)');
       c.fillStyle = fg; c.fillRect(0, 0, w, h);
