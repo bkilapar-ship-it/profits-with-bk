@@ -73,7 +73,7 @@ canvas.camv{object-fit:contain}
 <body>
 <header>
   <h1>💡 Episode Editor</h1>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 18:25 timing kept</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 18:45 tap fix</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -192,9 +192,9 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=0028"></script>
+<script src="engine.js?v=0029"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=0028"></script>
+<script src="cutout.js?v=0029"></script>
 <script>
 (() => {
 'use strict';
@@ -633,7 +633,7 @@ async function openTakePreview(s, i, from, tap) { // watch or listen to your tri
       m.ontimeupdate = () => { clk.textContent = `Recording time ${m.currentTime.toFixed(1)} s`; if (m.currentTime >= (st.dur || 1e9) - .05) { m.pause(); } };
       ctl.querySelector('[data-a="p"]').onclick = ev => { if (m.paused) { m.play(); ev.target.textContent = '❚❚ Pause'; } else { m.pause(); ev.target.textContent = '▶ Resume'; } };
       ctl.querySelector('[data-a="r"]').onclick = () => { marks.length = 1; j = 1; label(); try { m.currentTime = st.in; } catch (x) {} m.play().catch(() => {}); };
-      bt.onclick = () => { const v = Math.max(marks[marks.length - 1] + .3, Math.min((st.dur || 1e9) - .3, m.currentTime - .2)); marks.push(+v.toFixed(2)); try { navigator.vibrate && navigator.vibrate(30); } catch (x) {} j++;
+      bt.onclick = () => { if (j >= lines.length) return; const v = Math.max(marks[marks.length - 1] + .3, Math.min((st.dur || 1e9) - .3, m.currentTime - .2)); marks.push(+v.toFixed(2)); try { navigator.vibrate && navigator.vibrate(30); } catch (x) {} j++;
         if (j < lines.length) { label(); return; }
         setTimeout(() => { endStep = true; }, 600); bt.textContent = 'I finished speaking: END here ■'; info.textContent = 'Keep listening. Tap the big button the moment the last line is finished. Everything after that is cut. (The recording now plays to its very end, so you can hear what was being cut.)'; };
       bt.addEventListener('click', () => { if (!endStep || j < lines.length || done) return; done = true; st.out = +Math.min(st.dur || 1e9, Math.max(marks[marks.length - 1] + .5, m.currentTime + .1)).toFixed(2);
