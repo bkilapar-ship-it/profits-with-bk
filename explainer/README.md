@@ -79,3 +79,6 @@ Video tab, "Thumbnails" card: 1280x720 video thumbnail and 1080x1920 Short thumb
 ## My video in any scene, and the new end scene
 - Every scene except the presenter has "My video in this scene": a round bubble (bottom right or left) or Side by side (the scene shrinks to one side, your video beside it). Recording that scene then records your camera, and Make video puts you in the frame (`cam` in the scene data, `Explainer.camSlot`).
 - The end scene (outro) with three spoken lines is animated per line: a robot shopping (line 1), comments appearing (line 2), then like, share and subscribe with the bell (line 3). Headings per line: `head1`, `head2`, `heading`. With fewer than three lines it plays the old like/share/subscribe animation.
+
+## Cards follow the script
+Step cards appear when the spoken line they belong to starts (same timing as the captions, so it follows your recording). A card can name its line with an optional 4th part: `phone | Add your card | Like a wallet | 2` (line 2). Several cards on the same line come in one after another across that line. Without the 4th part the cards share the last lines in order.

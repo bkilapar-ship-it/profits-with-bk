@@ -58,10 +58,10 @@
     "en": {
      "heading": "Step 1: Set up once",
      "items": [
-      "phone | Add your card | Like adding a card to your phone wallet",
-      "fingerprint | Bank checks it's you | Fingerprint or a code",
-      "card | Agent gets a stand-in | Not your real card",
-      "list | You set the rules | Milk and cheese: M&S / Limit: £25"
+      "phone | Add your card | Like adding a card to your phone wallet | 2",
+      "fingerprint | Bank checks it's you | Fingerprint or a code | 3",
+      "card | Agent gets a stand-in | Not your real card | 4",
+      "list | You set the rules | Milk and cheese: M&S / Limit: £25 | 5"
      ],
      "note": "",
      "lines": [
@@ -83,10 +83,10 @@
     "en": {
      "heading": "Step 2: Ask for quotes",
      "items": [
-      "list | Your shopping list | Detergent, soap, / milk, cheese",
-      "shop | Shop A | Sends a quote",
-      "shop | Shop B | Sends a quote",
-      "shop | M&S | Sends a quote"
+      "list | Your shopping list | Detergent, soap, / milk, cheese | 2",
+      "shop | Shop A | Sends a quote | 3",
+      "shop | Shop B | Sends a quote | 3",
+      "shop | M&S | Sends a quote | 3"
      ],
      "note": "A request for quote is called an RFQ.",
      "lines": [
@@ -107,9 +107,9 @@
     "en": {
      "heading": "Step 3: Compare the totals",
      "items": [
-      "lock | Your rule is locked in | Milk and cheese: M&S",
-      "scales | Compare the totals | Detergent and soap, / one total per shop",
-      "tick! | Lowest total wins | The rest of the basket / goes there"
+      "lock | Your rule is locked in | Milk and cheese: M&S | 2",
+      "scales | Compare the totals | Detergent and soap, / one total per shop | 3",
+      "tick! | Lowest total wins | The rest of the basket / goes there | 4"
      ],
      "note": "",
      "lines": [
@@ -130,9 +130,9 @@
     "en": {
      "heading": "A made-up example",
      "items": [
-      "shop | Shop A | Detergent £3.90 / Soap £3.50 / Total £7.40",
-      "shop! | Shop B | Detergent £4.10 / Soap £3.00 / Total £7.10 / Wins on the total",
-      "lock | M&S | Milk and cheese, / locked in"
+      "shop | Shop A | Detergent £3.90 / Soap £3.50 / Total £7.40 | 1",
+      "shop! | Shop B | Detergent £4.10 / Soap £3.00 / Total £7.10 / Wins on the total | 2",
+      "lock | M&S | Milk and cheese, / locked in | 4"
      ],
      "note": "Example prices, made up for this video.",
      "lines": [
@@ -153,10 +153,10 @@
     "en": {
      "heading": "Step 4: Pay",
      "items": [
-      "agent | The agent pays | The stand-in, for just that amount and shop",
-      "shield | The shop checks | Is this a genuine agent?",
-      "network | Card network checks | Is the payment valid?",
-      "tick! | Your bank approves | Like any card payment"
+      "agent | The agent pays | The stand-in, for just that amount and shop | 2",
+      "shield | The shop checks | Is this a genuine agent? | 3",
+      "network | Card network checks | Is the payment valid? | 3",
+      "tick! | Your bank approves | Like any card payment | 4"
      ],
      "note": "",
      "lines": [
@@ -177,9 +177,9 @@
     "en": {
      "heading": "Over your limit?",
      "items": [
-      "pound | Your limit | £25 in total",
-      "stop | The agent stops | The total is above the limit",
-      "alert | You get asked | Approve it, or say no"
+      "pound | Your limit | £25 in total | 1",
+      "stop | The agent stops | The total is above the limit | 1",
+      "alert | You get asked | Approve it, or say no | 1"
      ],
      "note": "",
      "lines": [
@@ -198,9 +198,9 @@
     "en": {
      "heading": "Who is building this?",
      "items": [
-      "shield | Permission | Example: Google's AP2",
-      "id | Identity | Examples: Visa and Mastercard agent checks",
-      "card | Payment | Examples: Visa and Mastercard"
+      "shield | Permission | Example: Google's AP2 | 1",
+      "id | Identity | Examples: Visa and Mastercard agent checks | 1",
+      "card | Payment | Examples: Visa and Mastercard | 1"
      ],
      "note": "Examples only. Not an endorsement.",
      "lines": [
@@ -219,9 +219,9 @@
     "en": {
      "heading": "Who pays if it goes wrong?",
      "items": [
-      "question | The open question | Is an agent's payment / counted as authorised?",
-      "bank | Your bank | Refunds an unauthorised / payment first",
-      "scales | The FCA | Firms stay responsible"
+      "question | The open question | Is an agent's payment / counted as authorised? | 1",
+      "bank | Your bank | Refunds an unauthorised / payment first | 2",
+      "scales | The FCA | Firms stay responsible | 4"
      ],
      "note": "Education only, not legal advice.",
      "lines": [
@@ -242,9 +242,9 @@
     "en": {
      "heading": "Until then",
      "items": [
-      "pound | Set a limit | Cap what it can spend",
-      "alert | Approve big buys | Ask for your OK",
-      "shield | Protect your card | Don't share card details with tools you don't understand"
+      "pound | Set a limit | Cap what it can spend | 1",
+      "alert | Approve big buys | Ask for your OK | 1",
+      "shield | Protect your card | Don't share card details with tools you don't understand | 1"
      ],
      "note": "",
      "lines": [

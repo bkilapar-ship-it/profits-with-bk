@@ -134,6 +134,12 @@
   // cues: where each voiceover line starts, in base seconds (used when the number of lines matches).
   // fields: what the editor shows. per:'lang' = different in each language, per:'data' = same for every language.
   const SCENES = {};
+  /** When each spoken line starts and ends inside a scene (same split of the recording as the captions use). */
+  function lineTimesOf(S, ctx) {
+    const lines = (S.L.lines || []).filter(x => String(x).trim()), tk = S.L.take, spanT = tk ? tk.out - tk.in : ctx.dur, offT = tk ? LEAD - .15 : 0, tot = lines.reduce((a, q) => a + Math.max(12, q.length), 0); let acc = offT;
+    const st = lines.map(q => { const x = acc; acc += spanT * Math.max(12, q.length) / tot; return x; });
+    return { n: lines.length, st, en: st.map((x, j) => j + 1 < st.length ? st[j + 1] : offT + spanT + .35) };
+  }
 
   const CARD_ICONS = ['card', 'phone', 'fingerprint', 'list', 'shop', 'basket', 'lock', 'tick', 'stop', 'bank', 'question', 'pound', 'agent', 'network', 'shield', 'id', 'alert', 'scales', 'bulb', 'detergent', 'soap', 'milk', 'cheese'];
   // Layouts for the presenter scene, like the ones common on YouTube. Your camera picture always sits in the "slot" box.
@@ -719,7 +725,7 @@
     label: 'Step cards (pictures with short words, shown one by one)', base: 10, captions: true,
     fields: [
       { k: 'heading', per: 'lang', kind: 'text', label: 'Heading on top (for example Step 1: Set up once)' },
-      { k: 'items', per: 'lang', kind: 'lines', label: 'Cards, one per line, as: picture | title | small words (use / for a new line). Pictures: ' + CARD_ICONS.join(', ') + '. Add ! after the picture to highlight a card.' },
+      { k: 'items', per: 'lang', kind: 'lines', label: 'Cards, one per line, as: picture | title | small words (use / for a new line). Pictures: ' + CARD_ICONS.join(', ') + '. Add ! after the picture to highlight a card. Optional 4th part: the number of the spoken line the card appears with, for example: phone | Add your card | Like a wallet | 2. Without it the cards share the last lines in order.' },
       { k: 'arrows', per: 'data', kind: 'select', options: [['yes', 'Arrows between the cards'], ['no', 'No arrows']], label: 'Arrows' },
       { k: 'note', per: 'lang', kind: 'text', label: 'Small note at the bottom (for example Example prices)' },
       { k: 'lines', per: 'lang', kind: 'lines', label: 'What you say (one line per caption)' },
@@ -750,10 +756,13 @@
       const br = el('g', {}, g); // the channel logo at the top of every middle scene
       el('rect', { x: 40, y: 24, width: 440, height: 80, rx: 40, fill: '#0b1522', opacity: .88, stroke: '#ffd166', 'stroke-width': 2 }, br);
       bulb(br, 92, 68, .85, false); txt(br, 138, 81, ctx.channelName, 40, 800, '#fff6dc', { anchor: 'start', max: 320 });
+      // each card comes in when the line it belongs to starts being spoken
+      const LT = lineTimesOf(S, ctx), PHZ = LT.n > 0, idxOf = items.map((a, i) => { const e = parseInt(a[3], 10); return e >= 1 && e <= LT.n ? e - 1 : (LT.n > n ? LT.n - n + i : Math.min(LT.n - 1, Math.floor(i * LT.n / n))); });
+      const at = idxOf.map((li, i) => { const grp = idxOf.map((x, j) => x === li ? j : -1).filter(j => j >= 0), k = grp.indexOf(i), m = grp.length; return PHZ ? LT.st[li] + .15 + k * ((LT.en[li] - LT.st[li]) * .7 / m) : 0; });
       return u => {
-        const ts = u * this.base; head.setAttribute('opacity', ease(prog(ts, 0, .5)));
+        const ts = u * this.base, tt = u * ctx.dur; head.setAttribute('opacity', ease(prog(PHZ ? tt : ts, 0, .5)));
         cards.forEach((c, i) => {
-          const a = .7 + i * (5.2 / n), d = prog(ts, a, a + .55), k = lerp(.8, 1, bounce(d)), cxm = c.cx + cw / 2, cym = top + ch / 2;
+          const a = PHZ ? at[i] : .7 + i * (5.2 / n), ts = PHZ ? tt : u * this.base, d = prog(ts, a, a + .55), k = lerp(.8, 1, bounce(d)), cxm = c.cx + cw / 2, cym = top + ch / 2;
           c.root.setAttribute('opacity', ease(prog(ts, a, a + .3)));
           c.root.setAttribute('transform', `translate(${cxm},${cym}) scale(${k}) translate(${-cxm},${-cym})`);
           if (arrows[i - 1]) arrows[i - 1].setAttribute('opacity', ease(prog(ts, a - .1, a + .3)));
