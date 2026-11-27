@@ -134,10 +134,15 @@
   // cues: where each voiceover line starts, in base seconds (used when the number of lines matches).
   // fields: what the editor shows. per:'lang' = different in each language, per:'data' = same for every language.
   const SCENES = {};
+  /** Start of each spoken line, in seconds after the voice starts: matched to the pauses found in your recording (take.marks) when there are some, otherwise spread by line length. */
+  function relStarts(lines, tk, span) {
+    if (tk && Array.isArray(tk.marks) && tk.marks.length === lines.length) return tk.marks.map((m, j) => j === 0 ? 0 : clamp(m - tk.in, 0, Math.max(0, span - .3)));
+    const tot = lines.reduce((a, q) => a + Math.max(12, String(q).length), 0); let acc = 0; return lines.map(q => { const x = acc; acc += span * Math.max(12, String(q).length) / tot; return x; });
+  }
   /** When each spoken line starts and ends inside a scene (same split of the recording as the captions use). */
   function lineTimesOf(S, ctx) {
-    const lines = (S.L.lines || []).filter(x => String(x).trim()), tk = S.L.take, spanT = tk ? tk.out - tk.in : ctx.dur, offT = tk ? LEAD - .15 : 0, tot = lines.reduce((a, q) => a + Math.max(12, q.length), 0); let acc = offT;
-    const st = lines.map(q => { const x = acc; acc += spanT * Math.max(12, q.length) / tot; return x; });
+    const lines = (S.L.lines || []).filter(x => String(x).trim()), tk = S.L.take, spanT = tk ? tk.out - tk.in : ctx.dur, offT = tk ? LEAD - .15 : 0;
+    const st = relStarts(lines, tk, spanT).map(x => offT + x);
     return { n: lines.length, st, en: st.map((x, j) => j + 1 < st.length ? st[j + 1] : offT + spanT + .35) };
   }
 
@@ -228,8 +233,8 @@
       const popSpec = (S.L.popups || []).map(x => String(x).split('|').map(q => q.trim())).filter(a => a.length >= 2 && +a[0] > 0 && a[1]).map(a => ({ line: +a[0] - 1, icon: a[1].toLowerCase(), label: a[2] || '' })), popLines = (S.L.lines || []).filter(x => String(x).trim());
       const pops = []; let storyFn = null;
       if (popSpec.length && popLines.length) {
-        const tk = S.L.take, spanT = tk ? tk.out - tk.in : ctx.dur, offT = tk ? LEAD - .15 : 0, tot = popLines.reduce((a, q) => a + Math.max(12, q.length), 0); let acc = offT;
-        const st = popLines.map(q => { const x = acc; acc += spanT * Math.max(12, q.length) / tot; return x; }), en = st.map((x, j) => (j + 1 < st.length ? st[j + 1] : offT + spanT + .35));
+        const tk = S.L.take, spanT = tk ? tk.out - tk.in : ctx.dur, offT = tk ? LEAD - .15 : 0;
+        const st = relStarts(popLines, tk, spanT).map(x => offT + x), en = st.map((x, j) => (j + 1 < st.length ? st[j + 1] : offT + spanT + .35));
         // popups sit right beside you (just outside the camera picture, or just outside your shoulders for cut-out layouts), nearest column first
         const half = r.mode ? 520 : null, lx = half ? 960 - half : r.x, rx = half ? 960 + half : r.x + r.w, sides = [];
         const room = (a2, b2) => b2 - a2; // free width on that side
@@ -827,7 +832,7 @@
       const spark = el('g', {}, g), sp = []; for (let i = 0; i < 6; i++) sp.push(el('path', { d: 'M0 -16 l4 12 l12 4 l-12 4 l-4 12 l-4 -12 l-12 -4 l12 -4z', fill: '#fff6dc' }, spark));
       txt(g, 960, 880, S.L.small || '', 28, 500, '#8fa6bd', { max: 1700 });
       // three spoken lines -> three scenes of animation: a robot shopping, comments, then like / share / subscribe
-      const lt = (() => { let lines = (S.L.lines || []).filter(x => String(x).trim()); if (lines.length < 3) { const se = lines.join(' ').match(/[^.!?]+[.!?]+/g); if (se && se.length >= 3) lines = se.map(x => x.trim()); } const tk = S.L.take, spanT = tk ? tk.out - tk.in : ctx.dur, offT = tk ? LEAD - .15 : 0, tot = lines.reduce((a, q) => a + Math.max(12, q.length), 0); let acc = offT; const st = lines.map(q => { const x = acc; acc += spanT * Math.max(12, q.length) / tot; return x; }); return { n: lines.length, st, en: st.map((x, j) => j + 1 < st.length ? st[j + 1] : offT + spanT + .35) }; })();
+      const lt = (() => { let lines = (S.L.lines || []).filter(x => String(x).trim()); if (lines.length < 3) { const se = lines.join(' ').match(/[^.!?]+[.!?]+/g); if (se && se.length >= 3) lines = se.map(x => x.trim()); } const tk = S.L.take, spanT = tk ? tk.out - tk.in : ctx.dur, offT = tk ? LEAD - .15 : 0; const st = relStarts(lines, tk, spanT).map(x => offT + x); return { n: lines.length, st, en: st.map((x, j) => j + 1 < st.length ? st[j + 1] : offT + spanT + .35) }; })();
       const PH = lt.n >= 3, ic = (par, name, k) => { const q = el('g', {}, par); cardIcon(el('g', { transform: `scale(${k})` }, q), name); return q; };
       const rob = el('g', { opacity: 0 }, g), cmt = el('g', { opacity: 0 }, g);
       el('rect', { x: 150, y: 770, width: 1620, height: 12, rx: 6, fill: '#3a4a60' }, rob);
@@ -952,7 +957,7 @@
       const from = o.take ? o.start + LEAD - .15 : o.start, span = o.take ? o.take.out - o.take.in : o.dur, endAt = o.take ? from + span + .35 : o.end;
       let starts;
       if (!o.take && lc.length === lines.length) starts = lc.map(c => o.start + c.at * k);
-      else { const tot = lines.reduce((a, s) => a + Math.max(12, s.length), 0); let acc = from; starts = lines.map(s => { const st = acc; acc += span * Math.max(12, s.length) / tot; return st; }); }
+      else starts = relStarts(lines, o.take, span).map(x => from + x);
       lines.forEach((s, j) => caps.push({ start: starts[j] + .15, end: (j + 1 < lines.length ? starts[j + 1] : endAt) - .1, text: s, show: T.captions !== false && o.scene.captions !== false }));
     });
     return { scenes, captions: caps, cues, duration: t };

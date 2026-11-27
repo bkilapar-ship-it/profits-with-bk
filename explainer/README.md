@@ -82,3 +82,6 @@ Video tab, "Thumbnails" card: 1280x720 video thumbnail and 1080x1920 Short thumb
 
 ## Cards follow the script
 Step cards appear when the spoken line they belong to starts (same timing as the captions, so it follows your recording). A card can name its line with an optional 4th part: `phone | Add your card | Like a wallet | 2` (line 2). Several cards on the same line come in one after another across that line. Without the 4th part the cards share the last lines in order.
+
+## Animation matched to your voice
+After you record (and when you trim, or tap "Match animation to my voice"), the editor listens for the pauses between your lines and saves their times as `take.marks` (one start time per spoken line). Captions, cards, popups, the shops story and the end scene use those times, so they follow what you actually said. If no clear pauses are found it falls back to spreading the lines by length. Tip: leave a short pause (a breath) between lines when you record.
