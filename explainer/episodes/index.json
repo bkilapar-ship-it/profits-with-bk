@@ -2,6 +2,8 @@
  "episodes": [
   "inflation",
   "tap-to-pay",
-  "agentic-payments"
+  "agentic-payments",
+  "short-robot-shopping",
+  "short-cheapest-total"
  ]
 }

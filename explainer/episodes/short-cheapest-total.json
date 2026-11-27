@@ -1,0 +1,51 @@
+{
+ "id": "short-cheapest-total",
+ "title": {
+  "en": "Short: Cheapest item or cheapest total?"
+ },
+ "languages": {
+  "en": {
+   "name": "English",
+   "currency": "£",
+   "locale": "en-GB",
+   "decimals": 2
+  }
+ },
+ "scenes": [
+  {
+   "type": "presenter",
+   "data": {
+    "layout": "side",
+    "side": "right",
+    "story": "compare",
+    "storyFrom": 2
+   },
+   "lang": {
+    "en": {
+     "title": "Cheapest item or cheapest total?",
+     "lines": [
+      "The cheapest soap isn't always the cheapest shop.",
+      "In this made-up example, Shop A charges £3.90 for detergent and £3.50 for soap.",
+      "That's £7.40 in total.",
+      "Shop B charges £4.10 and £3.00, so £7.10 in total.",
+      "Shop B isn't cheapest on everything, but it wins on the total.",
+      "An AI agent could add this up for you. Do you check the total, or each price? Tell me below."
+     ],
+     "popups": [
+      "1 | scales | Total or item?"
+     ]
+    }
+   }
+  }
+ ],
+ "shorts": [
+  {
+   "title": {
+    "en": "Cheapest item or cheapest total?"
+   },
+   "scenes": [
+    0
+   ]
+  }
+ ]
+}

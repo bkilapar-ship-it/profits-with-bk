@@ -1,0 +1,53 @@
+{
+ "id": "short-robot-shopping",
+ "title": {
+  "en": "Short: Can a robot do your shopping?"
+ },
+ "languages": {
+  "en": {
+   "name": "English",
+   "currency": "£",
+   "locale": "en-GB",
+   "decimals": 2
+  }
+ },
+ "scenes": [
+  {
+   "type": "presenter",
+   "data": {
+    "layout": "side",
+    "side": "right",
+    "story": "agentshop",
+    "storyFrom": 3
+   },
+   "lang": {
+    "en": {
+     "title": "Can a robot do your shopping?",
+     "lines": [
+      "Could an AI do your weekly shop, and pay for it?",
+      "That's called an AI agent.",
+      "You tell it what you need, like detergent and soap.",
+      "It checks the shops, adds up each total, and picks the best one.",
+      "Then it pays, but only inside the limit you set.",
+      "In this made-up example, Shop B wins on the total.",
+      "What else could an AI agent pay for? Comment below."
+     ],
+     "popups": [
+      "1 | question | Could it?",
+      "2 | agent | AI agent"
+     ]
+    }
+   }
+  }
+ ],
+ "shorts": [
+  {
+   "title": {
+    "en": "Can a robot do your shopping?"
+   },
+   "scenes": [
+    0
+   ]
+  }
+ ]
+}

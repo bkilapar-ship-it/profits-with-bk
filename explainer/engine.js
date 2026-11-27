@@ -246,7 +246,7 @@
         // side by side (or circle): the whole empty half becomes a stage where each spoken line's picture pops up BIG, one line at a time
         const bigSd = sides.length === 1 && sides[0].free >= 700 ? sides[0] : null, bigCx = bigSd ? (bigSd.dir < 0 ? bigSd.edge / 2 : bigSd.edge + bigSd.free / 2) : 0;
         const per = {};
-        const storyOn = !!bigSd && (S.data.story === 'shops' || (S.data.story == null && popSpec.some(p => p.icon === 'shop'))), SA = Math.max(0, (+S.data.storyFrom || 3) - 1);
+        const storyKind = !bigSd ? '' : ['shops', 'agentshop', 'compare'].includes(S.data.story) ? S.data.story : (S.data.story == null && popSpec.some(p => p.icon === 'shop') ? 'shops' : ''), storyOn = !!storyKind, SA = Math.max(0, (+S.data.storyFrom || 3) - 1);
         popSpec.forEach(p => { if (st[p.line] != null && !(storyOn && p.line >= SA)) (per[p.line] = per[p.line] || []).push(p); });
         const popG = el('g', {}, g); let k = 0;
         Object.keys(per).forEach(j => { const arr = per[j], len = en[j] - st[j]; arr.forEach((p, i) => {
@@ -269,6 +269,7 @@
             el('rect', { x: x0 + 20, y: 330, width: 160, height: 140, rx: 8, fill: '#bde0fe', stroke: '#264653', 'stroke-width': 6 }, q);
             items.forEach((n, i) => { const it = ico(q, n, .5); it.setAttribute('transform', `translate(${x0 + 62 + i * 76},${420}) scale(.62)`); });
             el('rect', { x: x0 + 196, y: 380, width: 66, height: 180, fill: '#264653' }, q); return q; };
+          if (storyKind === 'shops') {
           const s1 = shop(20, '#2a9d8f', 'SHOP 1', ['detergent', 'soap']), s2 = shop(600, '#e76f51', 'SHOP 2', ['milk', 'cheese']);
           el('rect', { x: -10, y: 560, width: 920, height: 14, rx: 7, fill: '#3a4a60', opacity: .9 }, sg);
           const tg1 = pill(sg, 160, 118, 330, 'Cheapest: detergent, soap', '#2a9d8f', '#fff'), tg2 = pill(sg, 740, 118, 330, 'Best quality: milk, cheese', '#ffd166', '#1b2433');
@@ -298,6 +299,55 @@
             fly.forEach((q, i) => { const f = prog(t, tD + .4 + i * .35, tD + 1.1 + i * .35), sx = [160, 220, 740, 690][i], sy = 440; q.setAttribute('opacity', f > 0 && f < 1 ? 1 : 0); q.setAttribute('transform', `translate(${lerp(sx, 450, ease(f))},${lerp(sy, 430, ease(f)) - Math.sin(f * Math.PI) * 120}) scale(${1 - f * .3})`); });
             const pa = prog(t, tD + 2.0, tD + 2.5); paid.setAttribute('opacity', Math.min(1, pa * 3)); paid.setAttribute('transform', `translate(0,${(1 - bounce(pa)) * 30})`);
           };
+          } else {
+          const tF = L1(SA + 4), tFe = L1(SA + 4, 1), pop = (t, q, t0, x, y, k2 = 1) => { const a2 = prog(t, t0, t0 + .45), bnc = bounce(a2); q.setAttribute('opacity', Math.min(1, a2 * 3)); q.setAttribute('transform', `translate(${x},${y}) scale(${lerp(.3, 1, bnc) * k2})`); };
+          const note = txt(g, side === 'left' ? 1785 : 145, 912, 'Example prices, made up for this video.', 28, 600, '#9fb3c8', { anchor: side === 'left' ? 'end' : 'start', max: 900 }); note.setAttribute('font-style', 'italic');
+          if (storyKind === 'agentshop') {
+            // you say what you need, the AI agent visits both shops and adds up each total, pays inside your limit, Shop B wins, then the question
+            const s1 = shop(20, '#2a9d8f', 'SHOP A', ['detergent', 'soap']), s2 = shop(600, '#e76f51', 'SHOP B', ['detergent', 'soap']);
+            el('rect', { x: -10, y: 560, width: 920, height: 14, rx: 7, fill: '#3a4a60', opacity: .9 }, sg);
+            const pwr = el('g', {}, sg), PP = makePerson(pwr, { shirt: '#4cc9f0', shirtB: '#3a9bbd' });
+            const need = el('g', {}, sg); el('rect', { x: 290, y: 230, width: 320, height: 150, rx: 30, fill: '#fff', stroke: '#05101c', 'stroke-width': 4 }, need); txt(need, 450, 276, 'I need:', 34, 800, '#1b2433', { max: 280 });
+            { const i1 = ico(need, 'detergent', .6), i2 = ico(need, 'soap', .6); i1.setAttribute('transform', 'translate(395,330) scale(.62)'); i2.setAttribute('transform', 'translate(505,330) scale(.62)'); }
+            const ag = el('g', {}, sg); el('circle', { r: 62, fill: '#0b1522', stroke: '#ffd166', 'stroke-width': 6 }, ag); ico(ag, 'agent', .85);
+            const tgA = pill(sg, 160, 118, 190, '£7.40', '#264653', '#fff'), tgB = pill(sg, 740, 118, 190, '£7.10', '#2a9d8f', '#fff');
+            const lim = pill(sg, 450, 56, 500, 'Pays inside your limit ✓', '#ffd166', '#1b2433'), cdi = el('g', {}, sg); { const w2 = el('g', { transform: 'scale(.55)' }, cdi); cardIcon(w2, 'card'); }
+            const hi = el('rect', { x: 585, y: 160, width: 310, height: 415, rx: 18, fill: 'none', stroke: '#2a9d8f', 'stroke-width': 10 }, sg), win = pill(sg, 740, 610, 300, 'Shop B wins ✓', '#16a34a', '#fff');
+            const ask = el('g', {}, sg); el('rect', { x: 215, y: 215, width: 470, height: 150, rx: 34, fill: '#fff', stroke: '#05101c', 'stroke-width': 4 }, ask); txt(ask, 450, 275, 'What else could an', 36, 800, '#1b2433', { max: 420 }); txt(ask, 450, 325, 'AI agent pay for?', 36, 800, '#1b2433', { max: 420 });
+            storyFn = t => {
+              const inA = ease(prog(t, tA, tA + .6)), bq = prog(t, tA + .3, tA + .8) * (1 - prog(t, tBe - .2, tBe + .2));
+              s1.setAttribute('opacity', inA); s2.setAttribute('opacity', inA); s1.setAttribute('transform', `translate(${(1 - inA) * -300},0)`); s2.setAttribute('transform', `translate(${(1 - inA) * 300},0)`);
+              const dim = t >= tD ? ease(prog(t, tD, tD + .5)) : 0; s1.setAttribute('opacity', inA * (1 - dim * .55));
+              pwr.setAttribute('transform', 'translate(450,560)'); PP.set(0, 0, .62, { op: ease(prog(t, tA - .1, tA + .4)) * (1 - ease(prog(t, tC, tC + .5)) * .5), mood: 1 });
+              need.setAttribute('opacity', bq); need.setAttribute('transform', `translate(0,${(1 - bq) * 20})`);
+              const ak = prog(t, tB, tBe); const ax = ak < .2 ? lerp(450, 160, ease(ak / .2)) : ak < .6 ? 160 : ak < .8 ? lerp(160, 740, ease((ak - .6) / .2)) : 740, ay = 330 + Math.sin(t * 6) * 8;
+              const agOn = t >= tB - .1 && t < tD + .6; ag.setAttribute('opacity', agOn ? ease(prog(t, tB - .1, tB + .3)) * (1 - ease(prog(t, tD + .2, tD + .6))) : 0); ag.setAttribute('transform', `translate(${t >= tBe ? lerp(740, 450, ease(prog(t, tBe, tC))) : ax},${ay - 40}) scale(${.8 + Math.sin(t * 6) * .03})`);
+              pop(t, tgA, tB + (tBe - tB) * .25, 0, 0); pop(t, tgB, tB + (tBe - tB) * .72, 0, 0);
+              pop(t, lim, tC + .2, 0, 0); { const f = prog(t, tC + .5, tC + 1.4); cdi.setAttribute('opacity', f > 0 && f < 1 ? 1 : 0); cdi.setAttribute('transform', `translate(${lerp(450, 740, ease(f))},${lerp(300, 330, ease(f)) - Math.sin(f * Math.PI) * 90}) scale(${1 - f * .3})`); }
+              const h = prog(t, tD, tD + .45); hi.setAttribute('opacity', Math.min(1, h * 3)); pop(t, win, tD + .25, 0, 0);
+              const aq = prog(t, tF + .1, tF + .6) * (1 - prog(t, tFe - .1, tFe + .3) * 0); ask.setAttribute('opacity', aq); ask.setAttribute('transform', `translate(0,${(1 - aq) * 20})`);
+            };
+          } else { // compare: two price boards, the totals, the winner, then the agent
+            const panel = (x0, name, col, rows, total) => { const q = el('g', {}, sg); el('rect', { x: x0, y: 130, width: 410, height: 430, rx: 26, fill: '#0f2236', stroke: col, 'stroke-width': 6 }, q);
+              const head = el('rect', { x: x0 + 90, y: 102, width: 230, height: 56, rx: 28, fill: col, stroke: '#05101c', 'stroke-width': 3 }, q); void head; txt(q, x0 + 205, 142, name, 34, 800, '#fff', { max: 200 });
+              const rs = rows.map((r, i) => { const rg = el('g', {}, q), iw = el('g', { transform: `translate(${x0 + 70},${255 + i * 120}) scale(.6)` }, rg); cardIcon(iw, r[0]); txt(rg, x0 + 125, 255 + i * 120 + 12, r[1], 28, 700, '#cfe3ff', { anchor: 'start', max: 150 }); txt(rg, x0 + 385, 255 + i * 120 + 14, r[2], 38, 800, '#fff', { anchor: 'end', max: 110 }); return rg; });
+              el('rect', { x: x0 + 30, y: 400, width: 350, height: 4, rx: 2, fill: '#3a4a60' }, q);
+              const tot = el('g', {}, q); txt(tot, x0 + 60, 478, 'Total', 36, 700, '#9fb3c8', { anchor: 'start', max: 120 }); txt(tot, x0 + 380, 482, total, 56, 800, '#ffd166', { anchor: 'end', max: 200 });
+              return { q, rs, tot }; };
+            const PA = panel(10, 'SHOP A', '#e76f51', [['detergent', 'Detergent', '£3.90'], ['soap', 'Soap', '£3.50']], '£7.40'), PB = panel(480, 'SHOP B', '#2a9d8f', [['detergent', 'Detergent', '£4.10'], ['soap', 'Soap', '£3.00']], '£7.10');
+            const tk = el('g', {}, sg); el('circle', { r: 38, fill: '#16a34a', stroke: '#05101c', 'stroke-width': 4 }, tk); el('path', { d: 'M-16 2 l11 12 l22 -26', fill: 'none', stroke: '#fff', 'stroke-width': 8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, tk);
+            const win = pill(sg, 685, 598, 400, 'Wins on the total ✓', '#16a34a', '#fff'), diff = pill(sg, 685, 60, 330, '£0.30 less', '#ffd166', '#1b2433');
+            const ag = el('g', {}, sg); el('circle', { r: 54, fill: '#0b1522', stroke: '#ffd166', 'stroke-width': 6 }, ag); ico(ag, 'agent', .75); const agp = pill(sg, 560, 598, 440, 'An AI agent can add it up', '#264653', '#fff');
+            storyFn = t => {
+              const a1 = ease(prog(t, tA, tA + .6)), b1 = ease(prog(t, tC, tC + .6)); PA.q.setAttribute('opacity', a1); PA.q.setAttribute('transform', `translate(${(1 - a1) * -260},0)`); PB.q.setAttribute('opacity', b1); PB.q.setAttribute('transform', `translate(${(1 - b1) * 260},0)`);
+              PA.rs.forEach((r, i) => pop(t, r, tA + .5 + i * ((tAe - tA) * .3), 0, 0)); PB.rs.forEach((r, i) => pop(t, r, tC + .5 + i * ((tCe - tC) * .3), 0, 0));
+              pop(t, PA.tot, tB + .1, 0, 0); pop(t, PB.tot, tC + (tCe - tC) * .75, 0, 0);
+              const d = ease(prog(t, tD, tD + .5)); PA.q.setAttribute('opacity', a1 * (1 - d * .5));
+              pop(t, win, tD + .3, 0, 0); pop(t, diff, tD + .6, 0, 0); { const a2 = prog(t, tD + .1, tD + .55); tk.setAttribute('opacity', Math.min(1, a2 * 3)); tk.setAttribute('transform', `translate(870,150) scale(${lerp(.3, 1, bounce(a2))})`); }
+              const gx = prog(t, tF, tF + .5); win.setAttribute('opacity', Math.min(1, prog(t, tD + .3, tD + .75) * 3) * (1 - ease(gx))); ag.setAttribute('opacity', Math.min(1, gx * 3)); ag.setAttribute('transform', `translate(${210},${598}) scale(${lerp(.3, 1, bounce(gx))})`); agp.setAttribute('opacity', Math.min(1, gx * 3)); agp.setAttribute('transform', `translate(0,${(1 - bounce(gx)) * 24})`);
+            };
+          }
+          }
         }
       }
       const brand = el('g', {}, g), third = el('g', {}, g);
