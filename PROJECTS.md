@@ -5,7 +5,7 @@
 | 1 | **Trade with BK engine** ("4% Swing Trades") | The screener, research scripts, paper trading, the public site | `index.html`, `app.js`, `style.css`, `scanner/`, `research-trigger/`, workflows `scan`, `paper`, `peek`, `open-bars`, `*-research`, `alert-test` | Running |
 | 2 | **Studio** | Daily "4% Swing Trades" video builder | `studio/`, workflow `studio.yaml` | PAUSED (UK FCA review) |
 | 3 | **Oh, I Get It!!** channel | Explainer editor, engine, episodes, Shorts, YouTube and Instagram posting | `explainer/`, workflow `explainer.yaml` | Active |
-| 4 | **Service product** | Selling finished explainer videos (and later the tool) to others | `service/` (plan only so far) | New, idea stage |
+| 4 | **Service product** | Selling finished explainer videos (and later the tool) to others | `service/` (self-serve branded studio, stage 1, in `service/studio/`; not published yet) | Idea stage, stage 1 built |
 
 ## Why the code is not physically split into four repositories yet
 This was checked before deciding. Splitting tonight would break working things:

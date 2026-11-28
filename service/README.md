@@ -1,5 +1,7 @@
 # Project 4: Service product (idea stage)
 
+**28 Nov 2026:** Bharat chose a self-serve product, where clients use the studio themselves. Stage 1 is built in `service/studio/`: a branded studio that runs entirely in the client's browser, with no accounts and no uploads. See `service/studio/README.md`. Stage 2 (accounts, payments, cloud saving, hosting) is not started.
+
 Goal: test whether people pay for finished animated explainer videos before building any software for sale.
 
 ## Offer to test (draft, not live)
