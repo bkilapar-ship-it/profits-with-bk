@@ -1,4 +1,4 @@
-# Explainer Studio (service product, stage 1)
+# OneTake Studio (service product, stage 1)
 
 A self-serve studio that clients use in their own browser to make animated explainer videos in **their own brand**.
 Built 28 Nov 2026 from a copy of the channel editor (`explainer/`). The channel itself is unchanged.

@@ -1,7 +1,8 @@
 <!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Explainer Studio</title>
+<title>OneTake Studio</title>
+<meta name="description" content="OneTake Studio: make animated explainer videos in your own brand, on your phone.">
 <meta name="robots" content="noindex">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: data:; font-src 'self' data:; connect-src 'self' data: blob:; worker-src 'self' blob:; object-src 'none'; base-uri 'none'; form-action 'none'">
 <meta name="referrer" content="no-referrer">
@@ -80,7 +81,7 @@ canvas.camv{object-fit:contain}
 </style></head>
 <body>
 <header>
-  <h1>🎬 <span id="hBrand">Explainer Studio</span></h1>
+  <h1>🎬 <span id="hBrand">OneTake Studio</span></h1>
   <label class="muted" for="epSel" style="font-size:12px">Video</label><select id="epSel" style="width:auto"></select>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab" data-main="brand">🎨 1. My brand</button><button class="tab on" data-main="edit">✏️ 2. Script and scenes</button><button class="tab" data-main="video">🎬 3. Make the video</button><button class="tab" data-main="config">📁 My videos and backup</button></nav>
@@ -236,7 +237,7 @@ function setBrand(raw, save) {
   const r = Brand.clean(raw); brand = r.brand;
   const c = brand.colors; Object.assign(BC, { acc: c.accent, bg: c.background, bg2: mixC(c.background, '#ffffff', .08), dark: mixC(c.background, '#000000', .2), deep: mixC(c.background, '#000000', .55), text: c.text, soft: mixC(c.text, '#ffffff', .5), light: mixC(c.accent, '#ffffff', .65), mid: mixC(c.accent, '#000000', .06), glow1: mixC(c.background, '#ffffff', .3), glow2: mixC(c.background, '#ffffff', .12) });
   if (save) { try { localStorage.setItem('svc.brand', JSON.stringify(brand)); } catch (e) { return r.warnings.concat('This device is out of storage, so the brand could not be saved. Try a smaller logo.'); } }
-  $('hBrand').textContent = brand.name ? brand.name + ' studio' : 'Explainer Studio';
+  $('hBrand').textContent = brand.name ? brand.name + ' · OneTake Studio' : 'OneTake Studio';
   return r.warnings;
 }
 function brandFromStore() { let raw = null; try { raw = JSON.parse(localStorage.getItem('svc.brand') || 'null'); } catch (e) {} setBrand(raw || {}, false); return !!raw; }
@@ -250,7 +251,7 @@ async function boot() {
   const last = store.get('svc.last', index[0]);
   fillEpSel(index.includes(last) ? last : index[0]);
   await loadEpisode(index.includes(last) ? last : index[0]);
-  if (!had) { showTab('brand'); bMsg('Welcome! Start by adding your brand. It takes a minute.', ''); }
+  if (!had) { showTab('brand'); bMsg('Welcome to OneTake Studio! Start by adding your brand. It takes a minute.', ''); }
   try { if (navigator.storage && navigator.storage.persist) await navigator.storage.persist(); } catch (e) {}
   storeStatus();
 }
