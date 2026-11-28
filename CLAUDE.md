@@ -7,6 +7,14 @@ Four projects live here (see PROJECTS.md for the map). Read the notes for the on
 - Service product (selling explainer videos): see service/README.md. Idea stage.
 - The screener (scan.yaml, app.js, site) is separate again: do not touch it from studio or explainer work.
 
+Build principles (Bharat's rule book: apply to everything we build, in every project):
+1. Robust: handles bad input, missing files and slow networks without breaking; clear error messages that say what to do next.
+2. Resilient: work is never lost (drafts saved, retries, safe fallbacks); one failure does not stop the rest.
+3. Performant: fast on a mid-range phone (iPhone Safari, Android Chrome); small downloads, no needless work.
+4. Secure: no secrets in the repo or chat, least-privilege tokens, client data kept private, validate anything from outside.
+5. Very user friendly: plain language, few steps, works on a phone, obvious next action, nothing technical needed from the user.
+When these pull against each other, say so and explain the trade-off before choosing.
+
 Standing rules (all projects in this repo):
 - Never change live or paper trading settings without the owner's explicit yes.
 - Educational wording only. Only verified facts and news. No predictions, no hype.
