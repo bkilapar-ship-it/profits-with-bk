@@ -103,3 +103,6 @@ Tick **Motion beta** in the editor header to try it. It only changes the feel, n
 - Captions pop in with a small overshoot, then settle.
 - Scenes that carry your video stay still so the gold frame matches your camera.
 Applies to the preview and the finished video. Also settable per episode with `"motion":"beta"` in the JSON. Research notes: ease-out for entrances, one focal element at a time, short anticipation, restrained overshoot, consistent easing (duck.design, motion principles guides).
+
+## Saving line timing per scene
+Scenes tab, scene with a recording, open "Line timing": **Save this scene's timing to my device** downloads a small file (`timing-<episode>-scene<N>-<lang>.json`). **Load timing from a file** puts it back (only if the scene has the same number of lines). Use it as a backup before re-marking.

@@ -74,7 +74,7 @@ canvas.camv{object-fit:contain}
 <header>
   <h1>💡 Episode Editor</h1>
   <label class="muted" style="font-size:12px;white-space:nowrap"><input type="checkbox" id="motionBeta" style="width:auto"> Motion beta</label>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 00:10 Shorts tab</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 08:00 Timing files</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="shorts">📱 Shorts</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -202,9 +202,9 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=0043"></script>
+<script src="engine.js?v=0044"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=0043"></script>
+<script src="cutout.js?v=0044"></script>
 <script>
 (() => {
 'use strict';
@@ -604,6 +604,7 @@ function timingHTML(s, i, t) {
     <div class="row" style="gap:6px;margin-bottom:6px">${[-1, -.5, -.1, .1, .5, 1].map(d => `<button class="sm" data-lsh="${i}:${d}">${d > 0 ? '+' : ''}${d}s</button>`).join('')}</div>
     <button class="sm" data-lchk="${i}" style="margin:6px 0">🔬 Check sound alignment (for me to read)</button><div id="lchk_${i}" class="muted" style="font-size:13px;margin-bottom:6px"></div>
     <button class="pri" data-ltap="${i}" style="margin:6px 0">🎯 Play my recording and tap where each line starts</button>
+    <div class="row" style="gap:6px;margin:6px 0;flex-wrap:wrap"><button class="sm" data-lsave="${i}">💾 Save this scene's timing to my device</button><button class="sm" data-lload="${i}">📂 Load timing from a file</button><input type="file" accept=".json,application/json" data-lfile="${i}" style="display:none"></div><div id="lfm_${i}" class="muted" style="font-size:13px"></div>
     ${lines.map((x, j) => j === 0 ? '' : `<div class="row" style="align-items:center;gap:6px;margin:4px 0"><span class="muted" style="width:56px">Line ${j + 1}</span><input type="number" inputmode="decimal" step="0.1" min="0" max="${t.out}" data-lm="${i}:${j}" value="${abs[j].toFixed(1)}" style="width:84px"><span class="muted">s</span><button class="sm" data-lp="${i}:${j}">▶</button><span class="muted" style="flex:1;font-size:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis">${esc(String(x).slice(0, 48))}</span></div>`).join('')}</details>`;
 }
 function takeHTML(s, i, o) {
@@ -646,6 +647,21 @@ function wireTake(s, i) {
   box.querySelectorAll(`[data-lsh^="${i}:"]`).forEach(bt => bt.onclick = ev => { ev.stopPropagation(); const t = (((s.lang || {})[lang]) || {}).take; if (!t) return; const d = +bt.dataset.lsh.split(':')[1], { abs } = lineStartsAbs(s, t);
     let prev = t.in; const marks = [t.in]; abs.forEach((v, j) => { if (j === 0) return; let x = v + d; x = Math.max(prev + .3, Math.min(t.out - .3, x)); marks.push(+x.toFixed(2)); prev = x; });
     t.marks = marks; t.marksOn = true; changed(); remount(); refreshTakeStatus(); box.querySelectorAll(`[data-lm^="${i}:"]`).forEach(inp => { const k = +inp.dataset.lm.split(':')[1]; if (marks[k] != null) inp.value = marks[k].toFixed(1); }); });
+  { const sv = box.querySelector(`[data-lsave="${i}"]`), ld = box.querySelector(`[data-lload="${i}"]`), fi = box.querySelector(`[data-lfile="${i}"]`), fm = () => $('lfm_' + i);
+    if (sv) sv.onclick = ev => { ev.stopPropagation(); const t = (((s.lang || {})[lang]) || {}).take; if (!t || !t.file) { fm().textContent = 'No recording in this scene yet.'; return; }
+      const lines = ((E.sceneLang(s, lang) || {}).lines || []).filter(x => String(x).trim()).length;
+      const data = { kind: 'oh-i-get-it-line-timing', episode: ep.id, scene: i + 1, lang, lines, in: t.in, out: t.out, marksOn: !!t.marksOn, marks: t.marks || [], recording: t.file, saved: new Date().toISOString() };
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([JSON.stringify(data, null, 1)], { type: 'application/json' })); a.download = `timing-${ep.id}-scene${i + 1}-${lang}.json`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+      fm().textContent = 'Saved as ' + a.download + ' (in your Downloads / Files).'; };
+    if (ld && fi) { ld.onclick = ev => { ev.stopPropagation(); fi.click(); };
+      fi.onchange = async () => { const f = fi.files && fi.files[0]; fi.value = ''; if (!f) return; let d; try { d = JSON.parse(await f.text()); } catch (x) { fm().textContent = 'That file is not a timing file.'; return; }
+        const t = (((s.lang || {})[lang]) || {}).take; if (!d || d.kind !== 'oh-i-get-it-line-timing') { fm().textContent = 'That file is not a timing file.'; return; }
+        if (!t || !t.file) { fm().textContent = 'Record or load the voice for this scene first, then load the timing.'; return; }
+        const lines = ((E.sceneLang(s, lang) || {}).lines || []).filter(x => String(x).trim()).length;
+        if (d.lines !== lines) { fm().textContent = `This timing is for ${d.lines} lines but the scene now has ${lines}. Not loaded.`; return; }
+        if (d.episode !== ep.id || d.scene !== i + 1) if (!confirm(`This file is for "${d.episode}" scene ${d.scene}, not this scene. Load it anyway?`)) return;
+        t.in = d.in; t.out = d.out; if (d.marksOn && Array.isArray(d.marks) && d.marks.length >= lines) { t.marks = d.marks; t.marksOn = true; } else { delete t.marks; t.marksOn = false; }
+        changed(); remount(); try { renderScenes(); } catch (x) {} try { refreshTakeStatus(); } catch (x) {} const m = $('lfm_' + i); if (m) m.textContent = 'Timing loaded.'; }; } }
   { const ck = box.querySelector(`[data-lchk="${i}"]`); if (ck) ck.onclick = async ev => { ev.stopPropagation(); const out = $('lchk_' + i); const t = (((s.lang || {})[lang]) || {}).take; if (!t) return; out.textContent = 'Reading the sound…';
     try { const AC = window.AudioContext || window.webkitAudioContext, ac = new AC(); const main = blobs[t.file] || await loadBlob(t.file), aud = t.aud ? (blobs[t.file + '.aud'] || await loadBlob(t.file + '.aud')) : null;
       const env = b => { const d = b.getChannelData(0), w = Math.floor(b.sampleRate / 50), n = Math.min(Math.floor(d.length / w), 50 * 45), r = new Float32Array(n); for (let k = 0; k < n; k++) { let q2 = 0; for (let j = k * w; j < (k + 1) * w; j++) q2 += d[j] * d[j]; r[k] = Math.sqrt(q2 / w); } return r; };
