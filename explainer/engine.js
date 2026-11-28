@@ -1013,6 +1013,17 @@
       let starts;
       if (!o.take && lc.length === lines.length) starts = lc.map(c => o.start + c.at * k);
       else starts = relStarts(lines, o.take, span).map(x => from + x);
+      if (ep.sfx === true) { // optional sound effects (Shorts): synthesized in the editor, tied to what the picture does on each line
+        const at = (j, d, sound) => { if (j >= 0 && j < starts.length) cues.push({ t: starts[j] + d, sound }); };
+        if (o.i > 0) cues.push({ t: o.start, sound: 'whoosh' });
+        if (o.scene.type === 'presenter') {
+          (L.popups || []).map(x => String(x).split('|').map(q => q.trim())).filter(q => q.length >= 2 && +q[0] > 0).forEach(q => at(+q[0] - 1, .12, 'pop'));
+          const d0 = sceneData(o.scene), A0 = Math.max(0, (+d0.storyFrom || 3) - 1);
+          if (d0.story === 'agentshop') { at(A0, .2, 'pop'); at(A0 + 1, .3, 'tick'); at(A0 + 1, .9, 'tick'); at(A0 + 2, .6, 'coin'); at(A0 + 3, .5, 'win'); at(A0 + 4, .2, 'pop'); }
+          else if (d0.story === 'compare') { at(A0, .25, 'pop'); at(A0 + 1, .25, 'pop'); at(A0 + 2, .4, 'win'); at(A0 + 3, .3, 'pop'); }
+          else if (d0.story === 'shops') { at(A0, .25, 'pop'); at(A0 + 1, .3, 'tick'); at(A0 + 2, .6, 'coin'); at(A0 + 3, .5, 'win'); }
+        } else if (o.scene.type === 'cards') { for (let j = 0; j < starts.length; j++) at(j, .15, 'pop'); }
+      }
       lines.forEach((s, j) => caps.push({ start: starts[j] + .15, end: (j + 1 < lines.length ? starts[j + 1] : endAt) - .1, text: s, show: T.captions !== false && o.scene.captions !== false }));
     });
     return { scenes, captions: caps, cues, duration: t };

@@ -74,7 +74,7 @@ canvas.camv{object-fit:contain}
 <header>
   <h1>💡 Episode Editor</h1>
   <label class="muted" style="font-size:12px;white-space:nowrap"><input type="checkbox" id="motionBeta" style="width:auto"> Motion beta</label>
-  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 08:00 Timing files</span>
+  <select id="epSel" style="width:auto"></select><span class="muted" style="font-size:12px">build 18:00 Sound effects</span>
 </header>
 <nav class="tabs" id="mainTabs" style="padding:10px 16px 0;max-width:1500px;margin:0 auto"><button class="tab on" data-main="edit">✏️ Scenes</button><button class="tab" data-main="video">🎬 Video</button><button class="tab" data-main="shorts">📱 Shorts</button><button class="tab" data-main="config">⚙️ Configuration</button></nav>
 <main>
@@ -202,9 +202,9 @@ canvas.camv{object-fit:contain}
   </div>
   <div class="msg" id="recMsg"></div>
 </div></div>
-<script src="engine.js?v=0044"></script>
+<script src="engine.js?v=0045"></script>
 <script src="vendor/mp4-muxer.js"></script>
-<script src="cutout.js?v=0044"></script>
+<script src="cutout.js?v=0045"></script>
 <script>
 (() => {
 'use strict';
@@ -1419,6 +1419,15 @@ async function makeOnDevice(opts) {
     mkSt('Mixing the sound…');
     const off = new OfflineAudioContext(2, Math.ceil(SD * SR), SR);
     for (const k of takes) { const kEnd = k.at + (k.t.out - k.t.in); for (const sg of segs) { const lo = Math.max(k.at, sg.a), hi = Math.min(kEnd, sg.b); if (hi - lo < .05) continue; const s = off.createBufferSource(), g = off.createGain(); s.buffer = k.buf; g.gain.value = k.gain; s.connect(g); g.connect(off.destination); s.start(sg.off + (lo - sg.a), k.t.in + (lo - k.at), hi - lo); } } // each kept stretch of the episode, placed where it lands in the output
+    const FX = (kind, t0) => { // small synthesized sound effects: no files, nothing to license
+      const tone = (f0, f1, d, vol, type = 'sine', dl = 0) => { const os = off.createOscillator(), g = off.createGain(), t1 = t0 + dl; os.type = type; os.frequency.setValueAtTime(f0, t1); if (f1 !== f0) os.frequency.exponentialRampToValueAtTime(f1, t1 + d * .8); g.gain.setValueAtTime(0, t1); g.gain.linearRampToValueAtTime(vol, t1 + .008); g.gain.exponentialRampToValueAtTime(.0008, t1 + d); os.connect(g); g.connect(off.destination); os.start(t1); os.stop(t1 + d + .05); };
+      if (kind === 'pop') { tone(420, 900, .16, .22); tone(1300, 1300, .08, .06, 'triangle'); }
+      else if (kind === 'tick') tone(1500, 1100, .06, .12, 'triangle');
+      else if (kind === 'coin') { tone(988, 988, .09, .16, 'square'); tone(1319, 1319, .32, .16, 'square', .08); }
+      else if (kind === 'win') { [523, 659, 784, 1047].forEach((f, i) => tone(f, f, .5, .13, 'triangle', i * .07)); }
+      else if (kind === 'whoosh') { const n = Math.ceil(off.sampleRate * .45), b = off.createBuffer(1, n, off.sampleRate), d = b.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1; const sr = off.createBufferSource(), f = off.createBiquadFilter(), g = off.createGain(); sr.buffer = b; f.type = 'bandpass'; f.Q.value = 1.2; f.frequency.setValueAtTime(400, t0); f.frequency.exponentialRampToValueAtTime(3200, t0 + .35); g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.16, t0 + .12); g.gain.linearRampToValueAtTime(0, t0 + .42); sr.connect(f); f.connect(g); g.connect(off.destination); sr.start(t0); }
+    };
+    tl.cues.filter(x => x.sound && x.sound !== 'beep').forEach(c => segs.forEach(sg => { if (c.t >= sg.a && c.t < sg.b) FX(c.sound, sg.off + c.t - sg.a); }));
     const beeps = []; tl.cues.filter(x => x.sound === 'beep').forEach(c => segs.forEach(sg => { if (c.t >= sg.a && c.t < sg.b) beeps.push({ t: sg.off + c.t - sg.a }); }));
     for (const c of beeps) { const os = off.createOscillator(), g = off.createGain(); os.frequency.value = 1800; g.gain.setValueAtTime(0, c.t); g.gain.linearRampToValueAtTime(.35, c.t + .01); g.gain.setValueAtTime(.35, c.t + .14); g.gain.linearRampToValueAtTime(0, c.t + .16); os.connect(g); g.connect(off.destination); os.start(c.t); os.stop(c.t + .2); }
     let mixed = await off.startRendering();

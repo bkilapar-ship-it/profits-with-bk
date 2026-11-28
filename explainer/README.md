@@ -106,3 +106,6 @@ Applies to the preview and the finished video. Also settable per episode with `"
 
 ## Saving line timing per scene
 Scenes tab, scene with a recording, open "Line timing": **Save this scene's timing to my device** downloads a small file (`timing-<episode>-scene<N>-<lang>.json`). **Load timing from a file** puts it back (only if the scene has the same number of lines). Use it as a backup before re-marking.
+
+## Sound effects (Shorts)
+Episodes with `"sfx": true` (both Shorts) get small synthesized effects in the finished video: a pop when a popup or story step appears, soft ticks while the agent hops between shops, a coin sound when it pays, a chime when the winner shows, and a whoosh between scenes. Nothing to license, no files. They are mixed quietly under your voice. They are not played in the live preview, only in the made video. Set `"sfx": false` or remove it to turn them off.
