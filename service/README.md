@@ -1,6 +1,6 @@
 # Project 4: Service product (idea stage)
 
-**28 Nov 2026:** Bharat chose a self-serve product, where clients use the studio themselves. Stage 1 is built in `service/studio/`: a branded studio that runs entirely in the client's browser, with no accounts and no uploads. See `service/studio/README.md`. Stage 2 (accounts, payments, cloud saving, hosting) is not started.
+**28 Nov 2026:** Bharat chose a self-serve product, where clients use the studio themselves. Stage 1 is built: **OneTake Studio**, a branded studio that runs entirely in the client's browser, with no accounts and no uploads. Its home is now its own repository, bkilapar-ship-it/OneTake-studio (code, notes and live link). It moved out of `service/studio/` on 28 Nov so there is only one copy. Stage 2 (accounts, payments, cloud saving, hosting) is not started.
 
 Goal: test whether people pay for finished animated explainer videos before building any software for sale.
 
